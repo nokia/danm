@@ -384,4 +384,4 @@ Special thanks to the original author who started the whole project in 2015 by p
 
 ## License
 
-This project is licensed under the 3-Clause BSD License - see the [LICENSE.md](LICENSE.md) TODO: LINK file for details
+This project is licensed under the 3-Clause BSD License - see the [LICENSE](LICENSE)

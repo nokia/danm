@@ -33,7 +33,7 @@ TODO: INSERT STHINGSTHINGSTHING LOGO
 ## Introduction
 __DANM__ is Nokia's solution to bring TelCo grade network management into a Kubernetes cluster! DANM has more than 3 years of history inside the company, is currently deployed into production, and it is finally available for everyone, here on GitHub.
 
-The name stands for "Damn, Another Network Manager!", because yes, we know: the last thing the K8s world needed is another TelCo company company "revolutionizing" networking in Kubernetes.
+The name stands for "Damn, Another Network Manager!", because yes, we know: the last thing the K8s world needed is another TelCo company "revolutionizing" networking in Kubernetes.
 But still we hope that potential users checking out our project will involuntarily proclaim "DANM, that's some good networking stuff!" :)
 
 Please consider for a moment that there is a whole other world out there, with special requirements, and DANM is the result of those needs!

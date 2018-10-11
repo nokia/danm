@@ -1,0 +1,59 @@
+### DANM Svcwatcher compatible K8s Service template ###
+kind: Service
+apiVersion: v1
+metadata:
+  # Name of the K8s object this file represents
+  # MANDATORY - STRING
+  name: ## OBJECT_NAME  ##
+
+  # The K8s namespace the object belongs to.
+  # DanmNets are namespaced resources, so a Pod can only connect to a DanmNet if it resides in the same namespace.
+  # MANDATORY - STRING
+  namespace: ## NS_NAME  ##
+
+  # DANM related API enhancements must be put into the Service object's annotation field.
+  # MANDATORY - DICTIONARY
+  annotations:
+    # This field replaces the spec.selector field from the core Service API, which must be omitted to make the Service selectorless.
+    # DANM uses the information for the same purpose as teh default Service controller - for every Pod matching all key-value pairs in the selector field, one Endpoint will be created.
+    # MANDATORY - JSON FORMATTED LIST OF STRING:STRING ASSOCIATIONS (e.g. '{"app":"loadbalancer"},{"type":"sctp"}')
+    danm.k8s.io/selector: ## POD_SELECTORS ##
+    # When DANM creates an Endpoint for a selected Pod, it will populate it with the selected interface's IP.
+    # The selected interface will be the one which is connected to the DanmNet object named in this attribute.
+    # Pods, DanmNets, and Services are all namespaced resources, so an Endpoint is created only if all three are within the same K8s namespace.
+    # MANDATORY - STRING
+    danm.k8s.io/network: ## NETWORK_SELECTOR ##
+spec:
+  # DANM recognized Services are selectorless Services, because we want to avoid default Kubernetes controllers to create an Endpoint to a wrong network interface.
+  # Selectorless Services don't have a spec.selector present in their object.
+  # OPTIONAL - SHOULD BE OMITTED
+  #selector:
+  # app: MyApp
+  # "type" determines how the Service is exposed in the Kubernetes cluster.
+  # At this stage of svcwatcher component's life-cycle, interworking is only defined with "ClusterIP" and "ExternalName" types.
+  # But we would be delighted to discuss your use-cases or ideas if you want to extend the scope of our thought experiment to other Service types!
+  # OPTIONAL - STRING, ONE OF {"clusterip","externalname"}
+  type: ## SERVICE_TYPE ##
+  # DANM recognized ClusterIP Services should be headless Services, because in most cases the Pod's network interface anyway would not be reachable from the cluterIP's network (different VLAN, different network namespace, different backend technology etc.)
+  # Headless Services have their spec.clusterIP set to value "None" in their object.
+  # Ignored if type is set to "externalname"
+  # OPTIONAL - STRING, ONE OF {"None", ""}
+  clusterIP: ## CLUSTER_IP ##
+  # externalName is the external reference that kubedns will return as a CNAME record for this service.
+  # No proxying will be involved.
+  # Can be only present if "type" is set to "externalname"
+  # OPTIONAL - STRING, BUT MUST BE A VALID RFC-1123 HOSTNAME (https://tools.ietf.org/html/rfc1123)
+  externalName: ## EXTERNAL_CNAME ## 
+  # Define the ports section of the Service as usual. Information in this section is used by DANM to populate the Endpoints
+  # MANDATORY - LIST OF PORTS
+  ports:
+    # The IP protocol for this port. This information is useful only for the service discovery client, DANM ignores it.
+    # OPTIONAL - STRING, ONE OF {"TCP","UDP","SCTP"}
+  - protocol: ## PROTOCOL_NAME ##
+    # According to K8s schema definition, "targetPort is ignored for Services with clusterIP=None, and should be omitted."
+    # To adhere to this convention, DANM will put the value of the "port" attribute into the created Endpoint, and ignores the value of "targetPort".
+    # OPTIONAL - SHOULD BE OMITTED
+    #targetPort:
+    # The port where the service instance is listening. DANM uses this value to populate the Endpoints of this Service.
+    # MADNATORY - INTEGER
+    port: ## PORT_NUMBER ##

@@ -1,0 +1,71 @@
+### K8s DanmNet template ###
+apiVersion: danm.k8s.io/v1
+# This is a 3rd party addition to a K8s cluster. 
+# A DamnNet object represents a physical network together with its resources and configuration applications can use.
+# The DANM will always connect K8s pods to K8s DanmNets.
+kind: DanmNet
+metadata:
+  # Name of the K8s DanmNet object this file represents
+  # MANDATORY - STRING
+  name: ## DANMNET_NAME  ##
+  # The K8s namespace the network belongs to.
+  # MANDATORY - STRING
+  namespace: ## NS_NAME  ##
+spec:
+  # This parameter will be used in application description templates for referring to a desired connection point
+  # Currently this parameter shall exactly match with the name of DanmNet object itself
+  # MANDATORY - STRING
+  NetworkID: ## NETWORK_NAME  ##
+  # This parameter, if present, denotes which backend willl be used to provision the container interfaces connected to this network.
+  # Currently supported values with dynamic integration level are IPVLAN (default), or SRIOV.
+  # - IPVLAN option results in an IPVLAN slave interface provisioned in L2 mode, and connected to the designated host device
+  # - SRIOV option pushes an already existing Virtual Function of the configured host device to the container's netns
+  # For any other CNI backend DANM will read their configuration from the configured CNI config directory.
+  # E.g. when a Pod is connected to a DanmNet with "NetworkType" set to "flannel", DANM will pass the content of /etc/cni/net.d/flannel.conf file to the /opt/cni/bin/flannel binary by invoking a standard CNI operation.
+  # The default IPVLAN backend will be used if this parameter is not specified.
+  # OPTIONAL - ONE OF {ipvlan,sriov,<NAME_OF_STATIC_LEVEL_CNI_BINARY>}
+  # DEFAULT VALUE: ipvlan
+  NetworkType: ## BACKEND_TYPE ##
+  # Specific dynamic configuration options can be passed to the network provisioning backends.
+  # Dynamic configuration is supported only for IPVLAN, and SRIOV backends.
+  # Other networks are always provisioned from static configuration. Options are silently ignored if NetworkType is set to a non-dynamically integrated backend.
+  Options:
+    # Name of the master host device (i.e. physical host NIC).
+    # Slave interfaces are connected to this NIC in case NetworkType is set to IPVLAN.
+    # A Virtual Function belonging to this Physical Function is taken-up in case NetworkType is set to SRIOV.
+    # MANDATORY - STRING
+    host_device: ## MASTER_DEVICE_NAME ##
+    # The IPv4 CIDR notation of the subnet associated with the network. 
+    # Pods connecting to this network will get their IPs from this subnet, if defined.
+    # OPTIONAL - CIDR FORMAT (e.g. "10.0.0.0/24")
+    cidr: ## SUBNET_CIDR ##
+    # IP allocation will be done according to the narrowed down allocation pool parameter, if defined.
+    # Allocation pool must be provided together with CIDR, and shall be aligned with the CIDR subnet range.
+    # OPTIONAL - IPV4 FORMAT (e.g. "10.0.0.10")
+    allocation_pool:
+      start: ## FIRST_ASSIGNABLE_IP ##
+      end: ## LAST_ASSIGNABLE_IP ##
+    # Interfaces connected to this network will be renamed to "container_prefix" inside the container
+    # OPTIONAL - STRING
+    container_prefix: ## INTERNAL_IF_NAME ##
+    # IP routes belonging to this network will be installed in this routing table
+    # MANDATORY - INTEGER (e.g. 201)
+    rt_tables: ## HOST_UNIQUE_ROUTING_TABLE_NUMBER ##
+    # IPv4 routes to be installed by default for all containers connected to this network
+    # Provisioning L3 IP routes is not supported for SRIOV networks.
+    # OPTIONAL - LIST OF DESTINATION_IPV4_CIDR:IPV4_GW ENTRIES (e.g. "10.20.0.0/24: 10.0.0.1")
+    routes: 
+      ## IP_ROUTE_1 ##
+      ## IP_ROUTE_2 ##
+    # If this parameter is present then traffic going through this network will be VxLAN tagged with the provided identifier
+    # The VxLAN tag shall be unique on the level of the underlying host.
+    # Management of the VxLAN interface is handled automatically by DANM.
+    # Dynamic VxLAN tagging is not supported for SRIOV networks.
+    # OPTIONAL - INTEGER (e.g. 50)
+    vxlan: ## VXLAN_TAG ##
+    # If this parameter is present then traffic going through this network will be VLAN tagged with the provided identifier
+    # The VLAN ID shall be unique on the level of the underlying host.
+    # Management of the VLAN interface is handled automatically by DANM.
+    # VLAN and VxLAN paramaters are mutually exclusive! Defining both in the same DanmNet will result in a validation error!
+    # OPTIONAL - INTEGER (e.g. 4000)
+    vlan: ## VLAN_TAG ##

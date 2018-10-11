@@ -1,0 +1,54 @@
+apiVersion: apps/v1beta2
+kind: DaemonSet
+metadata:
+  name: netwatcher
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      danm.k8s.io: netwatcher
+  template:
+    metadata:
+      labels:
+        danm.k8s.io: netwatcher
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirst
+      hostIPC: true
+      hostPID: true
+      containers:
+        - name: netwatcher
+          image: netwatcher:3.0.0
+          securityContext:
+            capabilities:
+              add:
+                - SYS_PTRACE
+                - SYS_ADMIN
+                - NET_ADMIN
+                - NET_RAW
+          args:
+            - "--kubeconf"
+            - "$(WATCHER_CONFIG)"
+          env:
+            - name: WATCHER_CONFIG
+              value: "/etc/kubernetes/kubeconfig/watcherc.yml"
+          volumeMounts:
+            - name: kubeconf
+              mountPath: /etc/kubernetes/kubeconfig
+              readOnly: true
+            - name: api-server-certs
+              mountPath: /etc/danm/ssl
+              readOnly: true
+      tolerations:
+       - effect: NoSchedule
+         operator: Exists
+       - effect: NoExecute
+         operator: Exists
+      terminationGracePeriodSeconds: 0
+      volumes:
+        - name: kubeconf
+          hostPath:
+            path: /etc/kubernetes/kubeconfig
+        - name: api-server-certs
+          hostPath:
+            path: /etc/danm/ssl

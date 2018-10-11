@@ -1,0 +1,35 @@
+apiVersion: apps/v1beta2
+kind: DaemonSet
+metadata:
+  name: svcwatcher
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      danm.k8s.io: svcwatcher
+  template:
+    metadata:
+      annotations:
+        danm.k8s.io/interfaces: |
+          [
+            {
+              "network":"flannel"
+            }
+          ]
+      labels:
+        danm.k8s.io: svcwatcher
+    spec:
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        nodetype: master
+      containers:
+        - name: svcwatcher
+          image: svcwatcher:3.0.0
+          args:
+            - "--logtostderr"
+      tolerations:
+       - effect: NoSchedule
+         operator: Exists
+       - effect: NoExecute
+         operator: Exists
+      terminationGracePeriodSeconds: 0

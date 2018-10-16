@@ -15,7 +15,7 @@
    version="1.1"
    id="svg981"
    inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
-   sodipodi:docname="danm_icon_final_logo_only.svg"
+   sodipodi:docname="logo.svg"
    inkscape:export-filename="C:\Users\huszty\bitmap.png"
    inkscape:export-xdpi="199"
    inkscape:export-ydpi="199">
@@ -29,10 +29,10 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.4"
-     inkscape:cx="271.92179"
-     inkscape:cy="126.16153"
+     inkscape:cx="210.31496"
+     inkscape:cy="224.44777"
      inkscape:document-units="mm"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="g2842"
      showgrid="false"
      inkscape:window-width="1920"
      inkscape:window-height="1017"
@@ -47,7 +47,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -59,166 +59,176 @@
     <g
        id="g5281-2-4"
        transform="translate(-389.17725,8.6697895)">
-      <path
-         inkscape:export-ydpi="199"
-         inkscape:export-xdpi="199"
-         inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
-         transform="rotate(24.832614,-196.93342,700.35453)"
-         inkscape:transform-center-y="-2.9550015"
-         inkscape:transform-center-x="0.96627024"
-         d="m 197.52928,33.332674 -13.39552,6.17913 -13.18301,-6.620416 -3.04343,-14.434655 9.38793,-11.3793032 14.74997,0.2448951 9.00499,11.6846831 z"
-         inkscape:randomized="0"
-         inkscape:rounded="0"
-         inkscape:flatsided="true"
-         sodipodi:arg2="1.138599"
-         sodipodi:arg1="0.68979999"
-         sodipodi:r2="10.39456"
-         sodipodi:r1="16.999952"
-         sodipodi:cy="22.514194"
-         sodipodi:cx="184.41597"
-         sodipodi:sides="7"
-         id="path1023-7-7-1-2-5-91"
-         style="opacity:1;fill:#f0f0f0;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:3.55900002;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-         sodipodi:type="star" />
       <g
-         inkscape:export-ydpi="199"
-         inkscape:export-xdpi="199"
-         inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
-         transform="translate(273.36098,57.032225)"
-         style="fill:#000000;fill-opacity:0.05527637;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-         id="g967-9-3-4-4-7">
+         id="g2842">
         <path
-           sodipodi:nodetypes="cc"
-           style="fill:#000000;fill-opacity:0.05527637;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           d="m 160.49188,157.95867 -0.005,13.35226"
-           id="path1027-1-7-7-6-5-2"
-           inkscape:connector-curvature="0" />
-        <circle
-           style="opacity:1;fill:#f0f0f0;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           id="path1029-15-98-1-6-5-3"
-           cx="160.68088"
-           cy="154.77435"
-           r="3.1307073" />
-      </g>
-      <g
-         inkscape:export-ydpi="199"
-         inkscape:export-xdpi="199"
-         inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
-         style="fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-         id="g967-7-9-8-9-3-4"
-         transform="rotate(-51.420001,356.37435,-67.044072)">
+           sodipodi:nodetypes="ccccccccccccccccccccccccccccccccccccccccccccccccc"
+           transform="matrix(0.26458333,0,0,0.26458333,389.17725,198.33021)"
+           inkscape:connector-curvature="0"
+           id="path2817"
+           d="m 170.33514,30.302621 c -6.52936,-0.345284 -13.10843,2.515903 -17.07868,7.752512 -7.86728,9.501866 -4.88613,25.369314 6.19698,31.039341 -0.10737,11.874079 -0.21568,23.748149 -0.32506,35.622216 -14.04922,6.57448 -27.7896,13.76535 -42.06891,19.83119 -7.08894,-5.46504 -14.11712,-11.01052 -21.072264,-16.64506 -1.979707,-2.32289 -6.805828,-3.68828 -5.392578,-7.36583 C 93.237078,86.38588 77.566549,73.18911 64.053052,78.116516 52.007739,81.592694 45.647714,96.831137 51.974369,107.73287 c 4.367189,9.8527 16.806209,13.12267 26.379744,9.56333 9.232108,6.89976 18.3807,14.61696 27.539067,21.82757 -3.40639,15.29829 -7.040988,30.59585 -10.897045,45.82729 -7.34865,1.92814 -14.767693,3.57363 -22.175173,5.25713 -4.013307,0.0307 -9.167618,3.92794 -12.383994,1.258 -6.871131,-8.84017 -21.015857,-9.47212 -29.09318,-1.9797 -9.932645,8.08955 -9.259156,25.21895 1.460659,32.32143 10.693388,8.9731 28.811938,2.23072 32.218192,-10.94029 10.967166,-3.08256 22.82011,-5.46945 34.246653,-7.77483 10.098918,11.97343 19.651708,24.35542 29.464288,36.61412 -4.97257,10.26692 -9.94514,20.53385 -14.9177,30.80078 -9.26995,-0.0832 -18.309552,6.53649 -20.828674,15.49665 -4.363664,13.66859 8.958114,28.57955 22.986884,26.26256 14.77319,-1.48047 22.84349,-20.93631 14.12388,-32.67299 4.17709,-10.77836 10.10834,-21.34593 14.95257,-32.02288 15.77567,0.0189 31.55134,0.037 47.32701,0.0544 4.12654,8.62322 8.25307,17.24644 12.37982,25.86955 2.22472,3.18672 2.84582,5.9484 -0.001,8.80958 -6.85465,12.10647 1.64498,29.79361 15.89285,30.6543 10.2832,1.45787 20.35355,-5.95711 22.47908,-16.0212 3.54025,-12.28391 -7.01028,-24.9849 -19.32897,-25.7394 -5.16811,-10.28445 -9.97128,-21.04378 -15.10742,-31.4481 9.90406,-12.26688 19.53188,-24.76535 29.82561,-36.71178 11.1298,2.4332 22.21949,5.04499 33.3245,7.58789 1.54375,11.61378 14.5132,19.41331 25.57757,16.21652 13.25308,-2.99933 20.12374,-20.40456 12.20146,-31.54158 -6.99268,-11.072 -24.7065,-12.43212 -33.09292,-2.21818 -11.42425,-2.6211 -22.86252,-5.1822 -34.26618,-7.89202 -3.63007,-15.29216 -7.04439,-30.63443 -10.54269,-45.95704 8.22596,-6.55689 16.45201,-13.11369 24.67837,-19.6701 1.85712,-3.16286 4.32467,-0.37996 6.87436,-0.10947 10.89684,3.03787 23.48427,-4.26724 25.35436,-15.61384 2.80164,-11.680826 -6.07265,-24.525845 -18.21708,-25.27902 -13.05345,-1.645305 -25.23559,11.297794 -22.55022,24.2327 -8.74115,7.54482 -18.2592,14.87777 -27.65765,21.95312 -13.92752,-6.39701 -27.91917,-13.34493 -41.83873,-20.04464 C 178.2755,93.012351 178.1881,81.321965 178.1004,69.631583 184.71342,67.0564 189.54781,60.68653 189.93215,53.557365 192.07817,41.995936 182.0809,30.074222 170.33533,30.302621 Z"
+           style="opacity:0.32100004;fill:#fffff8;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke" />
         <path
-           sodipodi:nodetypes="cc"
-           style="fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           d="m 160.49188,157.95867 -0.004,13.35225"
-           id="path1027-1-3-9-7-3-8-2"
-           inkscape:connector-curvature="0" />
-        <circle
-           style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           id="path1029-15-9-6-6-5-3-2"
-           cx="160.68088"
-           cy="154.77435"
-           r="3.1307073" />
-      </g>
-      <g
-         inkscape:export-ydpi="199"
-         inkscape:export-xdpi="199"
-         inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
-         style="fill:#000000;fill-opacity:0.58823529;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-         id="g967-7-0-46-1-9-2-3"
-         transform="rotate(-102.84,319.89807,107.79695)">
-        <path
-           sodipodi:nodetypes="cc"
-           style="fill:#000000;fill-opacity:0.58823529;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           d="m 160.49188,157.95867 -0.003,13.35225"
-           id="path1027-1-3-5-06-7-5-3-3"
-           inkscape:connector-curvature="0" />
-        <circle
-           style="opacity:1;fill:#5a5a5a;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           id="path1029-15-9-8-2-9-4-7-22"
-           cx="160.68088"
-           cy="154.77435"
-           r="3.1307073" />
-      </g>
-      <g
-         inkscape:export-ydpi="199"
-         inkscape:export-xdpi="199"
-         inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
-         style="fill:#000000;fill-opacity:0.47058824;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-         id="g967-7-0-6-4-8-1-9-3"
-         transform="rotate(-154.26,303.66717,185.59936)">
-        <path
-           sodipodi:nodetypes="cc"
-           style="fill:#000000;fill-opacity:0.47058824;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           d="m 160.49188,157.95867 -0.003,13.35225"
-           id="path1027-1-3-5-0-2-3-2-4-7"
-           inkscape:connector-curvature="0" />
-        <circle
-           style="opacity:1;fill:#787878;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           id="path1029-15-9-8-8-6-1-3-4-0"
-           cx="160.68088"
-           cy="154.77435"
-           r="3.1307073" />
-      </g>
-      <g
-         inkscape:export-ydpi="199"
-         inkscape:export-xdpi="199"
-         inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
-         style="fill:#000000;fill-opacity:0.35294118;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-         id="g967-7-0-4-9-5-1-6-6"
-         transform="rotate(154.32,290.65372,247.97896)">
-        <path
-           sodipodi:nodetypes="cc"
-           style="fill:#000000;fill-opacity:0.35294118;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           d="m 160.49188,157.95867 -0.002,13.35224"
-           id="path1027-1-3-5-8-9-0-4-6-7"
-           inkscape:connector-curvature="0" />
-        <circle
-           style="opacity:1;fill:#969696;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           id="path1029-15-9-8-81-7-0-0-3-6"
-           cx="160.68088"
-           cy="154.77435"
-           r="3.1307073" />
-      </g>
-      <g
-         inkscape:export-ydpi="199"
-         inkscape:export-xdpi="199"
-         inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
-         style="fill:#000000;fill-opacity:0.23529412;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-         id="g967-7-0-2-8-7-7-6-0"
-         transform="rotate(102.9,274.43154,325.73624)">
-        <path
-           sodipodi:nodetypes="cc"
-           style="fill:#000000;fill-opacity:0.23529412;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           d="m 160.49188,157.95867 -0.002,13.35227"
-           id="path1027-1-3-5-9-0-3-2-5-1"
-           inkscape:connector-curvature="0" />
-        <circle
-           style="opacity:1;fill:#b4b4b4;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           id="path1029-15-9-8-9-0-0-8-5-0"
-           cx="160.68088"
-           cy="154.77435"
-           r="3.1307073" />
-      </g>
-      <g
-         inkscape:export-ydpi="199"
-         inkscape:export-xdpi="199"
-         inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
-         style="fill:#000000;fill-opacity:0.11764706;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-         id="g967-7-0-3-3-6-7-1-1"
-         transform="rotate(51.479999,238.01008,500.30205)">
-        <path
-           sodipodi:nodetypes="cc"
-           style="fill:#000000;fill-opacity:0.11764706;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           d="m 160.49188,157.95867 -0.001,13.35226"
-           id="path1027-1-3-5-84-4-1-1-5-8"
-           inkscape:connector-curvature="0" />
-        <circle
-           style="opacity:1;fill:#d2d2d2;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
-           id="path1029-15-9-8-4-4-2-7-9-7"
-           cx="160.68088"
-           cy="154.77435"
-           r="3.1307073" />
+           sodipodi:type="star"
+           style="opacity:1;fill:#f0f0f0;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:3.55900002;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+           id="path1023-7-7-1-2-5-91"
+           sodipodi:sides="7"
+           sodipodi:cx="184.41597"
+           sodipodi:cy="22.514194"
+           sodipodi:r1="16.999952"
+           sodipodi:r2="10.39456"
+           sodipodi:arg1="0.68979999"
+           sodipodi:arg2="1.138599"
+           inkscape:flatsided="true"
+           inkscape:rounded="0"
+           inkscape:randomized="0"
+           d="m 197.52928,33.332674 -13.39552,6.17913 -13.18301,-6.620416 -3.04343,-14.434655 9.38793,-11.3793032 14.74997,0.2448951 9.00499,11.6846831 z"
+           inkscape:transform-center-x="0.96627024"
+           inkscape:transform-center-y="-2.9550015"
+           transform="rotate(24.832614,-196.93342,700.35453)"
+           inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
+           inkscape:export-xdpi="199"
+           inkscape:export-ydpi="199" />
+        <g
+           id="g967-9-3-4-4-7"
+           style="fill:#000000;fill-opacity:0.05527637;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+           transform="translate(273.36098,57.032225)"
+           inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
+           inkscape:export-xdpi="199"
+           inkscape:export-ydpi="199">
+          <path
+             inkscape:connector-curvature="0"
+             id="path1027-1-7-7-6-5-2"
+             d="m 160.49188,157.95867 -0.005,13.35226"
+             style="fill:#000000;fill-opacity:0.05527637;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+             sodipodi:nodetypes="cc" />
+          <circle
+             r="3.1307073"
+             cy="154.77435"
+             cx="160.68088"
+             id="path1029-15-98-1-6-5-3"
+             style="opacity:1;fill:#f0f0f0;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke" />
+        </g>
+        <g
+           transform="rotate(-51.420001,356.37435,-67.044072)"
+           id="g967-7-9-8-9-3-4"
+           style="fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+           inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
+           inkscape:export-xdpi="199"
+           inkscape:export-ydpi="199">
+          <path
+             inkscape:connector-curvature="0"
+             id="path1027-1-3-9-7-3-8-2"
+             d="m 160.49188,157.95867 -0.004,13.35225"
+             style="fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+             sodipodi:nodetypes="cc" />
+          <circle
+             r="3.1307073"
+             cy="154.77435"
+             cx="160.68088"
+             id="path1029-15-9-6-6-5-3-2"
+             style="opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke" />
+        </g>
+        <g
+           transform="rotate(-102.84,319.89807,107.79695)"
+           id="g967-7-0-46-1-9-2-3"
+           style="fill:#000000;fill-opacity:0.58823529;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+           inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
+           inkscape:export-xdpi="199"
+           inkscape:export-ydpi="199">
+          <path
+             inkscape:connector-curvature="0"
+             id="path1027-1-3-5-06-7-5-3-3"
+             d="m 160.49188,157.95867 -0.003,13.35225"
+             style="fill:#000000;fill-opacity:0.58823529;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+             sodipodi:nodetypes="cc" />
+          <circle
+             r="3.1307073"
+             cy="154.77435"
+             cx="160.68088"
+             id="path1029-15-9-8-2-9-4-7-22"
+             style="opacity:1;fill:#5a5a5a;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke" />
+        </g>
+        <g
+           transform="rotate(-154.26,303.66717,185.59936)"
+           id="g967-7-0-6-4-8-1-9-3"
+           style="fill:#000000;fill-opacity:0.47058824;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+           inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
+           inkscape:export-xdpi="199"
+           inkscape:export-ydpi="199">
+          <path
+             inkscape:connector-curvature="0"
+             id="path1027-1-3-5-0-2-3-2-4-7"
+             d="m 160.49188,157.95867 -0.003,13.35225"
+             style="fill:#000000;fill-opacity:0.47058824;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+             sodipodi:nodetypes="cc" />
+          <circle
+             r="3.1307073"
+             cy="154.77435"
+             cx="160.68088"
+             id="path1029-15-9-8-8-6-1-3-4-0"
+             style="opacity:1;fill:#787878;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke" />
+        </g>
+        <g
+           transform="rotate(154.32,290.65372,247.97896)"
+           id="g967-7-0-4-9-5-1-6-6"
+           style="fill:#000000;fill-opacity:0.35294118;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+           inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
+           inkscape:export-xdpi="199"
+           inkscape:export-ydpi="199">
+          <path
+             inkscape:connector-curvature="0"
+             id="path1027-1-3-5-8-9-0-4-6-7"
+             d="m 160.49188,157.95867 -0.002,13.35224"
+             style="fill:#000000;fill-opacity:0.35294118;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+             sodipodi:nodetypes="cc" />
+          <circle
+             r="3.1307073"
+             cy="154.77435"
+             cx="160.68088"
+             id="path1029-15-9-8-81-7-0-0-3-6"
+             style="opacity:1;fill:#969696;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke" />
+        </g>
+        <g
+           transform="rotate(102.9,274.43154,325.73624)"
+           id="g967-7-0-2-8-7-7-6-0"
+           style="fill:#000000;fill-opacity:0.23529412;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+           inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
+           inkscape:export-xdpi="199"
+           inkscape:export-ydpi="199">
+          <path
+             inkscape:connector-curvature="0"
+             id="path1027-1-3-5-9-0-3-2-5-1"
+             d="m 160.49188,157.95867 -0.002,13.35227"
+             style="fill:#000000;fill-opacity:0.23529412;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+             sodipodi:nodetypes="cc" />
+          <circle
+             r="3.1307073"
+             cy="154.77435"
+             cx="160.68088"
+             id="path1029-15-9-8-9-0-0-8-5-0"
+             style="opacity:1;fill:#b4b4b4;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke" />
+        </g>
+        <g
+           transform="rotate(51.479999,238.01008,500.30205)"
+           id="g967-7-0-3-3-6-7-1-1"
+           style="fill:#000000;fill-opacity:0.11764706;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+           inkscape:export-filename="C:\Users\huszty\g967-7-0-3.png"
+           inkscape:export-xdpi="199"
+           inkscape:export-ydpi="199">
+          <path
+             inkscape:connector-curvature="0"
+             id="path1027-1-3-5-84-4-1-1-5-8"
+             d="m 160.49188,157.95867 -0.001,13.35226"
+             style="fill:#000000;fill-opacity:0.11764706;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+             sodipodi:nodetypes="cc" />
+          <circle
+             r="3.1307073"
+             cy="154.77435"
+             cx="160.68088"
+             id="path1029-15-9-8-4-4-2-7-9-7"
+             style="opacity:1;fill:#d2d2d2;fill-opacity:1;fill-rule:nonzero;stroke:#000095;stroke-width:2;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke" />
+        </g>
       </g>
     </g>
   </g>

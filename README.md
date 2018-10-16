@@ -1,5 +1,6 @@
-TODO: INSERT STHINGSTHINGSTHING LOGO
 # DANM
+<img src="https://github.com/nokia/danm/raw/master/logo.png" width="100">
+---
 ## Table of Contents
 * [Table of Contents](#table-of-contents)
 * [Introduction](#introduction)

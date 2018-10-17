@@ -25,7 +25,7 @@ func watchRes(controller cache.Controller) {
 func main() {
   log.SetOutput(os.Stdout)
   log.Println("Starting DANM Watcher...")
-  kubeConfig := flag.String("kubeconf", "admin.conf", "Path to a kube config. Only required if out-of-cluster.")
+  kubeConfig := flag.String("kubeconf", "", "Path to a kube config. Only required if out-of-cluster.")
   flag.Parse()
   config, err := getClientConfig(kubeConfig)
   if err != nil {
@@ -36,7 +36,7 @@ func main() {
   if err != nil {
     log.Println("ERROR: Creation of K8s DanmNet Controller failed with error:" + err.Error() + " , exiting")
     os.Exit(-1)
-  } 
+  }
   dnController := netHandler.CreateController()
   watchRes(dnController)
 

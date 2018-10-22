@@ -1,0 +1,4 @@
+bin/
+pkg/crd/apis/danm/*/zz_generated.deepcopy.go
+pkg/crd/client/
+pkg/vendor/

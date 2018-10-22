@@ -1,0 +1,17 @@
+sudo: required
+
+language: ruby
+
+services:
+  - docker
+
+env:
+  - GOPATH=/home/travis/gopath
+
+script:
+  - mkdir -p $GOPATH/{bin,pkg}
+  - mkdir -p $GOPATH/src/github.com/nokia/danm/
+  - mv * $GOPATH/src/github.com/nokia/danm/
+  - cd $GOPATH/src/github.com/nokia/danm/
+  - ./build_danm.sh
+

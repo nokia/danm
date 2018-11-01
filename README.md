@@ -1,5 +1,5 @@
 # DANM
-[![Build Status](https://travis-ci.org/Nokia/danm.svg?branch=master)](https://travis-ci.org/Nokia/danm)
+[![Build Status](https://travis-ci.org/nokia/danm.svg?branch=master)](https://travis-ci.org/Nokia/danm)
 <img src="https://github.com/nokia/danm/raw/master/logo.png" width="100">
 
 ## Table of Contents

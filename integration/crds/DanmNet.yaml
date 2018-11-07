@@ -36,7 +36,7 @@ spec:
                 allocation_pool:
                   properties:
                     start:
-                      tpye: string
+                      type: string
                       pattern: '(^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$)?'
                     end:
                       type: string

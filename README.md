@@ -168,7 +168,7 @@ danm        **fakeipam**      host-device  ipvlan       macvlan      ptp        
 
  **7. Create the netwatcher DaemonSet by executing the following command from the project's root directory:**
  ```
-kubectl create -f integration/manifests/netwatcher.yaml
+kubectl create -f integration/manifests/netwatcher/netwatcher_ds.yaml
 ```
 Note: don't forget to change the names of files and directories pointing to valid kubeconfig files, and TLS certificates used by the K8s API server in your infrastructure before instantiating the component! 
 
@@ -176,7 +176,7 @@ You are now ready to use the services of DANM, and can start bringing-up Pods wi
 
  **+1. OPTIONAL: Create the servicewatcher DaemonSet by executing the following command from the project's root directory:**
  ```
-kubectl create -f integration/manifests/svcwatcher.yaml
+kubectl create -f integration/manifests/svcwatcher/svcwatcher_ds.yaml
 ```
  This component is an optional part of the suite. You only need to install it if you would like to use Kubernetes Services for all the network interfaces of your Pod.
 Note: svcwatcher already leverages DANM CNI to create its network interface. Don't forget to change the name of the network referenced in the example manifest file to one which:

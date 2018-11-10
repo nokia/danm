@@ -65,14 +65,14 @@ func createInterfaces(args *skel.CmdArgs) error {
     return fmt.Errorf("CNI args cannot be loaded with error: %v", err)
   }
   log.Println("CNI ADD invoked with: ns:" + cniArgs.nameSpace + " PID:" + cniArgs.podId + " CID: " + cniArgs.containerId)
-  if err = fillAnnotationsAndLabels(cniArgs); err != nil {
-    log.Println("ERROR: ADD: Annotation could not be parsed with error:" + err.Error())
-    return fmt.Errorf("Annotation could not be parsed with error: %v", err)
+  if err = getPodAttributes(cniArgs); err != nil {
+    log.Println("ERROR: ADD: Pod manifest could not be parsed with error:" + err.Error())
+    return fmt.Errorf("Pod manifest could not be parsed with error: %v", err)
   }
   extractConnections(cniArgs)
   if len(cniArgs.interfaces) == 0 {
-    log.Println("INFO: ADD: No networks in manifest of Pod:" + cniArgs.podId + "Danm invocation is skipped")
-    return types.PrintResult(&current.Result{}, cniVersion)
+    log.Println("ERROR: ADD: DANM cannot create interfaces for Pod:" + cniArgs.podId + " , because no network connections are defined in spec.annotation")
+    return fmt.Errorf("DANM cannot create interfaces for Pod:%s, because no network connections are defined in spec.annotation", cniArgs.podId)
   }
   cniResult, err := setupNetworking(cniArgs)
   if err != nil {
@@ -136,18 +136,18 @@ func extractCniArgs(args *skel.CmdArgs) (*cniArgs,error) {
   return &cmdArgs, nil
 }
 
-func fillAnnotationsAndLabels(args *cniArgs) error {
+func getPodAttributes(args *cniArgs) error {
   confArgs, err := loadNetConf(args.stdIn)
   if err != nil {
     return errors.New("cannot load CNI NetConf due to error:" + err.Error())
   }
   k8sClient, err := createK8sClient(confArgs.Kubeconfig)
   if err != nil {
-    return errors.New("cannot create kube client due to error:" + err.Error())
+    return errors.New("cannot create K8s REST client due to error:" + err.Error())
   }
   pod, err := k8sClient.CoreV1().Pods(string(args.nameSpace)).Get(string(args.podId), meta_v1.GetOptions{})
   if err != nil {
-    return errors.New("failed to get pod info from API server due to:" + err.Error())
+    return errors.New("failed to get Pod info from K8s API server due to:" + err.Error())
   }
   args.annotation = pod.Annotations
   args.labels = pod.Labels

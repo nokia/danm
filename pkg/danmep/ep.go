@@ -26,7 +26,7 @@ func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
   if ns.IsNSorErr(ep.Spec.Netns) != nil {
     return errors.New("Cannot get container pid!")
   }
-  device := determineIfName(dnet)
+  device := DetermineHostDeviceName(dnet)
   return createContainerIface(ep, dnet, device)
 }
 

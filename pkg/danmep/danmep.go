@@ -2,6 +2,7 @@ package danmep
 
 import (
   "log"
+  "strconv"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/pkg/crd/client/clientset/versioned"
@@ -57,4 +58,19 @@ func AddIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
     return nil
   }
   return createIpvlanInterface(dnet, ep)
+}
+
+func DetermineHostDeviceName(dnet *danmtypes.DanmNet) string {
+  var device string
+  isVlanDefined := (dnet.Spec.Options.Vlan!=0)
+  isVxlanDefined := (dnet.Spec.Options.Vxlan!=0)
+  if isVxlanDefined {
+    device = "vx_" + dnet.Spec.NetworkID
+  } else if isVlanDefined {
+    vlanId := strconv.Itoa(dnet.Spec.Options.Vlan)
+    device = dnet.Spec.NetworkID + "." + vlanId
+  } else {
+    device = dnet.Spec.Options.Device
+  }
+  return device
 }

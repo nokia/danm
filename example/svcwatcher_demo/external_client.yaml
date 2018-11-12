@@ -1,0 +1,23 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: external-client
+  namespace: external-client
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: external-client
+      annotations:
+        danm.k8s.io/interfaces: |
+          [
+            {"network":"external", "ip":"dynamic"}
+          ]
+    spec:
+      containers:
+      - name: busybox
+        image: busybox:latest
+        args:
+        - sleep
+        - "1000"

@@ -1,0 +1,6 @@
+kind: Namespace
+apiVersion: v1
+metadata: 
+  name: external-client
+  labels:
+    name: external-client

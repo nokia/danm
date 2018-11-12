@@ -1,0 +1,17 @@
+apiVersion: danm.k8s.io/v1
+kind: DanmNet
+metadata:
+  name: external
+  namespace: external-client
+spec:
+  NetworkID: external
+  NetworkType: ipvlan
+  Options:
+    host_device: ens4
+    container_prefix: eth0
+    rt_tables: 300
+    vlan: 300
+    cidr: 10.100.20.0/24
+    allocation_pool:
+      start: 10.100.20.50
+      end: 10.100.20.60

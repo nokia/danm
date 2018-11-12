@@ -1,0 +1,26 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: loadbalancer
+  namespace: example-vnf
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: loadbalancer
+        vnf-type: example-vnf
+      annotations:
+        danm.k8s.io/interfaces: |
+          [
+            {"network":"management", "ip":"dynamic"},
+            {"network":"external", "ip":"dynamic"},
+            {"network":"internal", "ip":"dynamic"}
+          ]
+    spec:
+      containers:
+      - name: busybox
+        image: busybox:latest
+        args:
+        - sleep
+        - "1000"

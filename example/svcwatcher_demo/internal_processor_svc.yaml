@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vnf-internal-processor
+  namespace: example-vnf
+  annotations:
+    danm.k8s.io/selector: '{"app":"internal-processor"}'
+    danm.k8s.io/network: internal
+spec:
+  clusterIP: None
+  ports:
+  - name: zeromq
+    port: 5555
+    protocol: TCP

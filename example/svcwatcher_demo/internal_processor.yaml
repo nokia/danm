@@ -1,0 +1,24 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: internal-processor
+  namespace: example-vnf
+spec:
+  replicas: 6
+  template:
+    metadata:
+      labels:
+        app: internal-processor
+      annotations:
+        danm.k8s.io/interfaces: |
+          [
+            {"network":"management", "ip":"dynamic"},
+            {"network":"internal", "ip":"dynamic"}
+          ]
+    spec:
+      containers:
+      - name: busybox
+        image: busybox:latest
+        args:
+        - sleep
+        - "1000"

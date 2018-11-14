@@ -2,6 +2,9 @@
 [![Build Status](https://travis-ci.org/nokia/danm.svg?branch=master)](https://travis-ci.org/Nokia/danm)
 <img src="https://github.com/nokia/danm/raw/master/logo.png" width="100">
 
+## Don't like reading? Then start by watching our demo video!
+[Demo](example/danm_demo.mp4)
+
 ## Table of Contents
 * [Table of Contents](#table-of-contents)
 * [Introduction](#introduction)

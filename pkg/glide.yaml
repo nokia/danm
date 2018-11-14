@@ -13,7 +13,7 @@ ignore:
 - github.com/nokia/danm/pkg/ipam_test
 - github.com/nokia/danm/pkg/stubs
 - github.com/nokia/danm/pkg/syncher
-- github.com/nokia/danm/pkg/watcher
+- github.com/nokia/danm/pkg/netwatcher
 - github.com/nokia/danm/pkg/svcwatcher
 import:
 - package: k8s.io/client-go

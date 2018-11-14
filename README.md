@@ -359,7 +359,7 @@ Our cluster contains three physical networks: external, internal, management.
 LoadBalancer connects to all three, because it needs to be able to establish connections to entities both supplying, and serving traffic. LoadBalancer also wishes to be scaled via Prometheus, hence it connects to the cluster's management network to expose its own "packet_served_per_second" custom metric.
 
 ExternalClient only connects to the LoadBalancer Pod, because it simply wants to send traffic to the application (VNF), and deal with the result of transactions. It doesn't care, or know anything about the internal architecture of the application (VNF).
-As ExternalClient is not part of the same application (namespace) as LoadBalancer and InternalProcessor, so it can't have access to their internal network.
+Because ExternalClient is not part of the same application (namespace) as LoadBalancer and InternalProcessor, it can't have access to their internal network.
 It doesn't require scaling, being a lightweight, non-critical component, therefore it also does not connect to the cluster's management network.
 
 InternalProcessor only connects to the LoadBalancer Pod, but being a small, dynamically changing component, we don't want to expose it to external clients.
@@ -371,7 +371,7 @@ With DANM, the answer is as simple as instantiating the demonstration Kubernetes
 Namespaces -> DanmNets -> Deployments -> Services
 "vnf-internal-processor" will make the InternalProcessors discoverable through their application-internal network interface. LoadBalancers can use this Service to discover working backends serving transactions.
 "vnf-internal-lb" will make the LoadBalancers discoverable through their application-internal  network interface. InternalProcessors can use this Service to discover application egress points/gateway components.
-Lastly, "vnf-external-svc" makes the same LoadBalancer components discoverable but this time through its external network interface. External clients connecting to the same network can use this Service to connect to the entrypoint of the application (VNF)!
+Lastly, "vnf-external-svc" makes the same LoadBalancer instances discoverable but this time through their external network interfaces. External clients connecting to the same network can use this Service to find the ingress/gateway interfaces of the whole application (VNF)!
 
 As a closing note: remember to delete the now unnecessary Service Discovery tool's Deployment manifest from your Helm chart :)
 

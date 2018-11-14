@@ -349,28 +349,31 @@ However, if you believe in physically separated interfaces (or certain governmen
 
 This duplication of platform responsibility ends today! :)
 
-Allow us to demonstrate the usage of this feature via a simple example located in the project's example/svcwatcher_demo directory.
+Allow us to demonstrate the usage of this feature via an every-day common TelCo inspired example located in the project's example/svcwatcher_demo directory.
 The example contains three Pods running in the same cluster:
-
  - A LoadBalancer Pod, whose job is to accept connections over any exotic but widely used non-L7 protocols (e.g. DIAMETER, LDAP, SIP, SIGTRAN etc.), and distribute the workload to backend services
  - An ExternalClient Pod, supplying the LoadBalancer with traffic through an external network 
  - An InternalProcessor Pod, receiving requests to be served from the LoadBalancer Pod
  
-Our cluster contains three networks: external, internal, management.
+Our cluster contains three physical networks: external, internal, management.
 LoadBalancer connects to all three, because it needs to be able to establish connections to entities both supplying, and serving traffic. LoadBalancer also wishes to be scaled via Prometheus, hence it connects to the cluster's management network to expose its own "packet_served_per_second" custom metric.
 
-ExternalClient only connects to the LoadBalancer Pod, because it only wants to push requests to LoadBalancer, and deal with the result of transactions.
-ExternalClient is not part of the same application as LoadBalancer and InternalProcessor, so it can't have access to their internal network.
-It doesn't require scaling, being a lightweight, non-critical component, therefore it also does not connect to management network.
+ExternalClient only connects to the LoadBalancer Pod, because it simply wants to send traffic to the application (VNF), and deal with the result of transactions. It doesn't care, or know anything about the internal architecture of the application (VNF).
+As ExternalClient is not part of the same application (namespace) as LoadBalancer and InternalProcessor, so it can't have access to their internal network.
+It doesn't require scaling, being a lightweight, non-critical component, therefore it also does not connect to the cluster's management network.
 
-InternalProcessor only connects to the LoadBalancer Pod, but being a small, dynamically changing component, we don't want to expose it to the cluster's external network.
+InternalProcessor only connects to the LoadBalancer Pod, but being a small, dynamically changing component, we don't want to expose it to external clients.
 InternalProcessor wants to have access to the many network-based features of Kubernetes, so it also connects to the management network, similarly to LoadBalancer.
 
 **So, how can ExternalClient(S) discover LoadBalancer(S), how can LoadBalancer(S) discover InternalProcessor(S), and how can we avoid making LoadBalancer(S) and InternalProcessor(S) discoverable through their management interface?**
 
-With DANM, the answer is as simple as instantiating "lb_service.yaml" and "ip_service.yaml" files in your cluster.
+With DANM, the answer is as simple as instantiating the demonstration Kubernetes manifest files in the following order:
+Namespaces -> DanmNets -> Deployments -> Services
+"vnf-internal-processor" will make the InternalProcessors discoverable through their application-internal network interface. LoadBalancers can use this Service to discover working backends serving transactions.
+"vnf-internal-lb" will make the LoadBalancers discoverable through their application-internal  network interface. InternalProcessors can use this Service to discover application egress points/gateway components.
+Lastly, "vnf-external-svc" makes the same LoadBalancer components discoverable but this time through its external network interface. External clients connecting to the same network can use this Service to connect to the entrypoint of the application (VNF)!
 
-As a closing note: remember to delete the now unnecessary Etcd Deployment manifest and Docker image from your Helm chart :)
+As a closing note: remember to delete the now unnecessary Service Discovery tool's Deployment manifest from your Helm chart :)
 
 ## Contributing
 

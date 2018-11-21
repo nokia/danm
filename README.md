@@ -128,11 +128,11 @@ Netwatcher and svcwatcher binaries are built into their own containers.
 The project contains example Dockerfiles for both components under the integration/docker directory.
 Copying the respective binary into the right folder (netwatcher into integration/docker/netwatcher, svcwatcher into integration/docker/svcwatcher), then executing:
 ```
-docker build integration/docker/netwatcher
+docker build -t netwatcher:latest integration/docker/netwatcher
 ```
 or
 ```
-docker build integration/docker/svcwatcher
+docker build -t svcwatcher:latest integration/docker/svcwatcher
 ```
 builds the respective containers which can be directly integrated into a running Kubernetes cluster!
 ## Deployment

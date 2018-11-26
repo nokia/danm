@@ -50,6 +50,7 @@ type K8sArgs struct {
 
 type cniArgs struct {
   nameSpace string
+  netns string
   podId string
   containerId string
   annotation map[string]string
@@ -126,6 +127,7 @@ func extractCniArgs(args *skel.CmdArgs) (*cniArgs,error) {
     return nil,err
   }
   cmdArgs := cniArgs{string(kubeArgs.K8S_POD_NAMESPACE),
+                     args.Netns,
                      string(kubeArgs.K8S_POD_NAME),
                      string(kubeArgs.K8S_POD_INFRA_CONTAINER_ID),
                      nil,
@@ -305,6 +307,7 @@ func createDanmEp(epInput danmtypes.DanmEpIface, netId string, neType string, ar
     Host: host,
     Pod: args.podId,
     CID: args.containerId,
+    Netns: args.netns,
     Creator: "danm",
   }
   meta := meta_v1.ObjectMeta {

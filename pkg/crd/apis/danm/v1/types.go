@@ -85,6 +85,7 @@ type DanmEpSpec struct {
   Host        string      `json:"Host,omitempty"`
   Pod         string      `json:"Pod"`
   CID         string      `json:"CID,omitempty"`
+  Netns       string      `json:"netns,omitempty"`
   Creator     string      `json:"Creator,omitempty"`
   Expires     string      `json:"Expires,omitempty"`
 }

@@ -9,13 +9,14 @@ import (
   "strconv"
   "strings"
   "os/exec"
-  dclient "github.com/fsouza/go-dockerclient"
-  "github.com/vishvananda/netns"
+  //dclient "github.com/fsouza/go-dockerclient"
+  //"github.com/vishvananda/netns"
   "github.com/vishvananda/netlink"
+  "github.com/containernetworking/plugins/pkg/ns"
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
 )
 
-var containerPid int
+//var containerPid int
 
 func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
   host, err := os.Hostname()
@@ -26,7 +27,7 @@ func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
     //It should never happen that an interface is created from an Ep belonging to another host
     return nil
   }
-  if !doesTargetContainerExist(ep) {
+  if ns.IsNSorErr(ep.Spec.Netns) != nil {
     return errors.New("Cannot get container pid!")
   }
   device := determineIfName(dnet)
@@ -37,17 +38,17 @@ func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
 func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device string) error {
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
-  origns, err := netns.Get()
+  origns, err := ns.GetCurrentNS()
   if err != nil {
     return errors.New("getting current namespace failed")
   }
-  hns, err := netns.GetFromPid(containerPid)
+  hns, err := ns.GetNS(ep.Spec.Netns)
   if err != nil {
-    return errors.New("cannot open network namespace:" + strconv.Itoa(containerPid))
+    return errors.New("cannot open network namespace:" + ep.Spec.Netns)
   }
   defer func() {
     hns.Close()
-    err = netns.Set(origns)
+    err = origns.Set()
     if err != nil {
       log.Println("Could not switch back to default ns during IPVLAN interface creation:" + err.Error())
     }
@@ -73,15 +74,15 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
   if err != nil {
     return errors.New("cannot find created IPVLAN interface because:" + err.Error())
   }
-  err = netlink.LinkSetNsPid(peer, containerPid)
+  err = netlink.LinkSetNsFd(peer, int(hns.Fd()))
   if err != nil {
     netlink.LinkDel(peer)
     return errors.New("cannot move IPVLAN interface to netns because:" + err.Error())
   }
   // now change to network namespace
-  err = netns.Set(hns)
+  err = hns.Set()
   if err != nil {
-    return errors.New("failed to enter network namespace of CID:"+strconv.Itoa(containerPid)+" with error:"+err.Error())
+    return errors.New("failed to enter network namespace of CID:"+ep.Spec.Netns+" with error:"+err.Error())
   }
   iface, err = netlink.LinkByName(outer[0:15])
   if err != nil {
@@ -237,7 +238,7 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
     }
   }
   // set back to default ns
-  err = netns.Set(origns)
+  err = origns.Set()
   if err != nil {
     return errors.New("cannot set back default ns because:" + err.Error())
   }
@@ -276,21 +277,21 @@ func executeArping(srcAddr, ifaceName string) error {
 func deleteDockerIface(ep danmtypes.DanmEp) error {
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
-  origns, err := netns.Get()
+  origns, err := ns.GetCurrentNS()
   if err != nil {
     return errors.New("getting the current netNS failed")  
   }
-  hns, err := netns.GetFromPid(containerPid)
+  hns, err := ns.GetNS(ep.Spec.Netns)
   if err != nil {
-    return errors.New("cannot open network namespace:" + strconv.Itoa(containerPid))
+    return errors.New("cannot open network namespace:" + ep.Spec.Netns)
   }
   defer func() {
     hns.Close()
-    netns.Set(origns)
+    origns.Set()
   }()
-  err = netns.Set(hns)
+  err = hns.Set()
   if err != nil {
-    return errors.New("failed to enter network namespace" + strconv.Itoa(containerPid))
+    return errors.New("failed to enter network namespace" + ep.Spec.Netns)
   }
   device := ep.Spec.Iface.Name
   iface, err := netlink.LinkByName(device)
@@ -304,29 +305,29 @@ func deleteDockerIface(ep danmtypes.DanmEp) error {
   return nil
 }
 
-func doesTargetContainerExist(ep danmtypes.DanmEp) bool{
-  getDockerPid(ep)
-  if containerPid == 0 {
-    return false
-  }
-  return true
-}
+//func doesTargetContainerExist(ep danmtypes.DanmEp) bool{
+//  getDockerPid(ep)
+//  if containerPid == 0 {
+//    return false
+//  }
+//  return true
+//}
 
-func getDockerPid(ep danmtypes.DanmEp) {
-  client, err := dclient.NewVersionedClientFromEnv(dockerApiVersion)
-  if err != nil {
-    log.Println("error with docker client:", err)
-    containerPid = 0
-    return
-  }
-  c, err := client.InspectContainer(ep.Spec.CID)
-  if err != nil {
-    log.Println("error inspecting:", err)
-    containerPid = 0
-    return
-  }
-  containerPid = c.State.Pid
-}
+//func getDockerPid(ep danmtypes.DanmEp) {
+//  client, err := dclient.NewVersionedClientFromEnv(dockerApiVersion)
+//  if err != nil {
+//    log.Println("error with docker client:", err)
+//    containerPid = 0
+//    return
+//  }
+//  c, err := client.InspectContainer(ep.Spec.CID)
+//  if err != nil {
+//    log.Println("error inspecting:", err)
+//    containerPid = 0
+//    return
+//  }
+//  containerPid = c.State.Pid
+//}
 
 func determineIfName(dnet *danmtypes.DanmNet) string {
   var device string
@@ -344,8 +345,8 @@ func determineIfName(dnet *danmtypes.DanmNet) string {
 }
 
 func deleteEp(ep danmtypes.DanmEp) error {
-  if !doesTargetContainerExist(ep) {
-    return errors.New("Cannot get container pid")
+  if ns.IsNSorErr(ep.Spec.Netns) != nil {
+    return errors.New("Cannot find netns")
   }
   return deleteDockerIface(ep)
 }

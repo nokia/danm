@@ -4,6 +4,7 @@ export GOOS=linux
 cd $GOPATH/src/github.com/nokia/danm/pkg
 glide install
 go get -d github.com/vishvananda/netlink
+go get github.com/containernetworking/plugins/pkg/ns
 go get github.com/golang/groupcache/lru
 go get k8s.io/code-generator/cmd/deepcopy-gen
 go get k8s.io/code-generator/cmd/client-gen

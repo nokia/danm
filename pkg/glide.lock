@@ -1,18 +1,10 @@
-hash: 6bf4083f88d2dbdc5d3eeb4f801ef1cb30c2ffc499aaa6744a9ca325f2f7ba18
-updated: 2018-09-19T16:29:53.962479025+02:00
+hash: c733add746209fb2636606d30af3b2279aa2e51c786422ad39052596bdfc25a1
+updated: 2018-11-30T11:42:22.388805671+01:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
   subpackages:
   - cidr
-- name: github.com/Azure/go-ansiterm
-  version: d6e3b3328b783f23731bc4d058875b0371ff8109
-  subpackages:
-  - winterm
-- name: github.com/containerd/continuity
-  version: c6cef34830231743494fe2969284df7b82cc0ad0
-  subpackages:
-  - pathdriver
 - name: github.com/containernetworking/cni
   version: a7885cb6f8ab03fba07852ded351e4f5e7a112bf
   subpackages:
@@ -22,50 +14,14 @@ imports:
   - pkg/types/020
   - pkg/types/current
   - pkg/version
+- name: github.com/containernetworking/plugins
+  version: 3fb464786f10fc38da40a65575dbb8ea4b3a43c3
+  subpackages:
+  - pkg/ns
 - name: github.com/davecgh/go-spew
   version: 782f4967f2dc4564575ca782fe2d04090b5faca8
   subpackages:
   - spew
-- name: github.com/docker/docker
-  version: b7b6b6929c6436145bd12e6fef7efb7d01fa170b
-  subpackages:
-  - api/types
-  - api/types/blkiodev
-  - api/types/container
-  - api/types/filters
-  - api/types/mount
-  - api/types/network
-  - api/types/registry
-  - api/types/strslice
-  - api/types/swarm
-  - api/types/swarm/runtime
-  - api/types/versions
-  - opts
-  - pkg/archive
-  - pkg/fileutils
-  - pkg/homedir
-  - pkg/idtools
-  - pkg/ioutils
-  - pkg/jsonmessage
-  - pkg/longpath
-  - pkg/mount
-  - pkg/pools
-  - pkg/stdcopy
-  - pkg/system
-  - pkg/term
-  - pkg/term/windows
-- name: github.com/docker/go-connections
-  version: 7395e3f8aa162843a74ed6d48e79627d9792ac55
-  subpackages:
-  - nat
-- name: github.com/docker/go-units
-  version: 47565b4f722fb6ceae66b95f853feed578a4a51c
-- name: github.com/docker/libnetwork
-  version: eb6b2a57955e5c149d47c3973573216e8f8baa09
-  subpackages:
-  - ipamutils
-- name: github.com/fsouza/go-dockerclient
-  version: 51bd33c0c7792b2566054672a4915b406d988cc6
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
 - name: github.com/gogo/protobuf
@@ -109,38 +65,16 @@ imports:
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
-- name: github.com/Microsoft/go-winio
-  version: ab35fc04b6365e8fcb18e6e9e41ea4a02b10b175
 - name: github.com/modern-go/concurrent
   version: bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94
 - name: github.com/modern-go/reflect2
   version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
-- name: github.com/Nvveen/Gotty
-  version: cd527374f1e5bff4938207604a14f2e38a9cf512
-- name: github.com/opencontainers/go-digest
-  version: c9281466c8b2f606084ac71339773efd177436e7
-- name: github.com/opencontainers/image-spec
-  version: e562b04403929d582d449ae5386ff79dd7961a11
-  subpackages:
-  - specs-go
-  - specs-go/v1
-- name: github.com/opencontainers/runc
-  version: 0cbfd8392fff2462701507296081e835b3b0b99a
-  subpackages:
-  - libcontainer/system
-  - libcontainer/user
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
-- name: github.com/pkg/errors
-  version: 816c9085562cd7ee03e7f8188a1cfd942858cded
 - name: github.com/satori/go.uuid
   version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
-- name: github.com/sirupsen/logrus
-  version: 0dad3b6953e73d351ec8ebfd8a8c6b088d320381
 - name: github.com/spf13/pflag
   version: 583c0c0531f06d5278b7d917446061adc344b5cd
-- name: github.com/vishvananda/netns
-  version: be1fbeda19366dea804f00efff2dd73a1642fdcc
 - name: golang.org/x/crypto
   version: 49796115aa4b964c318aad4f3084fdb41e9aa067
   subpackages:
@@ -257,7 +191,6 @@ imports:
   version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
   - discovery
-  - discovery/fake
   - informers
   - informers/admissionregistration
   - informers/admissionregistration/v1alpha1
@@ -362,7 +295,6 @@ imports:
   - plugin/pkg/client/auth/exec
   - rest
   - rest/watch
-  - testing
   - tools/auth
   - tools/cache
   - tools/clientcmd

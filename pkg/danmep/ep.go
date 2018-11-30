@@ -9,14 +9,10 @@ import (
   "strconv"
   "strings"
   "os/exec"
-  //dclient "github.com/fsouza/go-dockerclient"
-  //"github.com/vishvananda/netns"
   "github.com/vishvananda/netlink"
   "github.com/containernetworking/plugins/pkg/ns"
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
 )
-
-//var containerPid int
 
 func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
   host, err := os.Hostname()
@@ -304,30 +300,6 @@ func deleteDockerIface(ep danmtypes.DanmEp) error {
   }
   return nil
 }
-
-//func doesTargetContainerExist(ep danmtypes.DanmEp) bool{
-//  getDockerPid(ep)
-//  if containerPid == 0 {
-//    return false
-//  }
-//  return true
-//}
-
-//func getDockerPid(ep danmtypes.DanmEp) {
-//  client, err := dclient.NewVersionedClientFromEnv(dockerApiVersion)
-//  if err != nil {
-//    log.Println("error with docker client:", err)
-//    containerPid = 0
-//    return
-//  }
-//  c, err := client.InspectContainer(ep.Spec.CID)
-//  if err != nil {
-//    log.Println("error inspecting:", err)
-//    containerPid = 0
-//    return
-//  }
-//  containerPid = c.State.Pid
-//}
 
 func determineIfName(dnet *danmtypes.DanmNet) string {
   var device string

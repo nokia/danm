@@ -17,11 +17,6 @@ func DeleteIpvlanInterface(ep danmtypes.DanmEp) (error) {
   return deleteEp(ep)
 }
 
-// DoesTargetContainerExist interrogates Docker whether the received CID belongs to an alive container, or it is outdated
-//func DoesTargetContainerExist(ep danmtypes.DanmEp) bool { 
-//  return doesTargetContainerExist(ep)
-//}
-
 // FindByCid returns a map of Eps which belong to the same Pod
 func FindByCid(client danmclientset.Interface, cid string)([]danmtypes.DanmEp, error) {
   result, err := client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})

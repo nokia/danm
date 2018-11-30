@@ -45,7 +45,8 @@ spec:
     allocation_pool:
       start: ## FIRST_ASSIGNABLE_IP ##
       end: ## LAST_ASSIGNABLE_IP ##
-    # Interfaces connected to this network will be renamed to "container_prefix" inside the container
+    # Interfaces connected to this network will be renamed to "container_prefix" inside the container.
+    # If not provided, DANM will dynamically allocate a name for each container interface belonging to this network in Pod instantiation time.
     # OPTIONAL - STRING
     container_prefix: ## INTERNAL_IF_NAME ##
     # IP routes belonging to this network will be installed in this routing table

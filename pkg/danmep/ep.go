@@ -109,7 +109,7 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
       return errors.New("Cannot add ip6 address to IPVLAN interface because:" + err.Error())
     }
   }
-  dstPrefix := dnet.Spec.Options.Prefix
+  dstPrefix := ep.Spec.Iface.Name
   err = netlink.LinkSetName(iface, dstPrefix)
   if err != nil {
     return errors.New("cannot rename IPVLAN interface because:" + err.Error())
@@ -270,7 +270,7 @@ func executeArping(srcAddr, ifaceName string) error {
 }
 
 // TODO: Refactor this, as cyclomatic complexity is 15
-func deleteDockerIface(ep danmtypes.DanmEp) error {
+func deleteContainerIface(ep danmtypes.DanmEp) error {
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   origns, err := ns.GetCurrentNS()
@@ -320,5 +320,5 @@ func deleteEp(ep danmtypes.DanmEp) error {
   if ns.IsNSorErr(ep.Spec.Netns) != nil {
     return errors.New("Cannot find netns")
   }
-  return deleteDockerIface(ep)
+  return deleteContainerIface(ep)
 }

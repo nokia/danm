@@ -6,6 +6,7 @@ import (
   "log"
   "net"
   "os"
+  "strconv"
   "strings"
   "encoding/json"
   "github.com/satori/go.uuid"
@@ -181,8 +182,9 @@ func extractConnections(args *cniArgs) error {
 
 func setupNetworking(args *cniArgs) (*current.Result, error) {
   syncher := syncher.NewSyncher(len(args.interfaces))
-  for _, val := range args.interfaces {
-    go createInterface(syncher, val, args)
+  for nicId, nicParam := range args.interfaces {
+    nicParam.DefaultIfaceName = "eth" + strconv.Itoa(nicId)
+    go createInterface(syncher, nicParam, args)
   }
   err := syncher.GetAggregatedResult()
   return syncher.MergeCniResults(), err
@@ -226,6 +228,7 @@ func createDelegatedInterface(danmClient danmclientset.Interface, iface danmtype
   if delegatedResult != nil {
     setEpIfaceAddress(delegatedResult, &epIfaceSpec)
   }
+  epIfaceSpec.Name = cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName)
   ep, err := createDanmEp(epIfaceSpec, netInfo.Spec.NetworkID, netInfo.Spec.NetworkType, args)
   if err != nil {
     return nil, errors.New("DanmEp object could not be created due to error:" + err.Error())
@@ -254,7 +257,7 @@ func createDanmInterface(danmClient danmclientset.Interface, iface danmtypes.Int
     return nil, errors.New("IP address reservation failed for network:" + netId + " with error:" + err.Error())
   }
   epSpec := danmtypes.DanmEpIface {
-    Name: netInfo.Spec.Options.Prefix,
+    Name: cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName),
     Address: ip4,
     AddressIPv6: ip6,
     MacAddress: macAddr,

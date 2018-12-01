@@ -179,7 +179,7 @@ You are now ready to use the services of DANM, and can start bringing-up Pods wi
 
  **+1. OPTIONAL: Create the servicewatcher DaemonSet by executing the following command from the project's root directory:**
  ```
-kubectl create -f integration/manifests/svcwatcher/svcwatcher_ds.yaml
+kubectl create -f integration/manifests/svcwatcher/
 ```
  This component is an optional part of the suite. You only need to install it if you would like to use Kubernetes Services for all the network interfaces of your Pod.
 Note: svcwatcher already leverages DANM CNI to create its network interface. Don't forget to change the name of the network referenced in the example manifest file to one which:

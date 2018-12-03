@@ -171,7 +171,7 @@ danm        **fakeipam**      host-device  ipvlan       macvlan      ptp        
 
  **7. Create the netwatcher DaemonSet by executing the following command from the project's root directory:**
  ```
-kubectl create -f integration/manifests/netwatcher/netwatcher_ds.yaml
+kubectl create -f integration/manifests/netwatcher/
 ```
 Note: don't forget to change the names of files and directories pointing to valid kubeconfig files, and TLS certificates used by the K8s API server in your infrastructure before instantiating the component! 
 

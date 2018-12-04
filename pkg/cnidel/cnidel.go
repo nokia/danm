@@ -116,13 +116,13 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
     freeDelegatedIps(danmClient, netInfo, ip4, ip6)
     return nil, err
   }
-  finalRawConfig, err := setIfName(rawConfig, netInfo.Spec.Options.Prefix, iface.DefaultIfaceName)
+  cniType := netInfo.Spec.NetworkType
+  cniPath, cniArgs, err := getExecCniParams(cniType, netInfo, iface)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ip4, ip6)
     return nil, err
-  } 
-  cniType := netInfo.Spec.NetworkType
-  cniResult, err := invoke.DelegateAdd(cniType, finalRawConfig)
+  }
+  cniResult, err := invoke.ExecPluginWithResult(cniPath, rawConfig, cniArgs)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ip4, ip6)
     return nil, errors.New("Error delegating ADD to CNI plugin:" + cniType + " because:" + err.Error())
@@ -174,23 +174,20 @@ func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCo
   return readCniConfigFile(netInfo)
 }
 
-func setIfName(rawConfig []byte, requiredIfName, defaultIfName string) ([]byte, error) {
-  var tmpObject map[string]json.RawMessage
-  err := json.Unmarshal(rawConfig, &tmpObject)
+func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, nicParams danmtypes.Interface) (string,*invoke.Args,error) {
+  cniPaths := os.Getenv("CNI_PATH")
+  cniPath, err := invoke.FindInPath(cniType, filepath.SplitList(cniPaths))
   if err != nil {
-    return nil, err
+    return "", nil, err
   }
-  var ifName []byte
-  if requiredIfName != "" {
-    ifName, err = json.Marshal(requiredIfName)
-  } else {
-    ifName, err = json.Marshal(defaultIfName)
+  cniArgs := invoke.Args {
+    Command:     os.Getenv("CNI_COMMAND"),
+    ContainerID: os.Getenv("CNI_CONTAINERID"),
+    NetNS:       os.Getenv("CNI_NETNS"),
+    IfName:      CalculateIfaceName(netInfo.Spec.Options.Prefix, nicParams.DefaultIfaceName),
+    Path:        cniPaths,
   }
-  if err != nil {
-    return nil, err
-  }
-  tmpObject["CNI_IFNAME"] = ifName
-  return json.Marshal(tmpObject)
+  return cniPath, &cniArgs, nil
 }
 
 func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, nicParams danmtypes.Interface) ([]byte, error) {

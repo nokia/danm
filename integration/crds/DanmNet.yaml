@@ -25,9 +25,6 @@ spec:
             NetworkType:
               type: string
             Options:
-              required:
-              - host_device
-              - rt_tables
               properties:
                 cidr:
                   type: string

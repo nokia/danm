@@ -1,5 +1,5 @@
 hash: c733add746209fb2636606d30af3b2279aa2e51c786422ad39052596bdfc25a1
-updated: 2018-11-30T11:42:22.388805671+01:00
+updated: 2018-12-04T18:31:09.317027749+01:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
@@ -191,6 +191,7 @@ imports:
   version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
   - discovery
+  - discovery/fake
   - informers
   - informers/admissionregistration
   - informers/admissionregistration/v1alpha1
@@ -295,6 +296,7 @@ imports:
   - plugin/pkg/client/auth/exec
   - rest
   - rest/watch
+  - testing
   - tools/auth
   - tools/cache
   - tools/clientcmd

@@ -173,7 +173,7 @@ danm        **fakeipam**      host-device  ipvlan       macvlan      ptp        
  ```
 kubectl create -f integration/manifests/netwatcher/
 ```
-Note: don't forget to change the names of files and directories pointing to valid kubeconfig files, and TLS certificates used by the K8s API server in your infrastructure before instantiating the component! 
+Note: we assume RBAC is configured for the Kubernetes API, so the manifests provides the required Role and ServiceAccount for this case.
 
 You are now ready to use the services of DANM, and can start bringing-up Pods within your cluster!
 
@@ -186,7 +186,7 @@ Note: svcwatcher already leverages DANM CNI to create its network interface. Don
  - exists in your cluster 
  - and through which svcwatcher can reach the Kubernetes API server
  
- We use Flannel for this purpose in our product.
+ We use Flannel for this purpose in our product. We also assume here the RBAC as the API access control method.
 ## User guide
 This section describes what features the DANM networking suite adds to a vanilla Kubernetes environment, and how can users utilize them.
 

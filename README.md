@@ -231,6 +231,7 @@ Spec:
   Validation:            True
 Events:                  <none>
 ```
+Note: you should always have a network attachment for all your pods, where the Container prefix is `eth0`. Kubelet is always searching for the existence of such Pod interface. If it does not exist after CNI is invoked, the Pod will be re-created in loop.
 ##### Delegating to other CNI plugins
 Pay special attention to the DanmNet attribute called "NetworkType". This parameter controls which CNI plugin is invoked by the DANM metaplugin during the execution of a CNI operation to setup, or delete exactly one network interface of a Pod.
 

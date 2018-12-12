@@ -275,6 +275,7 @@ When network management is delegated to CNI plugins with static integration leve
 Pods can request network connections to DanmNets by defining one or more network connections in the annotation of their (template) spec field, according to the schema described in the **schema/network_attach.yaml** file.
 
 For each connections defined in such a manner DANM will provision exactly one interface into the Pod's network namespace, according to the way described in previous chapters (configuration taken from teh referenced DanmNet API object).
+Note: if the Pod annotation is empty (no danmnet connection is defined), DANM will fall back to use a default network definition, if created. The danmnet object in the target K8S namespace must use the name: "default". It can have any network type (either delegated or ipvlan). Naturally, user in this case cannot specify any further property for the Pod (i.e. static IP address). This way, the user is able to use unmodified manifest files (i.e. community maintained Helm charts or Pods created by K8S operators).
 
 In addition to simply invoking other CNI libraries to set-up network connections, Pod's can even influence the way their interfaces are created to a certain extent.
 For example Pods can ask DANM to provision L3 IP addresses to their IPVLAN or SRI-OV interfaces dnyamically, statically, or not at all!

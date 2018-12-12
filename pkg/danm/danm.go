@@ -72,9 +72,8 @@ func createInterfaces(args *skel.CmdArgs) error {
     return fmt.Errorf("Pod manifest could not be parsed with error: %v", err)
   }
   extractConnections(cniArgs)
-  if len(cniArgs.interfaces) == 0 {
-    log.Println("ERROR: ADD: DANM cannot create interfaces for Pod:" + cniArgs.podId + " , because no network connections are defined in spec.metadata.annotation")
-    return fmt.Errorf("DANM cannot create interfaces for Pod:%s, because no network connections are defined in spec.metadata.annotation", cniArgs.podId)
+  if len(cniArgs.interfaces) == 1 && cniArgs.interfaces[0].Network == defaultNetworkName {
+    log.Println("WARN: ADD: no network connections for Pod: " + cniArgs.podId + " are defined in spec.metadata.annotation. Falling back to use: " + defaultNetworkName)
   }
   cniResult, err := setupNetworking(cniArgs)
   if err != nil {

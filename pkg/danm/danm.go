@@ -32,6 +32,7 @@ var (
   v1Endpoint = "/api/v1/"
   cniVersion = "0.3.1"
   kubeConf string
+  defaultNetworkName = "default"
 )
 
 type NetConf struct {
@@ -174,6 +175,9 @@ func extractConnections(args *cniArgs) error {
       }
       break
     }
+  }
+  if len(ifaces) == 0 {
+    ifaces = []danmtypes.Interface{{Network: defaultNetworkName}}
   }
   args.interfaces = ifaces
   return nil

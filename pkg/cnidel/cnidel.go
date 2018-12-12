@@ -12,6 +12,7 @@ import (
   "github.com/containernetworking/cni/pkg/invoke"
   "github.com/containernetworking/cni/pkg/types"
   "github.com/containernetworking/cni/pkg/types/current"
+  "github.com/containernetworking/cni/pkg/version"
   "github.com/nokia/danm/pkg/ipam"
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/pkg/crd/client/clientset/versioned"
@@ -117,12 +118,7 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
     return nil, err
   }
   cniType := netInfo.Spec.NetworkType
-  cniPath, cniArgs, err := getExecCniParams(cniType, netInfo, iface)
-  if err != nil {
-    freeDelegatedIps(danmClient, netInfo, ip4, ip6)
-    return nil, err
-  }
-  cniResult, err := invoke.ExecPluginWithResult(cniPath, rawConfig, cniArgs)
+  cniResult,err := execCniPlugin(cniType, netInfo, iface, rawConfig)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ip4, ip6)
     return nil, errors.New("Error delegating ADD to CNI plugin:" + cniType + " because:" + err.Error())
@@ -174,20 +170,38 @@ func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCo
   return readCniConfigFile(netInfo)
 }
 
-func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, nicParams danmtypes.Interface) (string,*invoke.Args,error) {
-  cniPaths := os.Getenv("CNI_PATH")
-  cniPath, err := invoke.FindInPath(cniType, filepath.SplitList(cniPaths))
+func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, nicParams danmtypes.Interface, rawConfig []byte) (types.Result,error) {
+  cniPath, cniArgs, err := getExecCniParams(cniType, netInfo, nicParams)
+  if err != nil {
+    return nil, err
+  }
+  exec := invoke.RawExec{Stderr: os.Stderr}
+  rawResult, err := exec.ExecPlugin(cniPath, rawConfig, cniArgs)
+  if err != nil {
+    return nil, err
+  }
+  versionDecoder := &version.ConfigDecoder{}
+  confVersion, err := versionDecoder.Decode(rawConfig)
+  if err != nil {
+    return nil, err
+  }
+  return version.NewResult(confVersion, rawResult)
+}
+
+func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, nicParams danmtypes.Interface) (string,[]string,error) {
+  cniPaths := filepath.SplitList(os.Getenv("CNI_PATH"))
+  cniPath, err := invoke.FindInPath(cniType, cniPaths)
   if err != nil {
     return "", nil, err
   }
-  cniArgs := invoke.Args {
-    Command:     os.Getenv("CNI_COMMAND"),
-    ContainerID: os.Getenv("CNI_CONTAINERID"),
-    NetNS:       os.Getenv("CNI_NETNS"),
-    IfName:      CalculateIfaceName(netInfo.Spec.Options.Prefix, nicParams.DefaultIfaceName),
-    Path:        cniPaths,
+  cniArgs := []string{
+    "CNI_COMMAND="     + os.Getenv("CNI_COMMAND"),
+    "CNI_CONTAINERID=" + os.Getenv("CNI_CONTAINERID"),
+    "CNI_NETNS="       + os.Getenv("CNI_NETNS"),
+    "CNI_IFNAME="      + CalculateIfaceName(netInfo.Spec.Options.Prefix, nicParams.DefaultIfaceName),
+    "CNI_PATH="        + os.Getenv("CNI_PATH"),
   }
-  return cniPath, &cniArgs, nil
+  return cniPath, cniArgs, nil
 }
 
 func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, nicParams danmtypes.Interface) ([]byte, error) {

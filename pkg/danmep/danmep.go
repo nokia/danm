@@ -1,8 +1,11 @@
 package danmep
 
 import (
+  "errors"
   "log"
+  "runtime"
   "strconv"
+  "github.com/containernetworking/plugins/pkg/ns"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/pkg/crd/client/clientset/versioned"
@@ -73,4 +76,29 @@ func DetermineHostDeviceName(dnet *danmtypes.DanmNet) string {
     device = dnet.Spec.Options.Device
   }
   return device
+}
+
+func CreateRoutesInNetNs(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, ) error {
+  runtime.LockOSThread()
+  defer runtime.UnlockOSThread()
+  origNs, err := ns.GetCurrentNS()
+  if err != nil {
+    return errors.New("getting current namespace failed")
+  }
+  hns, err := ns.GetNS(ep.Spec.Netns)
+  if err != nil {
+    return errors.New("cannot open network namespace:" + ep.Spec.Netns)
+  }
+  defer func() {
+    hns.Close()
+    err = origNs.Set()
+    if err != nil {
+      log.Println("Could not switch back to default ns during IPVLAN interface creation:" + err.Error())
+    }
+  }()
+  err = hns.Set()
+  if err != nil {
+    return errors.New("failed to enter network namespace of CID:"+ep.Spec.Netns+" with error:"+err.Error())
+  }
+  return addIpRoutes(ep,dnet)
 }

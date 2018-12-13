@@ -4,7 +4,7 @@ import (
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
 )
 
-type cniConfigReader func(netInfo *danmtypes.DanmNet, ipam danmtypes.IpamConfig) ([]byte, error)
+type cniConfigReader func(netInfo *danmtypes.DanmNet, ipam danmtypes.IpamConfig, nicParams danmtypes.Interface) ([]byte, error)
 
 type cniBackendConfig struct {
   danmtypes.CniBackend

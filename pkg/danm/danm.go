@@ -185,9 +185,9 @@ func extractConnections(args *cniArgs) error {
 
 func setupNetworking(args *cniArgs) (*current.Result, error) {
   syncher := syncher.NewSyncher(len(args.interfaces))
-  for nicId, nicParam := range args.interfaces {
-    nicParam.DefaultIfaceName = "eth" + strconv.Itoa(nicId)
-    go createInterface(syncher, nicParam, args)
+  for nicId, nicParams := range args.interfaces {
+    nicParams.DefaultIfaceName = "eth" + strconv.Itoa(nicId)
+    go createInterface(syncher, nicParams, args)
   }
   err := syncher.GetAggregatedResult()
   return syncher.MergeCniResults(), err
@@ -222,19 +222,22 @@ func createInterface(syncher *syncher.Syncher, iface danmtypes.Interface, args *
 }
 
 func createDelegatedInterface(danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) (*current.Result,error) {
-  delegateResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, iface)
+  epIfaceSpec := danmtypes.DanmEpIface {
+    Name: cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName),
+    Proutes: iface.Proutes,
+    Proutes6: iface.Proutes6,
+  }
+  ep, err := createDanmEp(epIfaceSpec, netInfo.Spec.NetworkID, netInfo.Spec.NetworkType, args)
+  if err != nil {
+    return nil, errors.New("DanmEp object could not be created due to error:" + err.Error())
+  }
+  delegateResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, iface, ep)
   if err != nil {
     return nil, err
   }
   delegatedResult := cnidel.ConvertCniResult(delegateResult)
-  epIfaceSpec := danmtypes.DanmEpIface{}
   if delegatedResult != nil {
-    setEpIfaceAddress(delegatedResult, &epIfaceSpec)
-  }
-  epIfaceSpec.Name = cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName)
-  ep, err := createDanmEp(epIfaceSpec, netInfo.Spec.NetworkID, netInfo.Spec.NetworkType, args)
-  if err != nil {
-    return nil, errors.New("DanmEp object could not be created due to error:" + err.Error())
+    setEpIfaceAddress(delegatedResult, &ep.Spec.Iface)
   }
   err = putDanmEp(args, ep)
   if err != nil {

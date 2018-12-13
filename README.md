@@ -173,7 +173,7 @@ danm        **fakeipam**      host-device  ipvlan       macvlan      ptp        
  ```
 kubectl create -f integration/manifests/netwatcher/
 ```
-Note: we assume RBAC is configured for the Kubernetes API, so the manifests provides the required Role and ServiceAccount for this case.
+Note: we assume RBAC is configured for the Kubernetes API, so the manifests include the required Role and ServiceAccount for this case.
 
 You are now ready to use the services of DANM, and can start bringing-up Pods within your cluster!
 
@@ -231,7 +231,18 @@ Spec:
   Validation:            True
 Events:                  <none>
 ```
-Note: you should always have a network attachment for all your pods, where the Container prefix is `eth0`. Kubelet is always searching for the existence of such Pod interface. If it does not exist after CNI is invoked, the Pod will be re-created in loop.
+##### Naming container interfaces
+Generally speaking, you need to care about how the network interfaces of your Pods are named inside their respective network namespaces.
+The hard reality to keep in mind is that you shall always have an interface literally called "eth0" created within all your Kubernetes Pods, because Kubelet will always search for the existence of such an interface at the end of Pod instantiation.
+If such an interface does not exist after CNI is invoked, the state of the Pod will be considered "faulty", and it will be re-created in a loop.
+To be able to comply with this Kubernetes limitation, DANM supports both explicit, and implicit interface naming schemes!
+
+An interface connected to a DanmNet containing the container_prefix attribute will be always named accordingly. You can use this API to explicitly set descriptive, unique names to NICs connecting to this network.
+In case container_prefix is not set in an interface's network descriptor, DANM will automatically name the interface "ethX", where X is a unique integer number corresponding to the sequence number of the network connection (e.g. the first interface defined in the annotation is called "eth0", second interface "eth1" etc.)
+DANM even supports the mixing of the networking schemes within the same Pod, and it supports the whole naming scheme for all network backends.
+While the feature provides complete control over the name of interfaces, ultimately it is the network administrators' responsibility to:
+ - make sure exactly one interface is named eth0 in every Pod
+ - don't configure multiple NICs into the same Pod with clashing names (e.g. provisioning two implicitly named interfaces, and then a third one explicitly named "eth0", or "eth1" etc.) 
 ##### Delegating to other CNI plugins
 Pay special attention to the DanmNet attribute called "NetworkType". This parameter controls which CNI plugin is invoked by the DANM metaplugin during the execution of a CNI operation to setup, or delete exactly one network interface of a Pod.
 

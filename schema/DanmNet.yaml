@@ -33,7 +33,7 @@ spec:
     # Name of the master host device (i.e. physical host NIC).
     # Slave interfaces are connected to this NIC in case NetworkType is set to IPVLAN.
     # A Virtual Function belonging to this Physical Function is taken-up in case NetworkType is set to SRIOV.
-    # MANDATORY - STRING
+    # OPTIONAL - STRING
     host_device: ## MASTER_DEVICE_NAME ##
     # The IPv4 CIDR notation of the subnet associated with the network. 
     # Pods connecting to this network will get their IPs from this subnet, if defined.
@@ -50,7 +50,7 @@ spec:
     # OPTIONAL - STRING
     container_prefix: ## INTERNAL_IF_NAME ##
     # IP routes belonging to this network will be installed in this routing table
-    # MANDATORY - INTEGER (e.g. 201)
+    # OPTIONAL - INTEGER (e.g. 201)
     rt_tables: ## HOST_UNIQUE_ROUTING_TABLE_NUMBER ##
     # IPv4 routes to be installed by default for all containers connected to this network
     # Provisioning L3 IP routes is not supported for SRIOV networks.

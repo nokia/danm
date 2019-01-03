@@ -393,11 +393,11 @@ As a closing note: remember to delete the now unnecessary Service Discovery tool
 
 ## Contributing
 
-Please read [CONTRIBUTING.md]() TODO: PROPER LINK for details on our code of conduct, and the process for submitting pull requests to us.
+Please read [CONTRIBUTING.md](https://github.com/nokia/danm/blob/master/CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
 
 ## Authors
 
-* **Robert Springer** (@rospring) - Initial work (V1 Ptyhon), IPAM, Netwatcher, Servicewatcher [Nokia](https://github.com/nokia)
+* **Robert Springer** (@rospring) - Initial work (V1 Python), IPAM, Netwatcher, Servicewatcher [Nokia](https://github.com/nokia)
 * **Levente Kale** (@Levovar) - Initial work (V2 Golang), Documentation, Integration, SCM, Metaplugin [Nokia](https://github.com/nokia)
 
 Special thanks to the original author who started the whole project in 2015 by putting a proprietary network management plugin between Kubelet and Docker; and also for coining the DANM acronym:

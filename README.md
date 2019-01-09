@@ -105,6 +105,11 @@ Note, that the project itself depends on Golang 1.10+ and glide being available,
 ### Building the binaries
 
 It is actually as easy as go get-ting the repository from GitHub, and executing the build_danm.sh script from the root of the project!
+```
+go get https://github.com/nokia/danm
+cd $GOPATH/src/github.com/nokia/danm
+./build_danm.sh
+```
 This will first build the Alpine 3.7 based builder container, mount the $GOPATH/src and the $GOPATH/bin directory into it, and invoke the necessary script to build all binaries inside the container.
 The builder container destroys itself once its purpose has been fulfilled.
 
@@ -129,10 +134,12 @@ The project contains example Dockerfiles for both components under the integrati
 Copying the respective binary into the right folder (netwatcher into integration/docker/netwatcher, svcwatcher into integration/docker/svcwatcher), then executing:
 ```
 docker build -t netwatcher:latest integration/docker/netwatcher
+docker build -t svcwatcher:latest integration/docker/svcwatcher
 ```
 or
 ```
-docker build -t svcwatcher:latest integration/docker/svcwatcher
+buildah bud -t netwatcher:latest integration/docker/netwatcher
+buildah bud -t svcwatcher:latest integration/docker/svcwatcher
 ```
 builds the respective containers which can be directly integrated into a running Kubernetes cluster!
 ## Deployment

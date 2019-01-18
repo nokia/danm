@@ -17,7 +17,7 @@ if [[ $WITH_BUILDAH == 'Y' ]]; then
     make runc all SECURITYTAGS="apparmor seccomp"
     sudo make install install.runc
     
-    sudo -s "cat > /etc/containers/registries.conf" <<- "EOF"
+    sudo -s 'cat > /etc/containers/registries.conf' <<- "EOF"
         [registries.search]
         registries = ['docker.io', 'registry.fedoraproject.org', 'quay.io', 'registry.access.redhat.com', 'registry.centos.org']
         

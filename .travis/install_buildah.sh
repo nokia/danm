@@ -2,7 +2,7 @@
 
 if [[ $WITH_BUILDAH == 'Y' ]]; then
     
-    sudo service docker stop
+    sudo systemctl stop docker
 
     sudo apt-get -y install software-properties-common
     sudo add-apt-repository -y ppa:alexlarsson/flatpak

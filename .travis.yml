@@ -1,12 +1,17 @@
 sudo: required
 
-language: ruby
-
-services:
-  - docker
+matrix:
+  include:
+    - env: WITH_DOCKER=Y
+      language: ruby
+      services: docker
+    - env: WITH_BUILDAH=Y
 
 env:
-  - GOPATH=/home/travis/gopath
+  - GOPATH=/home/travis/go
+
+install:
+ - ./.travis/install_buildah.sh
 
 script:
   - mkdir -p $GOPATH/{bin,pkg}
@@ -14,4 +19,3 @@ script:
   - mv * $GOPATH/src/github.com/nokia/danm/
   - cd $GOPATH/src/github.com/nokia/danm/
   - ./build_danm.sh
-

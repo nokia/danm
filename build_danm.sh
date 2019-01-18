@@ -5,9 +5,9 @@
 # error handling with trap taken from https://unix.stackexchange.com/questions/79648/how-to-trigger-error-using-trap-command/157327
 unset killer_sig 
 for sig in SIGHUP SIGINT SIGQUIT SIGTERM; do
-  trap "
+  trap '
     killer_sig="$sig"
-    exit $((128 + $(kill -l "$sig")))" "$sig"
+    exit $((128 + $(kill -l "$sig")))' "$sig"
 done
 
 trap '

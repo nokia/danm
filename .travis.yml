@@ -19,4 +19,4 @@ script:
   - mkdir -p $GOPATH/src/github.com/nokia/danm/
   - mv * $GOPATH/src/github.com/nokia/danm/
   - cd $GOPATH/src/github.com/nokia/danm/
-  - ./build_danm.sh
+  - sudo ./build_danm.sh

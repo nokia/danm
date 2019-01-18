@@ -16,8 +16,8 @@ if [[ $WITH_BUILDAH == 'Y' ]]; then
     cd "$GOPATH/src/github.com/containers/buildah" || exit
     make runc all SECURITYTAGS="apparmor seccomp"
     sudo make install install.runc
-    
-    sudo -s 'cat > /etc/containers/registries.conf' <<- "EOF"
+	
+	sudo tee -a /etc/containers/registries.conf >/dev/null <<-'EOF'
         [registries.search]
         registries = ['docker.io', 'registry.fedoraproject.org', 'quay.io', 'registry.access.redhat.com', 'registry.centos.org']
         
@@ -26,6 +26,7 @@ if [[ $WITH_BUILDAH == 'Y' ]]; then
         
         [registries.block]
         registries = []
+
 EOF
 
     sudo apt-get -y install libprotobuf-dev libprotobuf-c0-dev python3-setuptools

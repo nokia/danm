@@ -30,10 +30,10 @@ error_handler()
   exit $1
 }
 
-if [ -x "$(command -v docker)" ]; then
-  source ./build_docker.sh
-elif [ -x "$(command -v buildah)" ] && [ -x "$(command -v podman)" ]; then
+if [ -x "$(command -v buildah)" ]; then
   source ./build_buildah.sh
+elif [ -x "$(command -v docker)" ]; then
+  source ./build_docker.sh
 else
  echo 'The build process requires docker or buildah/podman installed. Please install any of these and make sure these are executable'
  exit 1

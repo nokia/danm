@@ -1,8 +1,6 @@
 #!/bin/bash
 
 if [[ $WITH_BUILDAH == 'Y' ]]; then
-    
-    sudo rm -f  "$(command -v docker)"
 	
     sudo apt-get -y install software-properties-common
     sudo add-apt-repository -y ppa:alexlarsson/flatpak
@@ -29,15 +27,4 @@ if [[ $WITH_BUILDAH == 'Y' ]]; then
 
 EOF
 
-    sudo apt-get -y install libprotobuf-dev libprotobuf-c0-dev python3-setuptools
-    git clone https://github.com/kubernetes-sigs/cri-o "$GOPATH/src/github.com/kubernetes-sigs/cri-o"
-    cd "$GOPATH/src/github.com/kubernetes-sigs/cri-o" || exit
-    mkdir bin
-    make bin/conmon
-    sudo install -D -m 755 bin/conmon /usr/libexec/podman/conmon
-
-    git clone https://github.com/containers/libpod/ "$GOPATH/src/github.com/containers/libpod"
-    cd "$GOPATH/src/github.com/containers/libpod" || exit
-    make
-    sudo make install PREFIX=/usr
 fi

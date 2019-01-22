@@ -199,6 +199,7 @@ func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, nicParams danm
     "CNI_CONTAINERID=" + os.Getenv("CNI_CONTAINERID"),
     "CNI_NETNS="       + os.Getenv("CNI_NETNS"),
     "CNI_IFNAME="      + CalculateIfaceName(netInfo.Spec.Options.Prefix, nicParams.DefaultIfaceName),
+    "CNI_ARGS="        + os.Getenv("CNI_ARGS"),
     "CNI_PATH="        + os.Getenv("CNI_PATH"),
   }
   return cniPath, cniArgs, nil

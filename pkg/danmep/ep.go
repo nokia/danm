@@ -97,7 +97,7 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
     }
   }
   ip6 := ep.Spec.Iface.AddressIPv6
-  // TODO: Refactor, duplicate of 97-108
+  // TODO: Refactor, duplicate of 87-98
   if ip6 != "" {
     addr6, pref,  err := net.ParseCIDR(ip6)
     if err != nil {
@@ -119,7 +119,10 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
     return errors.New("cannot set renamed IPVLAN interface to up because:" + err.Error())
   }
   sendGratArps(ip, ip6, dstPrefix)
-  addIpRoutes(ep, dnet)
+  err = addIpRoutes(ep, dnet)
+  if err != nil {
+    return errors.New("IP routes could not be provisioned, because:" + err.Error())
+  }
   return nil
 }
 

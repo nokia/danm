@@ -2,9 +2,9 @@ package danmnet
 
 import (
   "log"
+  "reflect"
   "strings"
   "time"
-  "reflect"
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/cache"
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"

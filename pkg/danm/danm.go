@@ -233,7 +233,7 @@ func createDelegatedInterface(danmClient danmclientset.Interface, iface danmtype
   if err != nil {
     return nil, errors.New("DanmEp object could not be created due to error:" + err.Error())
   }
-  delegateResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, ep)
+  delegateResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, &ep)
   if err != nil {
     return nil, err
   }
@@ -418,10 +418,6 @@ func deleteInterface(args *cniArgs, syncher *syncher.Syncher, ep danmtypes.DanmE
   if err != nil {
     aggregatedError += "failed to delete container NIC:" + err.Error() + "; "
   }
-  err = ipam.Free(danmClient, *netInfo, ep.Spec.Iface.Address)
-  if err != nil {
-    aggregatedError += "failed to delete container NIC:" + err.Error() + "; "
-  }
   err = deleteEp(danmClient, ep)
   if err != nil {
     aggregatedError += "failed to delete DanmEp:" + err.Error() + "; "
@@ -436,7 +432,7 @@ func deleteInterface(args *cniArgs, syncher *syncher.Syncher, ep danmtypes.DanmE
 func deleteNic(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
   var err error
   if ep.Spec.NetworkType != "ipvlan" {
-    err = cnidel.DelegateInterfaceDelete(danmClient, netInfo, ep)
+    err = cnidel.DelegateInterfaceDelete(danmClient, netInfo, &ep)
   } else {
     err = deleteDanmNet(danmClient, ep, netInfo)
   }
@@ -453,10 +449,7 @@ func deleteEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp) error {
 }
 
 func deleteDanmNet(danmClient danmclientset.Interface, ep danmtypes.DanmEp, netInfo *danmtypes.DanmNet) error {
-  err := ipam.Free(danmClient, *netInfo, ep.Spec.Iface.Address)
-  if err != nil {
-    return errors.New("cannot give back ip4 address for NID:" + ep.Spec.NetworkID + " addr:" +ep.Spec.Iface.Address)
-  }
+  ipam.GarbageCollectIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
   return danmep.DeleteIpvlanInterface(ep)
 }
 

@@ -22,10 +22,6 @@ const (
   maxVxlanId = 16777214
 )
 
-var (
-  nativelySupportedCnis = []string{"ipvlan","sriov"}
-)
-
 // LinkInfo is an absract struct to represent a host NIC of a special type: either VLAN, or VxLAN
 // The ID of the link is stored together with its Golang representation
 type LinkInfo struct {
@@ -85,7 +81,6 @@ func validateDanmNet(dnet *danmtypes.DanmNet) error {
   if err != nil {
     return err
   }
-  validate(dnet)
   return nil
 }
 
@@ -231,9 +226,6 @@ func validate(dnet *danmtypes.DanmNet) {
 func setupHost(dnet *danmtypes.DanmNet) error {
   netId := dnet.Spec.NetworkID
   hdev := dnet.Spec.Options.Device
-  if dnet.Spec.NetworkType != "ipvlan" {
-    return nil
-  }
   vxlanId := dnet.Spec.Options.Vxlan
   vlanId := dnet.Spec.Options.Vlan
   // Nothing to do here

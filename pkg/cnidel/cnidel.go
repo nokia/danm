@@ -43,7 +43,7 @@ func IsDelegationRequired(danmClient danmclientset.Interface, nid, namespace str
 
 // DelegateInterfaceSetup delegates K8s Pod network interface setup task to the input 3rd party CNI plugin
 // Returns the CNI compatible result object, or an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
-func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, iface danmtypes.Interface, ep danmtypes.DanmEp) (types.Result,error) {
+func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep danmtypes.DanmEp) (types.Result,error) {
   var (
     ip4 string
     ip6 string
@@ -51,19 +51,19 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
     ipamOptions danmtypes.IpamConfig
   )
   if isIpamNeeded(netInfo.Spec.NetworkType) {
-    ip4, ip6, _, err = ipam.Reserve(danmClient, *netInfo, iface.Ip, iface.Ip6)
+    ip4, ip6, _, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
       return nil, errors.New("IP address reservation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
     }
     ipamOptions = getCniIpamConfig(netInfo.Spec.Options, ip4, ip6)
   }
-  rawConfig, err := getCniPluginConfig(netInfo, ipamOptions, iface)
+  rawConfig, err := getCniPluginConfig(netInfo, ipamOptions, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ip4, ip6)
     return nil, err
   }
   cniType := netInfo.Spec.NetworkType
-  cniResult,err := execCniPlugin(cniType, netInfo, iface, rawConfig)
+  cniResult,err := execCniPlugin(cniType, netInfo, rawConfig, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ip4, ip6)
     return nil, errors.New("Error delegating ADD to CNI plugin:" + cniType + " because:" + err.Error())
@@ -110,11 +110,11 @@ func getCniIpamConfig(options danmtypes.DanmNetOption, ip4 string, ip6 string) d
   }
 }
 
-func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, nicParams danmtypes.Interface) ([]byte, error) {
+func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep danmtypes.DanmEp) ([]byte, error) {
   cniType := netInfo.Spec.NetworkType
   for _, cni := range supportedNativeCnis {
     if cni.BackendName == cniType {
-      return cni.readConfig(netInfo, ipamOptions, nicParams)
+      return cni.readConfig(netInfo, ipamOptions, ep)
     }
   }
   return readCniConfigFile(netInfo)
@@ -135,8 +135,8 @@ func parseRoutes(rawRoutes map[string]string, netCidr string) ([]danmtypes.IpamR
   return routes, defaultGw
 }
 
-func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, nicParams danmtypes.Interface, rawConfig []byte) (types.Result,error) {
-  cniPath, cniArgs, err := getExecCniParams(cniType, netInfo, nicParams)
+func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep danmtypes.DanmEp) (types.Result,error) {
+  cniPath, cniArgs, err := getExecCniParams(cniType, netInfo, ep)
   if err != nil {
     return nil, err
   }
@@ -153,7 +153,7 @@ func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, nicParams danmtyp
   return version.NewResult(confVersion, rawResult)
 }
 
-func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, nicParams danmtypes.Interface) (string,[]string,error) {
+func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, ep danmtypes.DanmEp) (string,[]string,error) {
   cniPaths := filepath.SplitList(os.Getenv("CNI_PATH"))
   cniPath, err := invoke.FindInPath(cniType, cniPaths)
   if err != nil {
@@ -163,7 +163,7 @@ func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, nicParams danm
     "CNI_COMMAND="     + os.Getenv("CNI_COMMAND"),
     "CNI_CONTAINERID=" + os.Getenv("CNI_CONTAINERID"),
     "CNI_NETNS="       + os.Getenv("CNI_NETNS"),
-    "CNI_IFNAME="      + CalculateIfaceName(netInfo.Spec.Options.Prefix, nicParams.DefaultIfaceName),
+    "CNI_IFNAME="      + ep.Spec.Iface.Name,
     "CNI_ARGS="        + os.Getenv("CNI_ARGS"),
     "CNI_PATH="        + os.Getenv("CNI_PATH"),
   }
@@ -172,8 +172,8 @@ func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, nicParams danm
 
 // DelegateInterfaceDelete delegates Ks8 Pod network interface delete task to the input 3rd party CNI plugin
 // Returns an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
-func DelegateInterfaceDelete(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip string) error {
-  rawConfig, err := getCniPluginConfig(netInfo, danmtypes.IpamConfig{}, danmtypes.Interface{})
+func DelegateInterfaceDelete(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
+  rawConfig, err := getCniPluginConfig(netInfo, danmtypes.IpamConfig{}, ep)
   if err != nil {
     return err
   }
@@ -181,10 +181,10 @@ func DelegateInterfaceDelete(danmClient danmclientset.Interface, netInfo *danmty
   err = invoke.DelegateDel(cniType, rawConfig)
   if err != nil {
     //Best-effort clean-up because we know how to handle exceptions
-    freeDelegatedIp(danmClient, netInfo, ip)
+    freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return errors.New("Error delegating DEL to CNI plugin:" + cniType + " because:" + err.Error())
   }
-  return freeDelegatedIp(danmClient, netInfo, ip)
+  return freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
 }
 
 func freeDelegatedIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) error {

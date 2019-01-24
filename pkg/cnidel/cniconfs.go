@@ -41,7 +41,7 @@ func readCniConfigFile(netInfo *danmtypes.DanmNet) ([]byte, error) {
 }
 
 //This function creates CNI configuration for the dynamic-level SR-IOV backend
-func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, nicParams danmtypes.Interface) ([]byte, error) {
+func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep danmtypes.DanmEp) ([]byte, error) {
   vlanid := netInfo.Spec.Options.Vlan
   sriovConfig := sriovNet {
     Name:   netInfo.Spec.NetworkID,
@@ -53,7 +53,7 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
     Dpdk:   DpdkOption{},
     Ipam:   ipamOptions,
   }
-  sriovConfig.IfName = CalculateIfaceName(netInfo.Spec.Options.Prefix, nicParams.DefaultIfaceName)
+  sriovConfig.IfName = ep.Spec.Iface.Name
   if ipamOptions.Ip != "" {
     sriovConfig.L2Mode = false
   }
@@ -72,7 +72,7 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
 }
 
 //This function creates CNI configuration for the dynamic-level MACVLAN backend
-func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, nicParams danmtypes.Interface) ([]byte, error) {
+func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep danmtypes.DanmEp) ([]byte, error) {
   hDev := danmep.DetermineHostDeviceName(netInfo)
   macvlanConfig := macvlanNet {
     Master: hDev,

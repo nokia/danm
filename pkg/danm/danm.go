@@ -223,15 +223,17 @@ func createInterface(syncher *syncher.Syncher, iface danmtypes.Interface, args *
 
 func createDelegatedInterface(danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) (*current.Result,error) {
   epIfaceSpec := danmtypes.DanmEpIface {
-    Name: cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName),
-    Proutes: iface.Proutes,
-    Proutes6: iface.Proutes6,
+    Name:        cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName),
+    Address:     iface.Ip,
+    AddressIPv6: iface.Ip6,
+    Proutes:     iface.Proutes,
+    Proutes6:    iface.Proutes6,
   }
   ep, err := createDanmEp(epIfaceSpec, netInfo.Spec.NetworkID, netInfo.Spec.NetworkType, args)
   if err != nil {
     return nil, errors.New("DanmEp object could not be created due to error:" + err.Error())
   }
-  delegateResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, iface, ep)
+  delegateResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, ep)
   if err != nil {
     return nil, err
   }
@@ -247,11 +249,12 @@ func createDelegatedInterface(danmClient danmclientset.Interface, iface danmtype
 }
 
 func setEpIfaceAddress(cniResult *current.Result, epIface *danmtypes.DanmEpIface) error {
-  // TODO: This only works for CNI backends which allocate one IP address per Pod
-  if cniResult.IPs[0].Version == "4" {
-    epIface.Address = cniResult.IPs[0].Address.String()
-  } else {
-    epIface.AddressIPv6 = cniResult.IPs[0].Address.String()
+  for _, ip := range cniResult.IPs {
+    if ip.Version == "4" {
+      epIface.Address = ip.Address.String()
+    } else {
+      epIface.AddressIPv6 = ip.Address.String()
+    }
   }
   return nil
 }
@@ -433,7 +436,7 @@ func deleteInterface(args *cniArgs, syncher *syncher.Syncher, ep danmtypes.DanmE
 func deleteNic(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
   var err error
   if ep.Spec.NetworkType != "ipvlan" {
-    err = cnidel.DelegateInterfaceDelete(danmClient, netInfo, ep.Spec.Iface.Address)
+    err = cnidel.DelegateInterfaceDelete(danmClient, netInfo, ep)
   } else {
     err = deleteDanmNet(danmClient, ep, netInfo)
   }

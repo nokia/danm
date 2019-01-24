@@ -93,7 +93,7 @@ func CreateRoutesInNetNs(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, ) error {
     hns.Close()
     err = origNs.Set()
     if err != nil {
-      log.Println("Could not switch back to default ns during IPVLAN interface creation:" + err.Error())
+      log.Println("Could not switch back to default ns during IP route provisioning operation:" + err.Error())
     }
   }()
   err = hns.Set()

@@ -6,7 +6,6 @@ import (
   "math"
   "math/big"
   "net"
-  "strings"
   "strconv"
   "syscall"
   "github.com/apparentlymart/go-cidr/cidr"
@@ -65,15 +64,9 @@ func Int2ip6(nn *big.Int) net.IP {
 }
 
 func validateNetwork(dnet *danmtypes.DanmNet) error {
-  cniType := dnet.Spec.NetworkType
-  if cniType == "" {
-    cniType = "ipvlan"
-  }
-  dnet.Spec.NetworkType = strings.ToLower(cniType)
-  for _,supportedCni := range nativelySupportedCnis {
-    if supportedCni == dnet.Spec.NetworkType {
-      return validateDanmNet(dnet)
-    }
+  err := validateDanmNet(dnet)
+  if err != nil {
+    return err
   }
   validate(dnet)
   return nil

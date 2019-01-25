@@ -233,30 +233,15 @@ func createDelegatedInterface(danmClient danmclientset.Interface, iface danmtype
   if err != nil {
     return nil, errors.New("DanmEp object could not be created due to error:" + err.Error())
   }
-  delegateResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, &ep)
+  delegatedResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, &ep)
   if err != nil {
     return nil, err
-  }
-  delegatedResult := cnidel.ConvertCniResult(delegateResult)
-  if delegatedResult != nil {
-    setEpIfaceAddress(delegatedResult, &ep.Spec.Iface)
   }
   err = putDanmEp(args, ep)
   if err != nil {
     return nil, errors.New("DanmEp object could not be PUT to K8s due to error:" + err.Error())
   }
   return delegatedResult, nil
-}
-
-func setEpIfaceAddress(cniResult *current.Result, epIface *danmtypes.DanmEpIface) error {
-  for _, ip := range cniResult.IPs {
-    if ip.Version == "4" {
-      epIface.Address = ip.Address.String()
-    } else {
-      epIface.AddressIPv6 = ip.Address.String()
-    }
-  }
-  return nil
 }
 
 func createDanmInterface(danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) (*current.Result,error) {

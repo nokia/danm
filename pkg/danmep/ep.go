@@ -49,6 +49,9 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
       log.Println("Could not switch back to default ns during IPVLAN interface creation:" + err.Error())
     }
   }()
+  //cns,_ := ns.GetCurrentNS()
+  cpath := origns.Path()
+  log.Println("EP NS BASE PATH:" + cpath)
   iface, err := netlink.LinkByName(device)
   if err != nil {
     return errors.New("cannot find host device because:" + err.Error())
@@ -164,19 +167,11 @@ func addIpRoutes(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   if err != nil {
     return err
   }
-  err = addRulesForPolicyRoutes(dnet.Spec.Options.RTables, ep.Spec.Iface.Address)
+  err = addPolicyRoute(dnet.Spec.Options.RTables, ep.Spec.Iface.Address, ep.Spec.Iface.Proutes)
   if err != nil {
     return err
   }
-  err = addRoutes(ep.Spec.Iface.Proutes, dnet.Spec.Options.RTables)
-  if err != nil {
-    return err
-  }
-  err = addRulesForPolicyRoutes(dnet.Spec.Options.RTables, ep.Spec.Iface.AddressIPv6)
-  if err != nil {
-    return err
-  }
-  err = addRoutes(ep.Spec.Iface.Proutes6, dnet.Spec.Options.RTables)
+  err = addPolicyRoute(dnet.Spec.Options.RTables, ep.Spec.Iface.AddressIPv6, ep.Spec.Iface.Proutes6)
   if err != nil {
     return err
   }
@@ -215,8 +210,8 @@ func addRoutes(routes map[string]string, rtable int) error {
   return nil
 }
 
-func addRulesForPolicyRoutes(rtable int, cidr string) error {
-  if rtable == 0 || cidr == "" {
+func addPolicyRoute(rtable int, cidr string, proutes map[string]string) error {
+  if rtable == 0 || cidr == "" || proutes == nil {
     return nil
   }
   srcIp, srcNet, _ := net.ParseCIDR(cidr)
@@ -228,10 +223,13 @@ func addRulesForPolicyRoutes(rtable int, cidr string) error {
   if err != nil {
     return errors.New("cannot add rule for policy-based IP routes because:" + err.Error())
   }
+  err = addRoutes(proutes, rtable)
+  if err != nil {
+    return err
+  }
   return nil
 }
 
-// TODO: Refactor this, as cyclomatic complexity is 15
 func deleteContainerIface(ep danmtypes.DanmEp) error {
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()

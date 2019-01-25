@@ -1,5 +1,5 @@
 hash: c733add746209fb2636606d30af3b2279aa2e51c786422ad39052596bdfc25a1
-updated: 2018-12-04T18:31:09.317027749+01:00
+updated: 2019-01-25T15:34:49.348804593+01:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
@@ -15,7 +15,7 @@ imports:
   - pkg/types/current
   - pkg/version
 - name: github.com/containernetworking/plugins
-  version: 3fb464786f10fc38da40a65575dbb8ea4b3a43c3
+  version: a686cc4bd84f77d93115f6f3e0ec894d55be178e
   subpackages:
   - pkg/ns
 - name: github.com/davecgh/go-spew

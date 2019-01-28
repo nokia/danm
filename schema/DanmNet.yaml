@@ -18,9 +18,9 @@ spec:
   NetworkID: ## NETWORK_NAME  ##
   # This parameter, if present, denotes which backend willl be used to provision the container interfaces connected to this network.
   # Currently supported values with dynamic integration level are IPVLAN (default), SRIOV, or MACVLAN.
-  # - IPVLAN option results in an IPVLAN slave interface provisioned in L2 mode, and connected to the designated host device
+  # - IPVLAN option results in an IPVLAN sub-interface provisioned in L2 mode, and connected to the designated host device
   # - SRIOV option pushes an already existing Virtual Function of the configured host device to the container's netns
-  # - MACVLAN option results in a MACVLAN slave interface provisioned in bridge mode, and connected to the designated host device
+  # - MACVLAN option results in a MACVLAN sub-interface provisioned in bridge mode, and connected to the designated host device
   # For any other CNI backend DANM will read their configuration from the configured CNI config directory.
   # E.g. when a Pod is connected to a DanmNet with "NetworkType" set to "flannel", DANM will pass the content of /etc/cni/net.d/flannel.conf file to the /opt/cni/bin/flannel binary by invoking a standard CNI operation.
   # The default IPVLAN backend will be used if this parameter is not specified.
@@ -31,11 +31,11 @@ spec:
   # Dynamic configuration is supported only for IPVLAN, and SRIOV backends.
   # Other networks are always provisioned from static configuration. Options are silently ignored if NetworkType is set to a non-dynamically integrated backend.
   Options:
-    # Name of the master host device (i.e. physical host NIC).
-    # Slave interfaces are connected to this NIC in case NetworkType is set to IPVLAN, or MACVLAN.
+    # Name of the parent host device (i.e. physical host NIC).
+    # Sub-interfaces are connected to this NIC in case NetworkType is set to IPVLAN, or MACVLAN.
     # A Virtual Function belonging to this Physical Function is taken-up in case NetworkType is set to SRIOV.
     # OPTIONAL - STRING
-    host_device: ## MASTER_DEVICE_NAME ##
+    host_device: ## PARENT_DEVICE_NAME ##
     # The IPv4 CIDR notation of the subnet associated with the network.
     # Pods connecting to this network will get their IPs from this subnet, if defined.
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.

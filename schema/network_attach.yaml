@@ -8,18 +8,18 @@ metadata:
   # Name of the K8s object this file represents
   # MANDATORY - STRING
   name: ## OBJECT_NAME  ##
-  
+
   # The K8 namespace the object belongs to.
   # DanmNets are namespaces resources, so a Pod can only connect to a DanmNet if it resides in the same namespace.
   # MANDATORY - STRING
   namespace: ## NS_NAME  ##
-  
+
 spec:
   # The specification body of the K8s object according to its default K8s API schema
   # MANDATORY
   template:
     metadata:
-      annotations: 
+      annotations:
       # DANM shall be driven with networking related requirements stated in this JSON formatted field.
       # Each entry listed in danm.k8s.io/interfaces annotation results in a network interface provisioned into the Pod's network namespace created by this K8s object.
       # The interface is provisioned via the backend specified in the referenced DanmNet (or with DANM's in-built IPVLAN CNI by default).
@@ -28,23 +28,27 @@ spec:
       # MANDATORY - LIST OF REQUIRED NETWORK INTERFACES
       #   One network connection can have the following attributes:
       #   "network": NetworkID of the DanmNet to which the interface should be connected to. MANDATORY PARAMETER
-      #   "ip": desired IPv4 address assigment scheme. 
+      #   "ip": desired IPv4 address assigment scheme.
+      #     Ignored for non-dynamic NetworkTypes.
       #     OPTIONAL PARAMETER - but either "ip" or "ip6" needs to be present. Presence of either "ip" or "ip6" is MANDATORY
       #     Possible values:
       #     - "dynamic": the first free IPv4 address is dynamically allocated from the DanmNet's allocation pool
       #     - "## DESIRED_STATIC_IPV4_ADDR_FROM_ALLOCATION_POOL (e.g. "10.10.0.101/24") ##"
       #     - "none": no IPv4 is allocated to the interface
       #   "ip6": desired IPv6 address assigment scheme.
+      #     Ignored for non-dynamic NetworkTypes.
       #     OPTIONAL PARAMETER - but either "ip" or "ip6" needs to be present. Presence of either "ip" or "ip6" is MANDATORY
       #     Possible values:
       #     - "dynamic": the first free IPv6 address is dynamically allocated from the DanmNet's allocation pool
       #     - "## DESIRED_STATIC_IPV6_ADDR_FROM_ALLOCATION_POOL ##"
       #     - "none": no IPv6 address is allocated to the interface
-      #   "proutes": list of policy-based IPv4 routes to be added to the routing table of this interface. 
-      #     OPTIONAL PARAMETER, ONLY SUPPORTED FOR IPVLAN BACKEND
+      #   "proutes": list of policy-based IPv4 routes to be added to the configured routing table of this interface.
+      #     Generally supported parameter, works with all NetworkTypes.
+      #     OPTIONAL PARAMETER
       #     possible value: {"DESTINATION_IPV4_CIDR1:IPV4_GW1","DESTINATION_IPV4_CIDR2:IPV4_GW2"...}
-      #   "proutes6": list of policy-based IPv6 routes to be added to the routing table of this interface.
-      #     OPTIONAL PARAMETER, ONLY SUPPORTED FOR IPVLAN BACKEND
+      #   "proutes6": list of policy-based IPv6 routes to be added to the configured routing table of this interface.
+      #     Generally supported parameter, works with all NetworkTypes.
+      #     OPTIONAL PARAMETER
       #     possible value: {"DESTINATION_IPV6_CIDR1:IPV6_GW1","DESTINATION_IPV6_CIDR2:IPV6_GW2"...}
         danm.k8s.io/interfaces: |
           [

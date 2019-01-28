@@ -279,8 +279,8 @@ This way users can dynamically configure various networking solutions via the sa
 A generic framework supporting this method is built into DANM's code, but still this level of integration requires case-by-case implementation.
 As a result, DANM currently supports two integration levels:
 
- - **Dynamic integration level:** CNI-specific network attributes (such as IP ranges, master host devices etc.) can be controlled on a per network level, taken directly from a DanmNet object
- - **Static integration level:** CNI-specific network attributes (such as IP ranges, master host devices etc.) can be only configured on a per node level, via a static CNI configuration files (Note: this is the default CNI configuration method)
+ - **Dynamic integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be controlled on a per network level, taken directly from a DanmNet object
+ - **Static integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be only configured on a per node level, via a static CNI configuration files (Note: this is the default CNI configuration method)
 
 Our aim is to integrate all the popular CNIs into the DANM eco-system over time, but currently the following CNI's achieved dynamic integration level:
 
@@ -336,8 +336,8 @@ DANM's IPVLAN CNI uses the Linux kernel's IPVLAN module to provision high-speed,
 4.9, 4.11, or 4.14 would be even better (lotta bug fixes)*
 
 The CNI provisions IPVLAN interfaces in L2 mode, and supports the following extra features:
-* attaching IPVLAN slaves to any host interface
-* attaching IPVLAN slaves to dynamically created VLAN or VxLAN host interfaces
+* attaching IPVLAN sub-interfaces to any host interface
+* attaching IPVLAN sub-interfaces to dynamically created VLAN or VxLAN host interfaces
 * renaming the created interfaces according to the "container_prefix" attribute defined in the DanmNet object
 * allocating IP addresses by using DANM's flexible, in-built IPAM module
 * provisioning generic IP routes into a configured routing table inside the Pod's network namespace

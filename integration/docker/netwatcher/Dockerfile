@@ -1,4 +1,4 @@
-FROM alpine:3.7
+FROM alpine:latest
 MAINTAINER Levente Kale <levente.kale@nokia.com>
 
 COPY netwatcher /usr/local/bin/netwatcher

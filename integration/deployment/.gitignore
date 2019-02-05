@@ -1,0 +1,7 @@
+bin
+crds
+tmp
+.cache
+.dmake*
+danm-install.yaml
+

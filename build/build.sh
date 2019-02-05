@@ -1,6 +1,7 @@
 #!/bin/sh -ex
 export CGO_ENABLED=0
 export GOOS=linux
+go get -d github.com/nokia/danm || true
 cd $GOPATH/src/github.com/nokia/danm/pkg
 glide install
 go get -d github.com/vishvananda/netlink

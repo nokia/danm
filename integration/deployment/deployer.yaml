@@ -1,0 +1,39 @@
+apiVersion: apps/v1beta2
+kind: DaemonSet
+metadata:
+    name: danm-deployer
+    namespace: kube-system
+spec:
+    selector:
+        matchLabels:
+            danm.k8s.io: danm-deployer
+    template:
+        metadata:
+            labels:
+                danm.k8s.io: danm-deployer
+        spec:
+            serviceAccountName: netwatcher
+            tolerations:
+            - effect: NoSchedule
+              operator: Exists
+            - effect: NoExecute
+              operator: Exists
+            containers:
+                - name: danm-deployer
+                  image: danm-deployer:3.0.0
+                  imagePullPolicy: Always
+                  env:
+                  - name: SERVICEACCOUNTNAME
+                    value: "netwatcher"
+                  readinessProbe:
+                    exec:
+                        command:
+                        - cat
+                        - /tmp/deploy_ready
+                  volumeMounts:
+                    - name: target
+                      mountPath: /target
+            volumes:
+                - name: target
+                  hostPath:
+                    path: /

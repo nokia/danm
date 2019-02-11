@@ -45,23 +45,32 @@ func readCniConfigFile(netInfo *danmtypes.DanmNet) ([]byte, error) {
 func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
   vlanid := netInfo.Spec.Options.Vlan
   sriovConfig := sriovNet {
-    Name:   netInfo.Spec.NetworkID,
-    Type:   "sriov",
-    PfName: netInfo.Spec.Options.Device,
-    IfName: ep.Spec.Iface.Name,
-    L2Mode: true,
-    Vlan:   vlanid,
-    Dpdk:   DpdkOption{},
-    Ipam:   ipamOptions,
+    Name:      netInfo.Spec.NetworkID,
+    Type:      "sriov",
+    PfName:    netInfo.Spec.Options.Device,
+    PfBackward: netInfo.Spec.Options.Device,
+    IfName:    ep.Spec.Iface.Name,
+    L2Mode:    true,
+    Vlan:      vlanid,
+    // TODO: DPDK support to be removed (by Levo) // petszila
+    // Dpdk:   DpdkOption{},
+    Ipam:      ipamOptions,
+    // TODO: New options should be filled properly. // petszila
+    CNIDir:    "",
+    DeviceID:  "",
   }
   if ipamOptions.Ip != "" {
     sriovConfig.L2Mode = false
   }
   if netInfo.Spec.Options.Dpdk {
-    sriovConfig.Dpdk = DpdkOption {
-      NicDriver: dpdkNicDriver,
+    sriovConfig.Dpdk = &DpdkOption{
+      // TODO: new options should be filled properly. // petszila
+      VFID:       0,
+      PCIaddr:    "",
+      Ifname:     "",
+      NicDriver:  dpdkNicDriver,
       DpdkDriver: dpdkDriver,
-      DpdkTool: dpdkTool,
+      DpdkTool:   dpdkTool,
     }
   }
   rawConfig, err := json.Marshal(sriovConfig)

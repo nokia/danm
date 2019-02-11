@@ -12,14 +12,16 @@ type cniBackendConfig struct {
   ipamNeeded bool
 }
 
-// sriovNet represent the configuration of sriov plugin
+// sriovNet represent the configuration of sriov plugin v1.0.0
 type sriovNet struct {
   // the name of the network
   Name   string     `json:"name"`
   // currently constant "sriov"
   Type   string     `json:"type"`
-  // name of the PF
-  PfName string     `json:"if0"`
+  // Backward compatible field of PF name
+  PfBackward string     `json:"if0"`
+  // name of the PF since sriov cni v1.0.0
+  PfName string     `json:"master"`
   // interface name in the Container
   IfName string     `json:"if0name,omitEmpty"`
   // if true then add VF as L2 mode only, IPAM will not be executed
@@ -29,17 +31,36 @@ type sriovNet struct {
   // IPAM configuration to be used for this network
   Ipam   danmtypes.IpamConfig `json:"ipam,omitEmpty"`
   // DPDK configuration
-  Dpdk   DpdkOption `json:"dpdk,omitEmpty"`
+  Dpdk   *DpdkOption `json:"dpdk,omitEmpty"`
+  // CNI binary location
+  CNIDir string `json:"cniDir"`
+  // Device PCI ID
+  DeviceID string `json:"deviceID"`
+  // Device Info
+  DeviceInfo *VfInformation `json:"deviceinfo,omitempty"`
 }
 
-// DpdkOption represents the DPDK options for the sriov plugin
+// VfInformation is a DeviceIfo desctiprtor expected by sriov plugin v1.0.0
+type VfInformation struct {
+  PCIaddr string `json:"pci_addr"`
+  Pfname  string `json:"pfname"`
+  Vfid    int    `json:"vfid"`
+}
+
+// DpdkOption represents the DPDK options for the sriov plugin v1.0.0
 type DpdkOption struct {
+  // The VFID of the sriov device
+  VFID int `json:"vfid"`
+  // The PCI address of sriov device
+  PCIaddr string `json:"pci_addr"`
+  // The name of the interface
+  Ifname string `json:"ifname"`
   // The name of kernel NIC driver
-  NicDriver  string `json:"kernel_driver"`
+  NicDriver string `json:"kernel_driver"`
   // The name of DPDK capable driver
   DpdkDriver string `json:"dpdk_driver"`
   // Path to the dpdk-devbind.py script
-  DpdkTool   string `json:"dpdk_tool"`
+  DpdkTool string `json:"dpdk_tool"`
 }
 
 type macvlanNet struct {

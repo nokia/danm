@@ -17,9 +17,23 @@ spec:
       dnsPolicy: ClusterFirst
       hostIPC: true
       hostPID: true
+      initContainers:
+        - name: install-danm
+          image: danm-deployer:3.1.0
+          imagePullPolicy: Always
+          env:
+          - name: SERVICEACCOUNTNAME
+            value: "netwatcher"
+          volumeMounts:
+            - name: cni-bin
+              mountPath: /target/cni-bin
+            - name: netd
+              mountPath: /target/netd
+            - name: etckubernetes
+              mountPath: /target/etc/kubernetes/
       containers:
         - name: netwatcher
-          image: netwatcher:3.0.0
+          image: netwatcher:3.1.0
           securityContext:
             capabilities:
               add:
@@ -33,3 +47,13 @@ spec:
        - effect: NoExecute
          operator: Exists
       terminationGracePeriodSeconds: 0
+      volumes:
+        - name: cni-bin
+          hostPath:
+            path: /opt/cni/bin
+        - name: netd
+          hostPath:
+            path: /etc/cni/net.d/
+        - name: etckubernetes
+          hostPath:
+            path: /etc/kubernetes/

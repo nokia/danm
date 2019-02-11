@@ -1,7 +1,7 @@
 #!/bin/sh -e
 DANMKUBECONFIG=/etc/kubernetes/danm.kubeconfig
-cp /opt/bin/* /target/opt/cni/bin/
-cat >/target/etc/cni/net.d/00-danm.conf <<-EOF
+cp /opt/bin/* /target/cni-bin/
+cat >/target/netd/00-danm.conf <<-EOF
 {
   "name": "meta_cni",
   "type": "danm",
@@ -35,8 +35,5 @@ users:
   user:
     token: $TOKEN
 EOF
-sleep 100
-touch /tmp/deploy_ready
-sleep 86400
 
 

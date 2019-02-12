@@ -15,6 +15,7 @@ import (
   "github.com/containernetworking/cni/pkg/version"
   "github.com/containernetworking/cni/pkg/types/current"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+  k8s "k8s.io/apimachinery/pkg/types"
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/clientcmd"
   "k8s.io/client-go/kubernetes"
@@ -24,6 +25,7 @@ import (
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/pkg/syncher"
+  "github.com/nokia/danm/pkg/checkpoint"
 )
 
 var (
@@ -59,6 +61,7 @@ type cniArgs struct {
   labels map[string]string
   stdIn []byte
   interfaces []danmtypes.Interface
+  podUid k8s.UID
 }
 
 func createInterfaces(args *skel.CmdArgs) error {
@@ -135,6 +138,7 @@ func extractCniArgs(args *skel.CmdArgs) (*cniArgs,error) {
                      nil,
                      args.StdinData,
                      nil,
+                     "",
                     }
   return &cmdArgs, nil
 }
@@ -154,6 +158,7 @@ func getPodAttributes(args *cniArgs) error {
   }
   args.annotation = pod.Annotations
   args.labels = pod.Labels
+  args.podUid = pod.UID
   return nil
 }
 
@@ -183,10 +188,33 @@ func extractConnections(args *cniArgs) error {
   return nil
 }
 
+func getRegisteredDevices(podUid k8s.UID) (map[string]*checkpoint.ResourceInfo) {
+  // TODO: try to collect Device ID-s from checkpoint // petszila sdfdsfs
+  var resourceMap map[string]*checkpoint.ResourceInfo
+  if string(podUid) != "" {
+    checkpoint, err := checkpoint.GetCheckpoint()
+    if err != nil {
+      log.Printf("getKubernetesDelegate: failed to get a checkpoint instance: %v", err)
+    }
+    log.Printf("PETSZILA PodID: %v", podUid)
+    resourceMap, err = checkpoint.GetComputeDeviceMap(string(podUid))
+    if err != nil {
+      log.Printf("getKubernetesDelegate: failed to get resourceMap from kubelet checkpoint file: %v", err)
+    }
+    log.Printf("getKubernetesDelegate(): resourceMap instance: %+v", resourceMap)
+  }
+  return resourceMap
+}
+
 func setupNetworking(args *cniArgs) (*current.Result, error) {
   syncher := syncher.NewSyncher(len(args.interfaces))
-  for nicId, nicParams := range args.interfaces {
-    nicParams.DefaultIfaceName = "eth" + strconv.Itoa(nicId)
+  rawDeviceMap := getRegisteredDevices(args.podUid)
+  devices := rawDeviceMap["intel.com/sriov_net_A"].DeviceIDs
+  // TODO: it prints out the allocated deviceIDs from intel.com/sriov_net_A resource. Those should be passed to nicParams.Device
+  log.Printf("PETSZILA intel.com/sriov_net_A devices: %v", devices)
+  for nicID, nicParams := range args.interfaces {
+    nicParams.DefaultIfaceName = "eth" + strconv.Itoa(nicID)
+    nicParams.Device = devices[nicID]
     go createInterface(syncher, nicParams, args)
   }
   err := syncher.GetAggregatedResult()
@@ -228,6 +256,7 @@ func createDelegatedInterface(danmClient danmclientset.Interface, iface danmtype
     AddressIPv6: iface.Ip6,
     Proutes:     iface.Proutes,
     Proutes6:    iface.Proutes6,
+    VfDeviceID:  iface.Device,
   }
   ep, err := createDanmEp(epIfaceSpec, netInfo.Spec.NetworkID, netInfo.Spec.NetworkType, args)
   if err != nil {
@@ -257,8 +286,6 @@ func createDanmInterface(danmClient danmclientset.Interface, iface danmtypes.Int
     MacAddress: macAddr,
     Proutes: iface.Proutes,
     Proutes6: iface.Proutes6,
-    // TODO: Fill this element from checkpoint resource query // petszila
-    VfDeviceID: "TODO",
   }
   networkType := "ipvlan"
   ep, err := createDanmEp(epSpec, netId, networkType, args)

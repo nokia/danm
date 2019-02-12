@@ -233,7 +233,8 @@ func getEnv(key, fallback string) string {
 // If a name is not explicitly set, then DANM will name the interface ethX where X=sequence number of the interface
 func CalculateIfaceName(chosenName, defaultName string) string {
   if chosenName != "" {
-    return chosenName
+    // TODO: Interface name is not unique when POD requests multiple interfaces from the same DanmNet (eg. SR IOV) // petszila
+    return chosenName + "@" + defaultName
   }
   return defaultName 
 }

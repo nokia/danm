@@ -257,6 +257,8 @@ func createDanmInterface(danmClient danmclientset.Interface, iface danmtypes.Int
     MacAddress: macAddr,
     Proutes: iface.Proutes,
     Proutes6: iface.Proutes6,
+    // TODO: Fill this element from checkpoint resource query // petszila
+    VfDeviceID: "TODO",
   }
   networkType := "ipvlan"
   ep, err := createDanmEp(epSpec, netId, networkType, args)

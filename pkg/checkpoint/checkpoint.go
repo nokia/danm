@@ -16,16 +16,19 @@
 package checkpoint
 
 import (
+	"log"
 	"encoding/json"
 	"io/ioutil"
-
-	"github.com/intel/multus-cni/logging"
-	"github.com/intel/multus-cni/types"
 )
 
 const (
 	checkPointfile = "/var/lib/kubelet/device-plugins/kubelet_internal_checkpoint"
 )
+
+type ResourceInfo struct {
+	Index     int
+	DeviceIDs []string
+}
 
 type PodDevicesEntry struct {
 	PodUID        string
@@ -47,7 +50,7 @@ type Data struct {
 
 type Checkpoint interface {
 	// GetComputeDeviceMap returns an instance of a map of ResourceInfo for a PodID
-	GetComputeDeviceMap(string) (map[string]*types.ResourceInfo, error)
+	GetComputeDeviceMap(string) (map[string]*ResourceInfo, error)
 }
 type checkpoint struct {
 	fileName   string
@@ -56,7 +59,7 @@ type checkpoint struct {
 
 // GetCheckpoint returns an instance of Checkpoint
 func GetCheckpoint() (Checkpoint, error) {
-	logging.Debugf("GetCheckpoint(): invoked")
+	log.Printf("GetCheckpoint(): invoked")
 	return getCheckpoint(checkPointfile)
 }
 
@@ -66,7 +69,7 @@ func getCheckpoint(filePath string) (Checkpoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	logging.Debugf("getCheckpoint(): created checkpoint instance with file: %s", filePath)
+	log.Printf("getCheckpoint(): created checkpoint instance with file: %s", filePath)
 	return cp, nil
 }
 
@@ -76,25 +79,28 @@ func (cp *checkpoint) getPodEntries() error {
 	cpd := &Data{}
 	rawBytes, err := ioutil.ReadFile(cp.fileName)
 	if err != nil {
-		return logging.Errorf("getPodEntries(): error reading file %s\n%v\n", checkPointfile, err)
+		log.Printf("getPodEntries(): error reading file %s\n%v\n", checkPointfile, err)
+		return nil
 	}
 
 	if err = json.Unmarshal(rawBytes, cpd); err != nil {
-		return logging.Errorf("getPodEntries(): error unmarshalling raw bytes %v", err)
+		log.Printf("getPodEntries(): error unmarshalling raw bytes %v", err)
+		return nil
 	}
 
 	cp.podEntires = cpd.Data.PodDeviceEntries
-	logging.Debugf("getPodEntries(): podEntires %+v", cp.podEntires)
+	log.Printf("getPodEntries(): podEntires %+v", cp.podEntires)
 	return nil
 }
 
 // GetComputeDeviceMap returns an instance of a map of ResourceInfo
-func (cp *checkpoint) GetComputeDeviceMap(podID string) (map[string]*types.ResourceInfo, error) {
+func (cp *checkpoint) GetComputeDeviceMap(podID string) (map[string]*ResourceInfo, error) {
 
-	resourceMap := make(map[string]*types.ResourceInfo)
+	resourceMap := make(map[string]*ResourceInfo)
 
 	if podID == "" {
-		return nil, logging.Errorf("GetComputeDeviceMap(): invalid Pod cannot be empty")
+		log.Printf("GetComputeDeviceMap(): invalid Pod cannot be empty")
+		return resourceMap, nil
 	}
 
 	for _, pod := range cp.podEntires {
@@ -105,7 +111,7 @@ func (cp *checkpoint) GetComputeDeviceMap(podID string) (map[string]*types.Resou
 				entry.DeviceIDs = append(entry.DeviceIDs, pod.DeviceIDs...)
 			} else {
 				// new entry
-				resourceMap[pod.ResourceName] = &types.ResourceInfo{DeviceIDs: pod.DeviceIDs}
+				resourceMap[pod.ResourceName] = &ResourceInfo{DeviceIDs: pod.DeviceIDs}
 			}
 		}
 	}

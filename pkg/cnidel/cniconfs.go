@@ -58,7 +58,7 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
     // TODO: New options should be filled properly. // petszila
     CNIDir:    "",
     // TODO: DeviceID comes from ep.Spec.Iface.VfDeviceID later on // petszila
-    DeviceID:  "",
+    DeviceID:  ep.Spec.Iface.VfDeviceID,
   }
   // TODO: Just to test. To be removed // petszila
   log.Println("PETSZILA ep.Spec.Iface.VfDeviceID: %v",ep.Spec.Iface.VfDeviceID)

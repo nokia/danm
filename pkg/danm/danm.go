@@ -188,36 +188,78 @@ func extractConnections(args *cniArgs) error {
   return nil
 }
 
-func getRegisteredDevices(podUid k8s.UID) (map[string]*checkpoint.ResourceInfo) {
-  // TODO: try to collect Device ID-s from checkpoint // petszila sdfdsfs
-  var resourceMap map[string]*checkpoint.ResourceInfo
+func getRegisteredDevices(podUid k8s.UID) ([]string) {
+  // TODO: change logs to error // petszila
+  resourceMap := make(map[string]*checkpoint.ResourceInfo)
   if string(podUid) != "" {
     checkpoint, err := checkpoint.GetCheckpoint()
     if err != nil {
       log.Printf("getKubernetesDelegate: failed to get a checkpoint instance: %v", err)
     }
-    log.Printf("PETSZILA PodID: %v", podUid)
     resourceMap, err = checkpoint.GetComputeDeviceMap(string(podUid))
     if err != nil {
       log.Printf("getKubernetesDelegate: failed to get resourceMap from kubelet checkpoint file: %v", err)
     }
     log.Printf("getKubernetesDelegate(): resourceMap instance: %+v", resourceMap)
   }
-  return resourceMap
+  /* TODO: - filter for CaaS defined sriov resource prefix  // petszila
+           - concatenate resource maps to one string array
+  */
+  return resourceMap["intel.com/sriov_net_A"].DeviceIDs
+}
+
+func getSriovInterfaces(args *cniArgs)(int,map[string]bool,error){
+  danmClient, err := createDanmClient(args.stdIn)
+  if err != nil {
+    return 0, nil, errors.New("Unable to create DanmClient")
+  }
+  sriovInterfaces := make(map[string]bool)
+  counter := 0
+  for _, interfac := range args.interfaces {
+    danmnet, err := danmClient.DanmV1().DanmNets(args.nameSpace).Get(interfac.Network, meta_v1.GetOptions{})
+    if err != nil || danmnet.ObjectMeta.Name == ""{
+      return 0, nil, errors.New("NID:" + interfac.Network + " in namespace:" + args.nameSpace + " cannot be GET from K8s API server!")
+    }
+    if danmnet.Spec.NetworkType == "sriov" {
+      sriovInterfaces[interfac.Network] = true
+      counter++
+    }
+  }
+  return counter, sriovInterfaces, nil
+}
+
+func updateDeviceOfInterfaces(args *cniArgs, interfaceCount int, sriovInterfaces map[string]bool) (error){
+  // TODO: Query Registered Devices from K8S Checkpoint.  // petszila
+  sriovDevices := getRegisteredDevices(args.podUid)
+  if len(sriovDevices) == interfaceCount {
+    for id, interfac := range args.interfaces {
+      if _, ok := sriovInterfaces[interfac.Network]; ok == true {
+        args.interfaces[id].Device, sriovDevices = sriovDevices[len(sriovDevices)-1], sriovDevices[:len(sriovDevices)-1]
+      }
+    }
+  } else if len(sriovDevices) > interfaceCount {
+    log.Printf("Warning: " + args.podId + " Pod overallocates SR IOV resources")
+  } else {
+    return errors.New(args.podId + " Pod needs " + string(len(sriovInterfaces)) + " SR IOV resources to be allocated")
+  }
+  return nil
 }
 
 func setupNetworking(args *cniArgs) (*current.Result, error) {
+  interfaceCount, sriovInterfaces, err := getSriovInterfaces(args)
+  // TODO: dump returned interfaces // petszila
+  log.Printf("PETSZILA sriovInterfaces: %v", sriovInterfaces)
+  if err != nil {
+    return nil, err
+  } else if interfaceCount > 0 {
+    updateDeviceOfInterfaces(args, interfaceCount, sriovInterfaces)
+  }
   syncher := syncher.NewSyncher(len(args.interfaces))
-  rawDeviceMap := getRegisteredDevices(args.podUid)
-  devices := rawDeviceMap["intel.com/sriov_net_A"].DeviceIDs
-  // TODO: it prints out the allocated deviceIDs from intel.com/sriov_net_A resource. Those should be passed to nicParams.Device
-  log.Printf("PETSZILA intel.com/sriov_net_A devices: %v", devices)
   for nicID, nicParams := range args.interfaces {
     nicParams.DefaultIfaceName = "eth" + strconv.Itoa(nicID)
-    nicParams.Device = devices[nicID]
     go createInterface(syncher, nicParams, args)
   }
-  err := syncher.GetAggregatedResult()
+  err = syncher.GetAggregatedResult()
   return syncher.MergeCniResults(), err
 }
 

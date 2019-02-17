@@ -188,24 +188,26 @@ func extractConnections(args *cniArgs) error {
   return nil
 }
 
-func getRegisteredDevices(podUid k8s.UID) ([]string) {
-  // TODO: change logs to error // petszila
+func getRegisteredDevices(podUid k8s.UID) ([]string,error) {
   resourceMap := make(map[string]*checkpoint.ResourceInfo)
   if string(podUid) != "" {
     checkpoint, err := checkpoint.GetCheckpoint()
     if err != nil {
-      log.Printf("getKubernetesDelegate: failed to get a checkpoint instance: %v", err)
+      return nil, err
     }
     resourceMap, err = checkpoint.GetComputeDeviceMap(string(podUid))
     if err != nil {
-      log.Printf("getKubernetesDelegate: failed to get resourceMap from kubelet checkpoint file: %v", err)
+      return nil, err
     }
-    log.Printf("getKubernetesDelegate(): resourceMap instance: %+v", resourceMap)
   }
-  /* TODO: - filter for CaaS defined sriov resource prefix  // petszila
-           - concatenate resource maps to one string array
-  */
-  return resourceMap["intel.com/sriov_net_A"].DeviceIDs
+  var registeredDevices []string
+  for resourcename, resources := range resourceMap {
+    // TODO: Change prefix accordingly // petszila
+    if strings.HasPrefix(resourcename,"intel.com/sriov") {
+      registeredDevices = append(registeredDevices, resources.DeviceIDs...)
+    }
+  }
+  return registeredDevices, nil
 }
 
 func getSriovInterfaces(args *cniArgs)(int,map[string]bool,error){
@@ -229,8 +231,10 @@ func getSriovInterfaces(args *cniArgs)(int,map[string]bool,error){
 }
 
 func updateDeviceOfInterfaces(args *cniArgs, interfaceCount int, sriovInterfaces map[string]bool) (error){
-  // TODO: Query Registered Devices from K8S Checkpoint.  // petszila
-  sriovDevices := getRegisteredDevices(args.podUid)
+  sriovDevices, err := getRegisteredDevices(args.podUid)
+  if err != nil {
+    return err
+  }
   if len(sriovDevices) == interfaceCount {
     for id, interfac := range args.interfaces {
       if _, ok := sriovInterfaces[interfac.Network]; ok == true {
@@ -240,7 +244,7 @@ func updateDeviceOfInterfaces(args *cniArgs, interfaceCount int, sriovInterfaces
   } else if len(sriovDevices) > interfaceCount {
     log.Printf("Warning: " + args.podId + " Pod overallocates SR IOV resources")
   } else {
-    return errors.New(args.podId + " Pod needs " + string(len(sriovInterfaces)) + " SR IOV resources to be allocated")
+    return errors.New(args.podId + " Pod needs " + string(len(sriovInterfaces)) + " SR IOV resources to be requested")
   }
   return nil
 }

@@ -97,7 +97,6 @@ type DanmEpIface struct {
   MacAddress  string            `json:"MacAddress"`
   Proutes     map[string]string `json:"proutes"`
   Proutes6    map[string]string `json:"proutes6"`
-  // TODO: consider the right place for SR IOV VF Device ID // petszila
   VfDeviceID  string            `json:"VfDeviceID,omitempty"`
 }
 
@@ -119,7 +118,6 @@ type Interface struct {
   Proutes map[string]string `json:"proutes"`
   Proutes6 map[string]string `json:"proutes6"`
   DefaultIfaceName string
-  // TODO: consider the right place for SR IOV VF Device ID // petszila
   Device string `json:"Device,omitempty"`
 }
 

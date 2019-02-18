@@ -235,24 +235,23 @@ func updateDeviceOfInterfaces(args *cniArgs, interfaceCount int, sriovInterfaces
   if err != nil {
     return err
   }
-  if len(sriovDevices) == interfaceCount {
+  if len(sriovDevices) >= interfaceCount {
+    if len(sriovDevices) > interfaceCount {
+      log.Printf("POD: " + args.podId + " overallocates SR IOV resources")
+    }
     for id, interfac := range args.interfaces {
       if _, ok := sriovInterfaces[interfac.Network]; ok == true {
         args.interfaces[id].Device, sriovDevices = sriovDevices[len(sriovDevices)-1], sriovDevices[:len(sriovDevices)-1]
       }
     }
-  } else if len(sriovDevices) > interfaceCount {
-    log.Printf("Warning: " + args.podId + " Pod overallocates SR IOV resources")
   } else {
-    return errors.New(args.podId + " Pod needs " + string(len(sriovInterfaces)) + " SR IOV resources to be requested")
+    return errors.New("POD" + args.podId + " needs " + string(len(sriovInterfaces)) + " SR IOV resources to be requested")
   }
   return nil
 }
 
 func setupNetworking(args *cniArgs) (*current.Result, error) {
   interfaceCount, sriovInterfaces, err := getSriovInterfaces(args)
-  // TODO: dump returned interfaces // petszila
-  log.Printf("PETSZILA sriovInterfaces: %v", sriovInterfaces)
   if err != nil {
     return nil, err
   } else if interfaceCount > 0 {

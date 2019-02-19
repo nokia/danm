@@ -49,14 +49,15 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
     Type:      "sriov",
     PfName:    netInfo.Spec.Options.Device,
     PfBackward: netInfo.Spec.Options.Device,
-    IfName:    ep.Spec.Iface.Name,
+    // TODO: Do not specify interface Name for sriov interfaces. Let CNI plugin generate it on its own. // petszila
+    // IfName:    ep.Spec.Iface.Name,
     L2Mode:    true,
     Vlan:      vlanid,
     // TODO: DPDK support to be removed (by Levo) // petszila
     // Dpdk:   DpdkOption{},
     Ipam:      ipamOptions,
-    // TODO: New options should be filled properly. // petszila
-    CNIDir:    "",
+    // TODO: CNIDir can be ommitted. SR IOV CNI plugin has its own default for. // petszila
+    // CNIDir:    "",
     DeviceID:  ep.Spec.Iface.VfDeviceID,
   }
   if ipamOptions.Ip != "" {

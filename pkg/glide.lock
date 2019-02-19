@@ -1,5 +1,5 @@
-hash: c733add746209fb2636606d30af3b2279aa2e51c786422ad39052596bdfc25a1
-updated: 2019-01-25T15:34:49.348804593+01:00
+hash: 6c91bced63f459ae044e0edd62341fea3b537100c19f8e3b64a863407d165745
+updated: 2019-02-20T09:22:01.958546557+01:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
@@ -63,6 +63,10 @@ imports:
   - simplelru
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
+- name: github.com/intel/sriov-cni
+  version: a87cb21e2f4aadedec7021eefa45523af51071ac
+  subpackages:
+  - pkg/utils
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/modern-go/concurrent
@@ -83,13 +87,10 @@ imports:
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
   - context
-  - html
-  - html/atom
   - http2
   - http2/hpack
   - idna
   - lex/httplex
-  - websocket
 - name: golang.org/x/sys
   version: 95c6576299259db960f6c5b9b69ea52422860fce
   subpackages:
@@ -131,7 +132,6 @@ imports:
   - core/v1
   - events/v1beta1
   - extensions/v1beta1
-  - imagepolicy/v1alpha1
   - networking/v1
   - policy/v1beta1
   - rbac/v1

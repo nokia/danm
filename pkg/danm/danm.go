@@ -26,6 +26,7 @@ import (
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/pkg/syncher"
   "github.com/nokia/danm/pkg/checkpoint"
+  sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 
 var (

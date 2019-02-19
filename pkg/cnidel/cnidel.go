@@ -234,7 +234,7 @@ func getEnv(key, fallback string) string {
 func CalculateIfaceName(chosenName, defaultName string) string {
   if chosenName != "" {
     // TODO: Interface name is not unique when POD requests multiple interfaces from the same DanmNet (eg. SR IOV) // petszila
-    return chosenName + "@" + defaultName
+    return chosenName
   }
   return defaultName 
 }

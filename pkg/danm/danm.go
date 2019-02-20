@@ -9,6 +9,7 @@ import (
   "strconv"
   "strings"
   "encoding/json"
+  "reflect"
   "github.com/satori/go.uuid"
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/types"
@@ -189,7 +190,7 @@ func extractConnections(args *cniArgs) error {
   return nil
 }
 
-func getRegisteredDevices(podUid k8s.UID) ([]string,error) {
+func getRegisteredDevices(podUid k8s.UID)([]string,error){
   resourceMap := make(map[string]*checkpoint.ResourceInfo)
   if string(podUid) != "" {
     checkpoint, err := checkpoint.GetCheckpoint()
@@ -203,7 +204,7 @@ func getRegisteredDevices(podUid k8s.UID) ([]string,error) {
   }
   var registeredDevices []string
   for resourcename, resources := range resourceMap {
-    // TODO: Change prefix accordingly // petszila
+    // TODO: Resource prefix should come from config-map according to Levo's email // petszila
     if strings.HasPrefix(resourcename,"intel.com/sriov") {
       registeredDevices = append(registeredDevices, resources.DeviceIDs...)
     }
@@ -211,52 +212,73 @@ func getRegisteredDevices(podUid k8s.UID) ([]string,error) {
   return registeredDevices, nil
 }
 
-func getSriovInterfaces(args *cniArgs)(int,map[string]bool,error){
+func getSriovInterfaces(args *cniArgs)(map[string]int,map[string]string,error){
   danmClient, err := createDanmClient(args.stdIn)
   if err != nil {
-    return 0, nil, errors.New("Unable to create DanmClient")
+    return nil, nil, errors.New("Unable to create DanmClient")
   }
-  sriovInterfaces := make(map[string]bool)
-  counter := 0
+  sriovInterfaces := make(map[string]int)
+  interfaceDeviceMap := make(map[string]string)
   for _, interfac := range args.interfaces {
     danmnet, err := danmClient.DanmV1().DanmNets(args.nameSpace).Get(interfac.Network, meta_v1.GetOptions{})
     if err != nil || danmnet.ObjectMeta.Name == ""{
-      return 0, nil, errors.New("NID:" + interfac.Network + " in namespace:" + args.nameSpace + " cannot be GET from K8s API server!")
+      return nil, nil, errors.New("NID:" + interfac.Network + " in namespace:" + args.nameSpace + " cannot be GET from K8s API server!")
     }
     if danmnet.Spec.NetworkType == "sriov" {
-      sriovInterfaces[interfac.Network] = true
-      counter++
+      sriovInterfaces[interfac.Network]++
+      interfaceDeviceMap[interfac.Network] = danmnet.Spec.Options.Device
     }
   }
-  return counter, sriovInterfaces, nil
+  return sriovInterfaces, interfaceDeviceMap, nil
 }
 
-func updateDeviceOfInterfaces(args *cniArgs, interfaceCount int, sriovInterfaces map[string]bool) (error){
-  sriovDevices, err := getRegisteredDevices(args.podUid)
-  if err != nil {
-    return err
+func validateSriovNetworkRequests(sriovInterfaces map[string]int, sriovDevices []string, interfaceDeviceMap map[string]string)(error){
+  requiredVfonPf := make(map[string]int)
+  requestedVfonPf := make(map[string]int)
+  for interfac, count := range sriovInterfaces {
+    requiredVfonPf[interfaceDeviceMap[interfac]] = count
   }
-  if len(sriovDevices) >= interfaceCount {
-    if len(sriovDevices) > interfaceCount {
-      log.Printf("POD: " + args.podId + " overallocates SR IOV resources")
+  for _, device := range sriovDevices {
+    pf, err := sriov_utils.GetPfName(device)
+    if err != nil {
+      // TODO: append err.Error() to a specific error message // petszila
+      return err
     }
-    for id, interfac := range args.interfaces {
-      if _, ok := sriovInterfaces[interfac.Network]; ok == true {
-        args.interfaces[id].Device, sriovDevices = sriovDevices[len(sriovDevices)-1], sriovDevices[:len(sriovDevices)-1]
-      }
+    requestedVfonPf[pf]++
+  }
+  eq := reflect.DeepEqual(requiredVfonPf, requestedVfonPf)
+  if eq {
+    return nil
+  }
+  log.Printf("Required SR IOV resources: %v", requiredVfonPf)
+  log.Printf("Requested SR IOV resources: %v", requestedVfonPf)
+  return errors.New("Requested and required SR IOV resources are not matching in the Pod definition")
+}
+
+func updateDeviceOfInterfaces(args *cniArgs, sriovInterfaces map[string]int, sriovDevices []string) (error){
+  for id, interfac := range args.interfaces {
+    if _, ok := sriovInterfaces[interfac.Network]; ok == true {
+      args.interfaces[id].Device, sriovDevices = sriovDevices[len(sriovDevices)-1], sriovDevices[:len(sriovDevices)-1]
     }
-  } else {
-    return errors.New("POD" + args.podId + " needs " + string(len(sriovInterfaces)) + " SR IOV resources to be requested")
   }
   return nil
 }
 
 func setupNetworking(args *cniArgs) (*current.Result, error) {
-  interfaceCount, sriovInterfaces, err := getSriovInterfaces(args)
+  sriovInterfaces, interfaceDeviceMap, err := getSriovInterfaces(args)
   if err != nil {
     return nil, err
-  } else if interfaceCount > 0 {
-    updateDeviceOfInterfaces(args, interfaceCount, sriovInterfaces)
+  }
+  if len(sriovInterfaces) > 0 {
+    sriovDevices, err := getRegisteredDevices(args.podUid)
+    if err != nil {
+      return nil, err
+    }
+    err = validateSriovNetworkRequests(sriovInterfaces, sriovDevices, interfaceDeviceMap)
+    if err != nil {
+      return nil, err
+    }
+    updateDeviceOfInterfaces(args, sriovInterfaces, sriovDevices)
   }
   syncher := syncher.NewSyncher(len(args.interfaces))
   for nicID, nicParams := range args.interfaces {

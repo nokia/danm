@@ -4,10 +4,8 @@ metadata:
   namespace: kube-system
 kind: ConfigMap
 data:
-  network:
-    sriov=intel.com/sriov
-    macvlan=nokia.com/macvlan
-  cpu:
-    foo=nokia.com/baa
+  sriov: intel.com/sriov
+  macvlan: nokia.com/macvlan
+  foo: nokia.com/baa
 
 

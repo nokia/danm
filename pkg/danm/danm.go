@@ -193,19 +193,17 @@ func extractConnections(args *cniArgs) error {
 func getResourcePrefix(args *cniArgs, resourceType string)(string,error){
   confArgs, err := loadNetConf(args.stdIn)
   if err != nil {
-    return errors.New("cannot load CNI NetConf due to error:" + err.Error())
+    return "", errors.New("cannot load CNI NetConf due to error:" + err.Error())
   }
   k8sClient, err := createK8sClient(confArgs.Kubeconfig)
   if err != nil {
     return "", errors.New("cannot create K8s REST client due to error:" + err.Error())
   }
   configmap, err := k8sClient.CoreV1().ConfigMaps(string("kube-system")).Get(string("resource-prefix-map"), meta_v1.GetOptions{})
-  // TODO: dump configmap. to be removed // petszila
-  log.Printf("PETSZILA resource-prefix-map: %v", configmap)
   if err != nil {
-    return "", errors.New("failed to get 'resource-prfix-map' Config Map data from K8s API server due to:" + err.Error())
+    return "", errors.New("failed to get 'resource-prefix-map' Config Map data from K8s API server due to:" + err.Error())
   }
-  return "intel.com/sriov", nil
+  return  configmap.Data[resourceType], nil
 }
 
 func getRegisteredDevices(args *cniArgs)([]string,error){

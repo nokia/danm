@@ -190,22 +190,44 @@ func extractConnections(args *cniArgs) error {
   return nil
 }
 
-func getRegisteredDevices(podUid k8s.UID)([]string,error){
+func getResourcePrefix(args *cniArgs, resourceType string)(string,error){
+  confArgs, err := loadNetConf(args.stdIn)
+  if err != nil {
+    return errors.New("cannot load CNI NetConf due to error:" + err.Error())
+  }
+  k8sClient, err := createK8sClient(confArgs.Kubeconfig)
+  if err != nil {
+    return "", errors.New("cannot create K8s REST client due to error:" + err.Error())
+  }
+  configmap, err := k8sClient.CoreV1().ConfigMaps(string("kube-system")).Get(string("resource-prefix-map"), meta_v1.GetOptions{})
+  // TODO: dump configmap. to be removed // petszila
+  log.Printf("PETSZILA resource-prefix-map: %v", configmap)
+  if err != nil {
+    return "", errors.New("failed to get 'resource-prfix-map' Config Map data from K8s API server due to:" + err.Error())
+  }
+  return "intel.com/sriov", nil
+}
+
+func getRegisteredDevices(args *cniArgs)([]string,error){
   resourceMap := make(map[string]*checkpoint.ResourceInfo)
-  if string(podUid) != "" {
+  if string(args.podUid) != "" {
     checkpoint, err := checkpoint.GetCheckpoint()
     if err != nil {
       return nil, err
     }
-    resourceMap, err = checkpoint.GetComputeDeviceMap(string(podUid))
+    resourceMap, err = checkpoint.GetComputeDeviceMap(string(args.podUid))
     if err != nil {
       return nil, err
     }
   }
+  prefix, err := getResourcePrefix(args, "sriov")
+  if err != nil {
+    return nil, err
+  }
   var registeredDevices []string
   for resourcename, resources := range resourceMap {
     // TODO: Resource prefix should come from config-map according to Levo's email // petszila
-    if strings.HasPrefix(resourcename,"intel.com/sriov") {
+    if strings.HasPrefix(resourcename,prefix) {
       registeredDevices = append(registeredDevices, resources.DeviceIDs...)
     }
   }
@@ -270,7 +292,7 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
     return nil, err
   }
   if len(sriovInterfaces) > 0 {
-    sriovDevices, err := getRegisteredDevices(args.podUid)
+    sriovDevices, err := getRegisteredDevices(args)
     if err != nil {
       return nil, err
     }

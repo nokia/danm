@@ -26,7 +26,8 @@ import (
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/pkg/syncher"
-  "github.com/nokia/danm/pkg/checkpoint"
+  checkpoint_utils "github.com/intel/multus-cni/checkpoint"
+  checkpoint_types "github.com/intel/multus-cni/types"
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 
@@ -207,9 +208,9 @@ func getResourcePrefix(args *cniArgs, resourceType string)(string,error){
 }
 
 func getRegisteredDevices(args *cniArgs)([]string,error){
-  resourceMap := make(map[string]*checkpoint.ResourceInfo)
+  resourceMap := make(map[string]*checkpoint_types.ResourceInfo)
   if string(args.podUid) != "" {
-    checkpoint, err := checkpoint.GetCheckpoint()
+    checkpoint, err := checkpoint_utils.GetCheckpoint()
     if err != nil {
       return nil, err
     }
@@ -276,6 +277,7 @@ func validateSriovNetworkRequests(sriovInterfaces map[string]int, sriovDevices [
 }
 
 func updateDeviceOfInterfaces(args *cniArgs, sriovInterfaces map[string]int, sriovDevices []string) (error){
+  // TODO:  nothing to return, this function is unnecessary // petszila
   for id, interfac := range args.interfaces {
     if _, ok := sriovInterfaces[interfac.Network]; ok == true {
       args.interfaces[id].Device, sriovDevices = sriovDevices[len(sriovDevices)-1], sriovDevices[:len(sriovDevices)-1]
@@ -562,5 +564,7 @@ func main() {
     log.SetOutput(f)
     defer f.Close()
   }
+  //TODO: Marker, to be sure that my code is running. // petszila
+  log.Printf("#################### PETSZILA #############################")
   skel.PluginMain(createInterfaces, deleteInterfaces, version.All)
 }

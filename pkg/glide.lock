@@ -1,5 +1,5 @@
 hash: 6c91bced63f459ae044e0edd62341fea3b537100c19f8e3b64a863407d165745
-updated: 2019-02-20T09:22:01.958546557+01:00
+updated: 2019-02-22T08:57:35.242417881+01:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
@@ -8,6 +8,7 @@ imports:
 - name: github.com/containernetworking/cni
   version: a7885cb6f8ab03fba07852ded351e4f5e7a112bf
   subpackages:
+  - libcni
   - pkg/invoke
   - pkg/skel
   - pkg/types
@@ -63,6 +64,12 @@ imports:
   - simplelru
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
+- name: github.com/intel/multus-cni
+  version: 8bf358071ab54b8f38d10027ccf81a29dfb78b3d
+  subpackages:
+  - checkpoint
+  - logging
+  - types
 - name: github.com/intel/sriov-cni
   version: a87cb21e2f4aadedec7021eefa45523af51071ac
   subpackages:
@@ -75,6 +82,8 @@ imports:
   version: 05fbef0ca5da472bbf96c9322b84a53edc03c9fd
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
+- name: github.com/pkg/errors
+  version: 856c240a51a2bf8fb8269ea7f3f9b046aadde36e
 - name: github.com/satori/go.uuid
   version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/spf13/pflag

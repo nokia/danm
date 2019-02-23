@@ -28,6 +28,8 @@ Link temporarily removed while we re-record the demonstration
       * [Internal workings of the metaplugin](#internal-workings-of-the-metaplugin)
     * [DANM IPAM](#danm-ipam)
     * [DANM IPVLAN CNI](#danm-ipvlan-cni)
+    * [Integrating SRIOV CNI](#integrating-sriov-cni)
+    * [Using SRIOV CNI](#using-sriov-cni)
   * [Usage of DANM's Netwatcher component](#usage-of-danms-netwatcher-component)
   * [Usage of DANM's Svcwatcher component](#usage-of-danms-svcwatcher-component)
     * [Feature description](#feature-description)
@@ -342,6 +344,130 @@ The CNI provisions IPVLAN interfaces in L2 mode, and supports the following extr
 * allocating IP addresses by using DANM's flexible, in-built IPAM module
 * provisioning generic IP routes into a configured routing table inside the Pod's network namespace
 * Pod-level controlled provisioning of policy-based IP routes into Pod's network namespace
+
+#### Integrating SRIOV CNI
+
+DANM has got interface to the latest Intel SR-IOV CNI. The solution relies on the Intel SR-IOV Network Device Plugin which maintains the actual resource allocation in kubernetes checkpoint. DANM utilizes the checkpoint data and passes the PCI ID of VF to be attached to the Pod to SR-IOV CNI.
+
+##### Prerequisites:
+* Intel SR-IOV Network Device Plugin needs to run on all SR-IOV capable minions according to it's [documnetation](https://github.com/intel/sriov-network-device-plugin#build-and-run-sriov-network-device-plugin)
+  
+  **NOTE:** Tested version: [v2.0.0](https://github.com/intel/sriov-network-device-plugin/tree/v2.0.0)
+* Intel SR-IOV CNI needs to be installed on all SR-IOV capable minions according to it's [documentation](https://github.com/intel/sriov-cni#sr-iov-cni-plugin)
+  
+  **NOTE:** Tested version: a87cb21e2f4aadedec7021eefa45523af51071ac
+* integration\manifests\resource-prefix-map.yaml to be edited and applied accordingly.
+  ```
+	Example:
+		apiVersion: v1
+		metadata:
+			name: resource-prefix-map
+			namespace: kube-system
+		kind: ConfigMap
+		data:
+			sriov: nokia.k8s.io/sriov
+			foo: foobaa.com/baa
+  ```
+  This Config Map contains resource type and resource name prefix bindings. DANM looks up for the value of the "sriov" key and looking for matching Pod resource in the checkpoint file where the name starts with this value.
+  
+  Configure all SR-IOV capable minions to use the same sriov prefix in the checkpoint file.
+  Intel SR-IOV Network Device Plugin creates a "nokia.k8s.io/sriov_ens1f0" like unique ID for each monitored resource where the "nokia.k8s.io" part comes from the "-resource-prefix=" SR-IOV Network Device Plugin service command line argument 
+  and the "sriov_ens1f0" part comes from the "resourceName" field in the SR-IOV Network Device Plugin configuration file.
+  ```
+  Example:
+			resourceList:
+			- resourceName: "sriov_ens1f0"
+			  rootDevices: [ "03:00.0" ]
+			  sriovMode: true
+			  deviceType: netdevice
+			- resourceName: "sriov_ens1f1"
+			  rootDevices: [ "03:00.1" ]
+			  sriovMode: true
+			  deviceType: netdevice
+  ```
+* **In case of RBAC, DANM requires getter role for configmaps**
+
+#### Using SRIOV CNI
+
+* Create sriov type DanmNets on the usual way. **Do not use** container_prefix option, SR-IOV CNI manages the interface naming automatically.
+```
+Example: 
+	apiVersion: danm.k8s.io/v1
+	kind: DanmNet
+	metadata:
+	  name: sriov-danm1
+	spec:
+	  NetworkID: sriov-danm1
+	  NetworkType: sriov
+	  Options:
+		host_device: ens1f0
+		rt_tables: 100
+		vlan: 100
+		cidr: 10.100.21.0/24
+		allocation_pool:
+		  start: 10.100.21.50
+		  end: 10.100.21.60
+	---
+	apiVersion: danm.k8s.io/v1
+	kind: DanmNet
+	metadata:
+	  name: sriov-danm2
+	spec:
+	  NetworkID: sriov-danm2
+	  NetworkType: sriov
+	  Options:
+		host_device: ens1f1
+		rt_tables: 200
+		vlan: 200
+		cidr: 10.100.22.0/24
+		allocation_pool:
+		  start: 10.100.22.50
+		  end: 10.100.22.60
+```
+* Attach one or more sriov DanmNet to the Pod and specify the related resource requests and limits accordingly.
+```
+Example:
+	apiVersion: v1
+	kind: Pod
+	metadata:
+	  name: testpod-sriov-6-double
+	  labels:
+		env: test
+	  annotations:
+		danm.k8s.io/interfaces: |
+		  [
+			{"network":"flannel", "ip":"dynamic"},
+			{"network":"sriov-danm1", "ip":"dynamic"},
+			{"network":"sriov-danm1", "ip":"dynamic"},
+			{"network":"sriov-danm1", "ip":"dynamic"},
+			{"network":"sriov-danm2", "ip":"dynamic"},
+			{"network":"sriov-danm2", "ip":"dynamic"},
+			{"network":"sriov-danm2", "ip":"dynamic"}
+		  ]
+	spec:
+	  containers:
+	  - name: testpod-sriov-6-double
+		image: busybox
+		imagePullPolicy: IfNotPresent
+		command: ['sh', '-c', 'echo Hello Kubernetes! && sleep 3600']
+		resources:
+		  requests:
+			nokia.k8s.io/sriov_ens1f0: '3'
+			nokia.k8s.io/sriov_ens1f1: '3'
+		  limits:
+			nokia.k8s.io/sriov_ens1f0: '3'
+			nokia.k8s.io/sriov_ens1f1: '3'
+	  nodeSelector:
+		nodename: caas_worker1
+```
+**ATTENTION: The total amount of requested sriov interfaces must be equal to the total amount of sriov resource requests. In case of any mismatch, DANM blocks the Pod instantiation and reports the deviance in /var/log/plugin.log**
+```
+Log sample:     
+	2019/02/23 19:18:00 Required SR IOV resources: map[ens1f0:4 ens1f1:2]
+	2019/02/23 19:18:00 Requested SR IOV resources: map[ens1f0:2 ens1f1:4]
+	2019/02/23 19:18:00 CNI DEL invoked with: ns:default PID:testpod-sriov-6-cross CID: 596e1b3ebb82f554fe32c60b35f238d892c126b273e81c732be5dd4430c30b11
+	2019/02/23 19:18:00 ERROR: ADD: CNI network could not be set up with error:sriov resource validation failed due to:requested and required sriov resources are not matching in the Pod definition
+```
 
 ### Usage of DANM's Netwatcher component
 Netwatcher is a mandatory component of the DANM networking suite.

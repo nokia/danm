@@ -2,7 +2,7 @@
 export CGO_ENABLED=0
 export GOOS=linux
 cd $GOPATH/src/github.com/nokia/danm/pkg
-glide install
+glide install --strip-vendor
 go get -d github.com/vishvananda/netlink
 go get github.com/containernetworking/plugins/pkg/ns
 go get github.com/golang/groupcache/lru

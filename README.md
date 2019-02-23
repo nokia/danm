@@ -3,7 +3,7 @@
 <img src="https://github.com/nokia/danm/raw/master/logo.png" width="100">
 
 ## Don't like reading? Then start by watching our demo video!
-[Demo](example/danm_demo.mp4)
+Link temporarily removed while we re-record the demonstration
 
 ## Table of Contents
 * [Table of Contents](#table-of-contents)

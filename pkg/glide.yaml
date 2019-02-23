@@ -20,4 +20,8 @@ import:
   version: v8.0.0
 - package: github.com/containernetworking/cni
   version: v0.6.0
+- package: github.com/intel/multus-cni
+  version: 8bf358071ab54b8f38d10027ccf81a29dfb78b3d
 - package: github.com/intel/sriov-cni
+  version: a87cb21e2f4aadedec7021eefa45523af51071ac
+

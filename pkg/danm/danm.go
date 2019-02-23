@@ -26,7 +26,8 @@ import (
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/pkg/syncher"
-  "github.com/nokia/danm/pkg/checkpoint"
+  checkpoint_utils "github.com/intel/multus-cni/checkpoint"
+  checkpoint_types "github.com/intel/multus-cni/types"
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 
@@ -206,25 +207,24 @@ func getResourcePrefix(args *cniArgs, resourceType string)(string,error){
   return  configmap.Data[resourceType], nil
 }
 
-func getRegisteredDevices(args *cniArgs)([]string,error){
-  resourceMap := make(map[string]*checkpoint.ResourceInfo)
+func getRegisteredDevices(args *cniArgs, cniType string)([]string,error){
+  resourceMap := make(map[string]*checkpoint_types.ResourceInfo)
   if string(args.podUid) != "" {
-    checkpoint, err := checkpoint.GetCheckpoint()
+    checkpoint, err := checkpoint_utils.GetCheckpoint()
     if err != nil {
-      return nil, err
+      return nil, errors.New("failed to instantiate checkpoint object due to:" + err.Error())
     }
     resourceMap, err = checkpoint.GetComputeDeviceMap(string(args.podUid))
     if err != nil {
-      return nil, err
+      return nil, errors.New("failed to retrieve Pod info from checkpoint object due to:" + err.Error())
     }
   }
-  prefix, err := getResourcePrefix(args, "sriov")
+  prefix, err := getResourcePrefix(args, cniType)
   if err != nil {
-    return nil, err
+    return nil, errors.New("failed to get resource prefix from config map due to:" + err.Error())
   }
   var registeredDevices []string
   for resourcename, resources := range resourceMap {
-    // TODO: Resource prefix should come from config-map according to Levo's email // petszila
     if strings.HasPrefix(resourcename,prefix) {
       registeredDevices = append(registeredDevices, resources.DeviceIDs...)
     }
@@ -235,7 +235,7 @@ func getRegisteredDevices(args *cniArgs)([]string,error){
 func getSriovInterfaces(args *cniArgs)(map[string]int,map[string]string,error){
   danmClient, err := createDanmClient(args.stdIn)
   if err != nil {
-    return nil, nil, errors.New("Unable to create DanmClient")
+    return nil, nil, errors.New("failed to create DanmClient due to:" + err.Error())
   }
   sriovInterfaces := make(map[string]int)
   interfaceDeviceMap := make(map[string]string)
@@ -252,7 +252,7 @@ func getSriovInterfaces(args *cniArgs)(map[string]int,map[string]string,error){
   return sriovInterfaces, interfaceDeviceMap, nil
 }
 
-func validateSriovNetworkRequests(sriovInterfaces map[string]int, sriovDevices []string, interfaceDeviceMap map[string]string)(error){
+func validateSriovNetworkRequests(sriovInterfaces map[string]int, sriovDevices []string, interfaceDeviceMap map[string]string) error {
   requiredVfonPf := make(map[string]int)
   requestedVfonPf := make(map[string]int)
   for interfac, count := range sriovInterfaces {
@@ -261,8 +261,7 @@ func validateSriovNetworkRequests(sriovInterfaces map[string]int, sriovDevices [
   for _, device := range sriovDevices {
     pf, err := sriov_utils.GetPfName(device)
     if err != nil {
-      // TODO: append err.Error() to a specific error message // petszila
-      return err
+      return errors.New("failed to get the name of the sriov PF for device "+ device +" due to:" + err.Error())
     }
     requestedVfonPf[pf]++
   }
@@ -272,33 +271,28 @@ func validateSriovNetworkRequests(sriovInterfaces map[string]int, sriovDevices [
   }
   log.Printf("Required SR IOV resources: %v", requiredVfonPf)
   log.Printf("Requested SR IOV resources: %v", requestedVfonPf)
-  return errors.New("Requested and required SR IOV resources are not matching in the Pod definition")
-}
-
-func updateDeviceOfInterfaces(args *cniArgs, sriovInterfaces map[string]int, sriovDevices []string) (error){
-  for id, interfac := range args.interfaces {
-    if _, ok := sriovInterfaces[interfac.Network]; ok == true {
-      args.interfaces[id].Device, sriovDevices = sriovDevices[len(sriovDevices)-1], sriovDevices[:len(sriovDevices)-1]
-    }
-  }
-  return nil
+  return errors.New("requested and required sriov resources are not matching in the Pod definition")
 }
 
 func setupNetworking(args *cniArgs) (*current.Result, error) {
   sriovInterfaces, interfaceDeviceMap, err := getSriovInterfaces(args)
   if err != nil {
-    return nil, err
+    return nil, errors.New("failed to collect sriov interfaces due to:" + err.Error())
   }
   if len(sriovInterfaces) > 0 {
-    sriovDevices, err := getRegisteredDevices(args)
+    sriovDevices, err := getRegisteredDevices(args, "sriov")
     if err != nil {
-      return nil, err
+      return nil, errors.New("failed to collect sriov interfaces due to:" + err.Error())
     }
     err = validateSriovNetworkRequests(sriovInterfaces, sriovDevices, interfaceDeviceMap)
     if err != nil {
-      return nil, err
+      return nil, errors.New("sriov resource validation failed due to:" + err.Error())
     }
-    updateDeviceOfInterfaces(args, sriovInterfaces, sriovDevices)
+    for id, interfac := range args.interfaces {
+      if _, ok := sriovInterfaces[interfac.Network]; ok == true {
+        args.interfaces[id].Device, sriovDevices = sriovDevices[len(sriovDevices)-1], sriovDevices[:len(sriovDevices)-1]
+      }
+    }
   }
   syncher := syncher.NewSyncher(len(args.interfaces))
   for nicID, nicParams := range args.interfaces {

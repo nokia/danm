@@ -207,7 +207,7 @@ func getResourcePrefix(args *cniArgs, resourceType string)(string,error){
   return  configmap.Data[resourceType], nil
 }
 
-func getRegisteredDevices(args *cniArgs)([]string,error){
+func getRegisteredDevices(args *cniArgs, cniType string)([]string,error){
   resourceMap := make(map[string]*checkpoint_types.ResourceInfo)
   if string(args.podUid) != "" {
     checkpoint, err := checkpoint_utils.GetCheckpoint()
@@ -219,8 +219,7 @@ func getRegisteredDevices(args *cniArgs)([]string,error){
       return nil, errors.New("failed to retrieve Pod info from checkpoint object due to:" + err.Error())
     }
   }
-  // TODO: eliminate "sriov", get it from variable to be more generic // petszila
-  prefix, err := getResourcePrefix(args, "sriov")
+  prefix, err := getResourcePrefix(args, cniType)
   if err != nil {
     return nil, errors.New("failed to get resource prefix from config map due to:" + err.Error())
   }
@@ -262,7 +261,6 @@ func validateSriovNetworkRequests(sriovInterfaces map[string]int, sriovDevices [
   for _, device := range sriovDevices {
     pf, err := sriov_utils.GetPfName(device)
     if err != nil {
-      // TODO: append err.Error() to a specific error message // petszila
       return errors.New("failed to get the name of the sriov PF for device "+ device +" due to:" + err.Error())
     }
     requestedVfonPf[pf]++
@@ -282,7 +280,7 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
     return nil, errors.New("failed to collect sriov interfaces due to:" + err.Error())
   }
   if len(sriovInterfaces) > 0 {
-    sriovDevices, err := getRegisteredDevices(args)
+    sriovDevices, err := getRegisteredDevices(args, "sriov")
     if err != nil {
       return nil, errors.New("failed to collect sriov interfaces due to:" + err.Error())
     }
@@ -558,7 +556,5 @@ func main() {
     log.SetOutput(f)
     defer f.Close()
   }
-  //TODO: Marker, to be sure that my code is running. // petszila
-  log.Printf("#################### PETSZILA #############################")
   skel.PluginMain(createInterfaces, deleteInterfaces, version.All)
 }

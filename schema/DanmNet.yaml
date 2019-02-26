@@ -37,17 +37,21 @@ spec:
     # OPTIONAL - STRING
     host_device: ## PARENT_DEVICE_NAME ##
     # The IPv4 CIDR notation of the subnet associated with the network.
-    # Pods connecting to this network will get their IPs from this subnet, if defined.
+    # Pods connecting to this network will get their IPv4 IP from this subnet, if defined.
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
-    # OPTIONAL - CIDR FORMAT (e.g. "10.0.0.0/24")
+    # OPTIONAL - IPv4 CIDR FORMAT (e.g. "10.0.0.0/24")
     cidr: ## SUBNET_CIDR ##
-    # IP allocation will be done according to the narrowed down allocation pool parameter, if defined.
-    # Allocation pool must be provided together with CIDR, and shall be aligned with the CIDR subnet range.
+    # IPv4 allocation will be done according to the narrowed down allocation pool parameter, if defined.
+    # Allocation pool must be provided together with "cidr", and shall be included in the subnet range.
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
-    # OPTIONAL - IPV4 FORMAT (e.g. "10.0.0.10")
     allocation_pool:
       start: ## FIRST_ASSIGNABLE_IP ##
       end: ## LAST_ASSIGNABLE_IP ##
+    # The IPv6 CIDR notation of the subnet associated with the network.
+    # Pods connecting to this network will get their IPv6s from this subnet, if defined.
+    # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
+    # OPTIONAL - IPv6 CIDR FORMAT (e.g. "2001:db8::/45")
+    net6: ## SUBNET_CIDR ##
     # Interfaces connected to this network will be renamed to "container_prefix" inside the container.
     # If not provided, DANM will dynamically allocate a name for each container interface belonging to this network in Pod instantiation time.
     # Generally supported parameter, works with all NetworkTypes.
@@ -57,10 +61,16 @@ spec:
     # Generally supported parameter, works with all NetworkTypes.
     # OPTIONAL - INTEGER (e.g. 201)
     rt_tables: ## HOST_UNIQUE_ROUTING_TABLE_NUMBER ##
-    # IPv4 routes to be installed by default for all containers connected to this network
+    # IPv4 routes to be installed into the default routing table of all Pods connected to this network.
     # Generally supported parameter, works with all NetworkTypes.
     # OPTIONAL - LIST OF DESTINATION_IPV4_CIDR:IPV4_GW ENTRIES (e.g. "10.20.0.0/24: 10.0.0.1")
     routes:
+      ## IP_ROUTE_1 ##
+      ## IP_ROUTE_2 ##
+    # IPv6 routes to be installed into the default routing table of all Pods connected to this network.
+    # Generally supported parameter, works with all NetworkTypes.
+    # OPTIONAL - LIST OF DESTINATION_IPV6_CIDR:IPV6_GW ENTRIES
+    routes6:
       ## IP_ROUTE_1 ##
       ## IP_ROUTE_2 ##
     # If this parameter is present then traffic going through this network will be VxLAN tagged with the provided identifier

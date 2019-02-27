@@ -79,7 +79,7 @@ func updateDanmNetAllocation (danmClient danmclientset.Interface, netInfo danmty
     //Randomizing backoff time to decrease the possibility of conflicts
     randomBackoff := rand.Intn(backOffTimer) 
     time.Sleep(time.Duration(randomBackoff) * time.Millisecond)
-    newNetSpec, err := danmClient.Danm().DanmNets(netInfo.ObjectMeta.Namespace).Get(netInfo.Spec.NetworkID, meta_v1.GetOptions{})
+    newNetSpec, err := danmClient.DanmV1().DanmNets(netInfo.ObjectMeta.Namespace).Get(netInfo.Spec.NetworkID, meta_v1.GetOptions{})
     if err != nil {
         return false, errors.New("After IP address reservation conflict, network cannot be read again!"), danmtypes.DanmNet{}
     }

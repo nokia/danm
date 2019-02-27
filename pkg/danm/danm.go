@@ -9,7 +9,6 @@ import (
   "strconv"
   "strings"
   "encoding/json"
-  "reflect"
   "github.com/satori/go.uuid"
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/types"
@@ -27,7 +26,6 @@ import (
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/pkg/syncher"
   checkpoint_utils "github.com/intel/multus-cni/checkpoint"
-  checkpoint_types "github.com/intel/multus-cni/types"
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 
@@ -191,147 +189,70 @@ func extractConnections(args *cniArgs) error {
   return nil
 }
 
-func getResourcePrefix(args *cniArgs, resourceType string)(string,error){
-  confArgs, err := loadNetConf(args.stdIn)
+func getAllocatedDevices(args *cniArgs, devicePool string)(map[string][]string, error){
+  checkpoint, err := checkpoint_utils.GetCheckpoint()
   if err != nil {
-    return "", errors.New("cannot load CNI NetConf due to error:" + err.Error())
+    return nil, errors.New("failed to instantiate checkpoint object due to:" + err.Error())
   }
-  k8sClient, err := createK8sClient(confArgs.Kubeconfig)
-  if err != nil {
-    return "", errors.New("cannot create K8s REST client due to error:" + err.Error())
+  resourceMap, err := checkpoint.GetComputeDeviceMap(string(args.podUid))
+  if err != nil || len(resourceMap) == 0 {
+    return nil, errors.New("failed to retrieve Pod info from checkpoint object due to:" + err.Error())
   }
-  configmap, err := k8sClient.CoreV1().ConfigMaps(string("kube-system")).Get(string("resource-prefix-map"), meta_v1.GetOptions{})
-  if err != nil {
-    return "", errors.New("failed to get 'resource-prefix-map' Config Map data from K8s API server due to:" + err.Error())
-  }
-  return  configmap.Data[resourceType], nil
-}
-
-func getRegisteredDevices(args *cniArgs, cniType string)([]string,error){
-  resourceMap := make(map[string]*checkpoint_types.ResourceInfo)
-  if string(args.podUid) != "" {
-    checkpoint, err := checkpoint_utils.GetCheckpoint()
-    if err != nil {
-      return nil, errors.New("failed to instantiate checkpoint object due to:" + err.Error())
-    }
-    resourceMap, err = checkpoint.GetComputeDeviceMap(string(args.podUid))
-    if err != nil {
-      return nil, errors.New("failed to retrieve Pod info from checkpoint object due to:" + err.Error())
-    }
-  }
-  prefix, err := getResourcePrefix(args, cniType)
-  if err != nil {
-    return nil, errors.New("failed to get resource prefix from config map due to:" + err.Error())
-  }
-  var registeredDevices []string
+  allocatedDevices := make(map[string][]string)
   for resourcename, resources := range resourceMap {
-    if strings.HasPrefix(resourcename,prefix) {
-      registeredDevices = append(registeredDevices, resources.DeviceIDs...)
+    if strings.HasPrefix(resourcename, devicePool) {
+      hostDevice, err := sriov_utils.GetPfName(resources.DeviceIDs[0])
+      if err != nil {
+        return nil, errors.New("failed to get the name of the sriov PF for device "+ resources.DeviceIDs[0] +" due to:" + err.Error())
+      }
+      allocatedDevices[hostDevice] = resources.DeviceIDs
     }
   }
-  return registeredDevices, nil
+  return allocatedDevices, nil
 }
 
-func getSriovInterfaces(args *cniArgs)(map[string]int,map[string]string,error){
-  danmClient, err := createDanmClient(args.stdIn)
-  if err != nil {
-    return nil, nil, errors.New("failed to create DanmClient due to:" + err.Error())
+func getDevice(hostDevice string, allocatedDevices map[string][]string)(string, map[string][]string) {
+  device :=  ""
+  if len(allocatedDevices[hostDevice]) != 0 {
+    device, allocatedDevices[hostDevice] = allocatedDevices[hostDevice][len(allocatedDevices[hostDevice])-1], allocatedDevices[hostDevice][:len(allocatedDevices[hostDevice])-1]
   }
-  sriovInterfaces := make(map[string]int)
-  interfaceDeviceMap := make(map[string]string)
-  for _, interfac := range args.interfaces {
-    danmnet, err := danmClient.DanmV1().DanmNets(args.nameSpace).Get(interfac.Network, meta_v1.GetOptions{})
-    if err != nil || danmnet.ObjectMeta.Name == ""{
-      return nil, nil, errors.New("NID:" + interfac.Network + " in namespace:" + args.nameSpace + " cannot be GET from K8s API server!")
-    }
-    if danmnet.Spec.NetworkType == "sriov" {
-      sriovInterfaces[interfac.Network]++
-      interfaceDeviceMap[interfac.Network] = danmnet.Spec.Options.Device
-    }
-  }
-  return sriovInterfaces, interfaceDeviceMap, nil
-}
-
-func validateSriovNetworkRequests(sriovInterfaces map[string]int, sriovDevices []string, interfaceDeviceMap map[string]string) error {
-  requiredVfonPf := make(map[string]int)
-  requestedVfonPf := make(map[string]int)
-  for interfac, count := range sriovInterfaces {
-    requiredVfonPf[interfaceDeviceMap[interfac]] = count
-  }
-  for _, device := range sriovDevices {
-    pf, err := sriov_utils.GetPfName(device)
-    if err != nil {
-      return errors.New("failed to get the name of the sriov PF for device "+ device +" due to:" + err.Error())
-    }
-    requestedVfonPf[pf]++
-  }
-  eq := reflect.DeepEqual(requiredVfonPf, requestedVfonPf)
-  if eq {
-    return nil
-  }
-  log.Printf("Required SR IOV resources: %v", requiredVfonPf)
-  log.Printf("Requested SR IOV resources: %v", requestedVfonPf)
-  return errors.New("requested and required sriov resources are not matching in the Pod definition")
+  return device, allocatedDevices
 }
 
 func setupNetworking(args *cniArgs) (*current.Result, error) {
-  sriovInterfaces, interfaceDeviceMap, err := getSriovInterfaces(args)
+  danmClient, err := createDanmClient(args.stdIn)
   if err != nil {
-    return nil, errors.New("failed to collect sriov interfaces due to:" + err.Error())
-  }
-  if len(sriovInterfaces) > 0 {
-    sriovDevices, err := getRegisteredDevices(args, "sriov")
-    if err != nil {
-      return nil, errors.New("failed to collect sriov interfaces due to:" + err.Error())
-    }
-    err = validateSriovNetworkRequests(sriovInterfaces, sriovDevices, interfaceDeviceMap)
-    if err != nil {
-      return nil, errors.New("sriov resource validation failed due to:" + err.Error())
-    }
-    for id, interfac := range args.interfaces {
-      if _, ok := sriovInterfaces[interfac.Network]; ok == true {
-        args.interfaces[id].Device, sriovDevices = sriovDevices[len(sriovDevices)-1], sriovDevices[:len(sriovDevices)-1]
-      }
-    }
+    return nil, errors.New("failed to create DanmClient due to:" + err.Error())
   }
   syncher := syncher.NewSyncher(len(args.interfaces))
+  allocatedDevices := make(map[string][]string)
+  var cniRes *current.Result
   for nicID, nicParams := range args.interfaces {
+    isDelegationRequired, netInfo, err := cnidel.IsDelegationRequired(danmClient, nicParams.Network, args.nameSpace)
+    if err != nil {
+      return cniRes, errors.New("failed to get DanmNet due to:" + err.Error())
+    }
     nicParams.DefaultIfaceName = "eth" + strconv.Itoa(nicID)
-    go createInterface(syncher, nicParams, args)
+    if isDelegationRequired {
+      if cnidel.IsDeviceNeeded(netInfo.Spec.NetworkType) {
+        if len(allocatedDevices) == 0 {
+          allocatedDevices, err = getAllocatedDevices(args, netInfo.Spec.Options.DevicePool)
+          if err != nil {
+            log.Printf("Failed to get allocated devices due to: %v", err.Error())
+          }
+        }
+        nicParams.Device, allocatedDevices = getDevice(netInfo.Spec.Options.Device, allocatedDevices)
+      }
+      go createDelegatedInterface(syncher, danmClient, nicParams, netInfo, args)
+    } else {
+      go createDanmInterface(syncher, danmClient, nicParams, netInfo, args)
+    }
   }
   err = syncher.GetAggregatedResult()
   return syncher.MergeCniResults(), err
 }
 
-func createInterface(syncher *syncher.Syncher, iface danmtypes.Interface, args *cniArgs) {
-  danmClient, err := createDanmClient(args.stdIn)
-  if err != nil {
-    syncher.PushResult(iface.Network, err, nil)
-    return
-  }
-  isDelegationRequired, netInfo, err := cnidel.IsDelegationRequired(danmClient, iface.Network, args.nameSpace)
-  if err != nil {
-    syncher.PushResult(iface.Network, err, nil)
-    return
-  }
-  var cniRes *current.Result
-  if isDelegationRequired {
-    cniRes, err = createDelegatedInterface(danmClient, iface, netInfo, args)
-    if err != nil {
-      syncher.PushResult(iface.Network, err, nil)
-      return
-    }
-  } else {
-    cniRes, err = createDanmInterface(danmClient, iface, netInfo, args)
-    if err != nil {
-      syncher.PushResult(iface.Network, err, nil)
-      return
-    }
-  }
-  syncher.PushResult(iface.Network, nil, cniRes)
-}
-
-func createDelegatedInterface(danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) (*current.Result,error) {
+func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) {
   epIfaceSpec := danmtypes.DanmEpIface {
     Name:        cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName),
     Address:     iface.Ip,
@@ -342,24 +263,24 @@ func createDelegatedInterface(danmClient danmclientset.Interface, iface danmtype
   }
   ep, err := createDanmEp(epIfaceSpec, netInfo.Spec.NetworkID, netInfo.Spec.NetworkType, args)
   if err != nil {
-    return nil, errors.New("DanmEp object could not be created due to error:" + err.Error())
+    syncher.PushResult(iface.Network, errors.New("DanmEp object could not be created due to error:" + err.Error()), nil)
   }
   delegatedResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, &ep)
   if err != nil {
-    return nil, err
+    syncher.PushResult(iface.Network, errors.New("CNI delegation failed due to error:" + err.Error()), nil)
   }
   err = putDanmEp(args, ep)
   if err != nil {
-    return nil, errors.New("DanmEp object could not be PUT to K8s due to error:" + err.Error())
+    syncher.PushResult(iface.Network, errors.New("DanmEp object could not be PUT to K8s due to error:" + err.Error()), nil)
   }
-  return delegatedResult, nil
+  syncher.PushResult(iface.Network, nil, delegatedResult)
 }
 
-func createDanmInterface(danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) (*current.Result,error) {
+func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) {
   netId := netInfo.Spec.NetworkID
   ip4, ip6, macAddr, err := ipam.Reserve(danmClient, *netInfo, iface.Ip, iface.Ip6)
   if err != nil {
-    return nil, errors.New("IP address reservation failed for network:" + netId + " with error:" + err.Error())
+    syncher.PushResult(iface.Network, errors.New("IP address reservation failed for network:" + netId + " with error:" + err.Error()), nil)
   }
   epSpec := danmtypes.DanmEpIface {
     Name: cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName),
@@ -373,18 +294,18 @@ func createDanmInterface(danmClient danmclientset.Interface, iface danmtypes.Int
   ep, err := createDanmEp(epSpec, netId, networkType, args)
   if err != nil {
     ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
-    return nil, errors.New("DanmEp object could not be created due to error:" + err.Error())
+    syncher.PushResult(iface.Network, errors.New("DanmEp object could not be created due to error:" + err.Error()), nil)
   }
   err = putDanmEp(args, ep)
   if err != nil {
     ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
-    return nil, errors.New("EP could not be PUT into K8s due to error:" + err.Error())
+    syncher.PushResult(iface.Network, errors.New("EP could not be PUT into K8s due to error:" + err.Error()), nil)
   } 
   err = danmep.AddIpvlanInterface(netInfo, ep)
   if err != nil {
     ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
     deleteEp(danmClient, ep)
-    return nil, errors.New("IPVLAN interface could not be created due to error:" + err.Error())
+    syncher.PushResult(iface.Network, errors.New("IPVLAN interface could not be created due to error:" + err.Error()), nil)
   } 
   danmResult := &current.Result{}
   addIfaceToResult(ep.Spec.EndpointID, epSpec.MacAddress, args.containerId, danmResult)
@@ -394,7 +315,7 @@ func createDanmInterface(danmClient danmclientset.Interface, iface danmtypes.Int
   if (ip6 != "") {
     addIpToResult(ip6,"6",danmResult)
   }
-  return danmResult, nil
+  syncher.PushResult(iface.Network, nil, danmResult)
 }
 
 func createDanmEp(epInput danmtypes.DanmEpIface, netId string, neType string, args *cniArgs) (danmtypes.DanmEp, error) {

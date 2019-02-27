@@ -86,6 +86,15 @@ func isIpamNeeded(cniType string) bool {
   return false
 }
 
+func IsDeviceNeeded(cniType string) bool {
+  for _, cni := range supportedNativeCnis {
+    if cni.BackendName == cniType {
+      return cni.deviceNeeded
+    }
+  }
+  return false
+}
+
 func getCniIpamConfig(options danmtypes.DanmNetOption, ip4, ip6 string) danmtypes.IpamConfig {
   var (
     subnet string

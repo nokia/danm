@@ -31,6 +31,8 @@ type DanmNetSpec struct {
 type DanmNetOption struct {
   // The device to where the network is attached
   Device string  `json:"host_device"`
+  // The resource_pool contains allocated device IDs
+  DevicePool string  `json:"device_pool,omitempty"`
   // the vxlan id on the host device (creation of vxlan interface)
   Vxlan  int  `json:"vxlan,omitempty"`
   // The name of the interface in the container
@@ -53,8 +55,6 @@ type DanmNetOption struct {
   RTables int `json:"rt_tables"`
   // the VLAN id of the VLAN interface created on top of the host device
   Vlan  int  `json:"vlan,omitempty"`
-  // option to determinate if DPDK options should be used
-  Dpdk    bool               `json:"dpdk,omitempty"`
 }
 
 type IP4Pool struct {

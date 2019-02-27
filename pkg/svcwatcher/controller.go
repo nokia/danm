@@ -504,7 +504,7 @@ func (c *Controller) updatePod(old, new interface{}) {
 			if deNew.Spec.Pod == podName && deNew.Namespace == podNs {
 				deLabels := newPod.Labels
 				deNew.SetLabels(deLabels)
-				c.danmclient.Danm().DanmEps(deNew.Namespace).Update(deNew)
+				c.danmclient.DanmV1().DanmEps(deNew.Namespace).Update(deNew)
 			}
 		}
 	}

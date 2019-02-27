@@ -10,6 +10,7 @@ type cniBackendConfig struct {
   danmtypes.CniBackend
   readConfig cniConfigReader
   ipamNeeded bool
+  deviceNeeded bool
 }
 
 // sriovNet represent the configuration of sriov plugin v1.0.0

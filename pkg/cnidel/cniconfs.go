@@ -18,6 +18,7 @@ var (
       },
       cniConfigReader(getSriovCniConfig),
       true,
+      true,
     },
     &cniBackendConfig {
       danmtypes.CniBackend {
@@ -26,6 +27,7 @@ var (
       },
       cniConfigReader(getMacvlanCniConfig),
       true,
+      false,
     },
   }
 )

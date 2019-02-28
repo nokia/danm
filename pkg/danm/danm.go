@@ -26,7 +26,6 @@ import (
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/pkg/syncher"
   checkpoint_utils "github.com/intel/multus-cni/checkpoint"
-  sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 
 var (
@@ -189,7 +188,7 @@ func extractConnections(args *cniArgs) error {
   return nil
 }
 
-func getAllocatedDevices(args *cniArgs, devicePool string)(map[string][]string, error){
+func getAllocatedDevices(args *cniArgs, devicePool string)(*[]string, error){
   checkpoint, err := checkpoint_utils.GetCheckpoint()
   if err != nil {
     return nil, errors.New("failed to instantiate checkpoint object due to:" + err.Error())
@@ -198,25 +197,18 @@ func getAllocatedDevices(args *cniArgs, devicePool string)(map[string][]string, 
   if err != nil || len(resourceMap) == 0 {
     return nil, errors.New("failed to retrieve Pod info from checkpoint object due to:" + err.Error())
   }
-  allocatedDevices := make(map[string][]string)
-  for resourcename, resources := range resourceMap {
-    if strings.HasPrefix(resourcename, devicePool) {
-      hostDevice, err := sriov_utils.GetPfName(resources.DeviceIDs[0])
-      if err != nil {
-        return nil, errors.New("failed to get the name of the sriov PF for device "+ resources.DeviceIDs[0] +" due to:" + err.Error())
-      }
-      allocatedDevices[hostDevice] = resources.DeviceIDs
-    }
+  if _, ok := resourceMap[devicePool]; !ok {
+    return nil, errors.New("failed to retrieve resources of DevicePool")
   }
-  return allocatedDevices, nil
+  return &resourceMap[devicePool].DeviceIDs, nil
 }
 
-func getDevice(hostDevice string, allocatedDevices map[string][]string)(string, map[string][]string) {
-  device :=  ""
-  if len(allocatedDevices[hostDevice]) != 0 {
-    device, allocatedDevices[hostDevice] = allocatedDevices[hostDevice][len(allocatedDevices[hostDevice])-1], allocatedDevices[hostDevice][:len(allocatedDevices[hostDevice])-1]
-  }
-  return device, allocatedDevices
+func popDevice(devicePool string, allocatedDevices map[string]*[]string)(string, error) {
+  devices := (*allocatedDevices[devicePool])
+  if len(devices) == 0 { return "", errors.New("devicePool is empty") }
+  device, devices := devices[len(devices)-1], devices[:len(devices)-1]
+  allocatedDevices[devicePool] = &devices
+  return device, nil
 }
 
 func setupNetworking(args *cniArgs) (*current.Result, error) {
@@ -225,7 +217,7 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
     return nil, errors.New("failed to create DanmClient due to:" + err.Error())
   }
   syncher := syncher.NewSyncher(len(args.interfaces))
-  allocatedDevices := make(map[string][]string)
+  allocatedDevices := make(map[string]*[]string)
   var cniRes *current.Result
   for nicID, nicParams := range args.interfaces {
     isDelegationRequired, netInfo, err := cnidel.IsDelegationRequired(danmClient, nicParams.Network, args.nameSpace)
@@ -235,13 +227,16 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
     nicParams.DefaultIfaceName = "eth" + strconv.Itoa(nicID)
     if isDelegationRequired {
       if cnidel.IsDeviceNeeded(netInfo.Spec.NetworkType) {
-        if len(allocatedDevices) == 0 {
-          allocatedDevices, err = getAllocatedDevices(args, netInfo.Spec.Options.DevicePool)
+        if _, ok := allocatedDevices[netInfo.Spec.Options.DevicePool]; !ok {
+          allocatedDevices[netInfo.Spec.Options.DevicePool], err = getAllocatedDevices(args, netInfo.Spec.Options.DevicePool)
           if err != nil {
-            log.Printf("Failed to get allocated devices due to: %v", err.Error())
+            return cniRes, errors.New("failed to get allocated devices due to:" + err.Error())
           }
         }
-        nicParams.Device, allocatedDevices = getDevice(netInfo.Spec.Options.Device, allocatedDevices)
+        nicParams.Device, err = popDevice(netInfo.Spec.Options.DevicePool, allocatedDevices)
+        if err != nil {
+          return cniRes, errors.New("failed to pop devices due to:" + err.Error())
+        }
       }
       go createDelegatedInterface(syncher, danmClient, nicParams, netInfo, args)
     } else {

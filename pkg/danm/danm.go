@@ -254,7 +254,7 @@ func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset
     AddressIPv6: iface.Ip6,
     Proutes:     iface.Proutes,
     Proutes6:    iface.Proutes6,
-    VfDeviceID:  iface.Device,
+    DeviceID:  iface.Device,
   }
   ep, err := createDanmEp(epIfaceSpec, netInfo.Spec.NetworkID, netInfo.Spec.NetworkType, args)
   if err != nil {

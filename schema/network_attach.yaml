@@ -65,6 +65,15 @@ spec:
               ...
             }
           ]
-
   ...
-
+  spec:
+    containers:
+    - name:
+    ...
+      resources:
+      # In case of sriov interface type, resources must be requested from the Intel SR-IOV Netwrok Device plugin 
+        requests:
+          "<SRIOV_DP_RESOURCE_POOL_NAME>": '3'
+        limits:
+          "<SRIOV_DP_RESOURCE_POOL_NAME>": '3'
+  ...

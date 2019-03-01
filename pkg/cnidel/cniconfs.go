@@ -7,6 +7,7 @@ import (
   "encoding/json"
   "github.com/nokia/danm/pkg/danmep"
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 
 var (
@@ -45,11 +46,15 @@ func readCniConfigFile(netInfo *danmtypes.DanmNet) ([]byte, error) {
 
 //This function creates CNI configuration for the dynamic-level SR-IOV backend
 func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
+  pfname, err := sriov_utils.GetPfName(ep.Spec.Iface.DeviceID)
+  if err != nil {
+    return nil, errors.New("failed to get the name of the sriov PF for device "+ ep.Spec.Iface.DeviceID +" due to:" + err.Error())
+  }
   vlanid := netInfo.Spec.Options.Vlan
   sriovConfig := sriovNet {
     Name:      netInfo.Spec.NetworkID,
     Type:      "sriov",
-    PfName:    netInfo.Spec.Options.Device,
+    PfName:    pfname,
     L2Mode:    true,
     Vlan:      vlanid,
     Ipam:      ipamOptions,

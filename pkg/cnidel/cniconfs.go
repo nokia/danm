@@ -50,11 +50,10 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
     Name:      netInfo.Spec.NetworkID,
     Type:      "sriov",
     PfName:    netInfo.Spec.Options.Device,
-    PfBackward: netInfo.Spec.Options.Device,
     L2Mode:    true,
     Vlan:      vlanid,
     Ipam:      ipamOptions,
-    DeviceID:  ep.Spec.Iface.VfDeviceID,
+    DeviceID:  ep.Spec.Iface.DeviceID,
   }
   if ipamOptions.Ip != "" {
     sriovConfig.L2Mode = false

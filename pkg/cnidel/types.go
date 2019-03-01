@@ -19,8 +19,6 @@ type sriovNet struct {
   Name   string     `json:"name"`
   // currently constant "sriov"
   Type   string     `json:"type"`
-  // Backward compatible field of PF name
-  PfBackward string     `json:"if0"`
   // name of the PF since sriov cni v1.0.0
   PfName string     `json:"master"`
   // interface name in the Container
@@ -31,8 +29,6 @@ type sriovNet struct {
   Vlan   int        `json:"vlan,omitEmpty"`
   // IPAM configuration to be used for this network
   Ipam   danmtypes.IpamConfig `json:"ipam,omitEmpty"`
-  // DPDK configuration
-  Dpdk   *DpdkOption `json:"dpdk,omitEmpty"`
   // CNI binary location
   CNIDir string `json:"cniDir"`
   // Device PCI ID
@@ -41,27 +37,11 @@ type sriovNet struct {
   DeviceInfo *VfInformation `json:"deviceinfo,omitempty"`
 }
 
-// VfInformation is a DeviceIfo desctiprtor expected by sriov plugin v1.0.0
+// VfInformation is a DeviceInfo desctiprtor expected by sriov plugin v1.0.0
 type VfInformation struct {
   PCIaddr string `json:"pci_addr"`
   Pfname  string `json:"pfname"`
   Vfid    int    `json:"vfid"`
-}
-
-// DpdkOption represents the DPDK options for the sriov plugin v1.0.0
-type DpdkOption struct {
-  // The VFID of the sriov device
-  VFID int `json:"vfid"`
-  // The PCI address of sriov device
-  PCIaddr string `json:"pci_addr"`
-  // The name of the interface
-  Ifname string `json:"ifname"`
-  // The name of kernel NIC driver
-  NicDriver string `json:"kernel_driver"`
-  // The name of DPDK capable driver
-  DpdkDriver string `json:"dpdk_driver"`
-  // Path to the dpdk-devbind.py script
-  DpdkTool string `json:"dpdk_tool"`
 }
 
 type macvlanNet struct {

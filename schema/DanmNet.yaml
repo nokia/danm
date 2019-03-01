@@ -19,7 +19,7 @@ spec:
   # This parameter, if present, denotes which backend willl be used to provision the container interfaces connected to this network.
   # Currently supported values with dynamic integration level are IPVLAN (default), SRIOV, or MACVLAN.
   # - IPVLAN option results in an IPVLAN sub-interface provisioned in L2 mode, and connected to the designated host device
-  # - SRIOV option pushes an already existing Virtual Function of the configured host device to the container's netns
+  # - SRIOV option pushes a pre-allocated Virtual Function of the configured host device to the container's netns
   # - MACVLAN option results in a MACVLAN sub-interface provisioned in bridge mode, and connected to the designated host device
   # For any other CNI backend DANM will read their configuration from the configured CNI config directory.
   # E.g. when a Pod is connected to a DanmNet with "NetworkType" set to "flannel", DANM will pass the content of /etc/cni/net.d/flannel.conf file to the /opt/cni/bin/flannel binary by invoking a standard CNI operation.
@@ -36,6 +36,12 @@ spec:
     # A Virtual Function belonging to this Physical Function is taken-up in case NetworkType is set to SRIOV.
     # OPTIONAL - STRING
     host_device: ## PARENT_DEVICE_NAME ##
+    # Name of an SR-IOV Network Device Plugin resource pool
+    # DANM assumes that only one SR-IOV Phisical Function is mapped to an Intel SR-IOV Network Device resource pool
+    # Pod definition must contain resource requests against the same Intel SR-IOV Network Device resource
+    # container_prefix must be ommited, Intel SR-IOV CNI generates unique interface name automatically 
+    # OPTIONAL - STRING
+    device_pool: ## SRIOV_DP_RESOURCE_MAME ##
     # The IPv4 CIDR notation of the subnet associated with the network.
     # Pods connecting to this network will get their IPv4 IP from this subnet, if defined.
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.

@@ -1,0 +1,34 @@
+apiVersion: danm.k8s.io/v1
+kind: DanmNet
+metadata:
+  name: management
+  namespace: example-sriov
+spec:
+  NetworkID: management
+  NetworkType: flannel
+---
+apiVersion: danm.k8s.io/v1
+kind: DanmNet
+metadata:
+  name: sriov-a
+  namespace: example-sriov
+spec:
+  NetworkID: sriov-a
+  NetworkType: sriov
+  Options:
+    host_device: ens1f0
+    device_pool: "nokia.k8s.io/sriov_ens1f0"
+---
+apiVersion: danm.k8s.io/v1
+kind: DanmNet
+metadata:
+  name: sriov-b
+  namespace: example-sriov
+spec:
+  NetworkID: sriov-b
+  NetworkType: sriov
+  Options:
+    host_device: ens1f1
+    device_pool: "nokia.k8s.io/sriov_ens1f1"
+
+

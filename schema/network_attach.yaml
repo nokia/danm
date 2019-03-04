@@ -71,9 +71,15 @@ spec:
     - name:
     ...
       resources:
-      # In case of sriov interface type, resources must be requested from the Intel SR-IOV Netwrok Device plugin 
+        # Network Device Plugin managed resources (e.g. devices/interfaces) to be requested for DanmNets.
+        # OPTIONAL PARAMETER - but MANDATORY if a network Device Plugin is being used
         requests:
-          "<SRIOV_DP_RESOURCE_POOL_NAME>": '3'
+          "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_A>": "<NUM_OF_RESOURCES>"
+          "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_B>": "<NUM_OF_RESOURCES>"
+          ...
+        # OPTIONAL PARAMETER - but MANDATORY if a network Device Plugin is being used
         limits:
-          "<SRIOV_DP_RESOURCE_POOL_NAME>": '3'
+          "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_A>": "<NUM_OF_RESOURCES>"
+          "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_B>": "<NUM_OF_RESOURCES>"
+          ...
   ...

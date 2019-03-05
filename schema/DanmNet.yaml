@@ -39,7 +39,6 @@ spec:
     # Name of a network Device Plugin resource pool
     # The device_pool parameter generally represents the base resource name of the Kubernetes Devices connected to this network.
     # Specifically for DanmNets with "NetworkType: sriov" this option is mandatory, and it represents a pool of VFs Pods connecting to this network will get one provisioned from.
-    # container_prefix must be ommited, Intel SR-IOV CNI generates unique interface name automatically 
     # OPTIONAL - STRING
     device_pool: ## DEVICE_PLUGIN_RESOURCE_POOL_MAME ##
     # The IPv4 CIDR notation of the subnet associated with the network.

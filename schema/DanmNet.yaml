@@ -36,12 +36,11 @@ spec:
     # A Virtual Function belonging to this Physical Function is taken-up in case NetworkType is set to SRIOV.
     # OPTIONAL - STRING
     host_device: ## PARENT_DEVICE_NAME ##
-    # Name of an SR-IOV Network Device Plugin resource pool
-    # DANM assumes that only one SR-IOV Phisical Function is mapped to an Intel SR-IOV Network Device resource pool
-    # Pod definition must contain resource requests against the same Intel SR-IOV Network Device resource
-    # container_prefix must be ommited, Intel SR-IOV CNI generates unique interface name automatically 
+    # Name of a network Device Plugin resource pool
+    # The device_pool parameter generally represents the base resource name of the Kubernetes Devices connected to this network.
+    # Specifically for DanmNets with "NetworkType: sriov" this option is mandatory, and it represents a pool of VFs Pods connecting to this network will get one provisioned from.
     # OPTIONAL - STRING
-    device_pool: ## SRIOV_DP_RESOURCE_MAME ##
+    device_pool: ## DEVICE_PLUGIN_RESOURCE_POOL_MAME ##
     # The IPv4 CIDR notation of the subnet associated with the network.
     # Pods connecting to this network will get their IPv4 IP from this subnet, if defined.
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
@@ -61,6 +60,7 @@ spec:
     # Interfaces connected to this network will be renamed to "container_prefix" inside the container.
     # If not provided, DANM will dynamically allocate a name for each container interface belonging to this network in Pod instantiation time.
     # Generally supported parameter, works with all NetworkTypes.
+    # Do not specify container_prefix in case multiple interfaces are provisioned from the same DanmNet.
     # OPTIONAL - STRING
     container_prefix: ## INTERNAL_IF_NAME ##
     # Policy-based IP routes belonging to this network will be installed in this routing table, if a Pod asks for them.

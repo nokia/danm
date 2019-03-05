@@ -1,6 +1,7 @@
 package stubs
 
 import (
+  "errors"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
   types "k8s.io/apimachinery/pkg/types"
@@ -37,7 +38,7 @@ func (netClient NetClientStub) Get(netName string, options meta_v1.GetOptions) (
       return &testNet, nil
     }
   }
-  return nil, nil
+  return nil, errors.New("let's test error case as well")
 }
 
 func (netClient NetClientStub) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {

@@ -5,15 +5,37 @@ import (
   "github.com/nokia/danm/pkg/cnidel"
   danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/stubs"
+  meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var testNets = []danmtypes.DanmNet {
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "empty", NetworkType: ""} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "ipvlan", NetworkType: "ipvlan"} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "IPVLAN", NetworkType: "IPVLAN"} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "sriov",NetworkType: "sriov"} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "flannel", NetworkType: "flannel"} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "hululululu", NetworkType: "hululululu"} },
+  danmtypes.DanmNet{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "empty"},
+    Spec:       danmtypes.DanmNetSpec{NetworkID: "empty", NetworkType: ""},
+  },
+  danmtypes.DanmNet{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "ipvlan"},
+    Spec: danmtypes.DanmNetSpec{NetworkID: "ipvlan", NetworkType: "ipvlan"},
+  },
+  danmtypes.DanmNet{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "IPVLAN"},
+    Spec: danmtypes.DanmNetSpec{NetworkID: "IPVLAN", NetworkType: "IPVLAN"},
+  },
+  danmtypes.DanmNet{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "sriov"},  
+    Spec: danmtypes.DanmNetSpec{NetworkID: "sriov",NetworkType: "sriov"},
+  },
+  danmtypes.DanmNet{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "flannel"},  
+    Spec: danmtypes.DanmNetSpec{NetworkID: "flannel", NetworkType: "flannel"},
+  },
+  danmtypes.DanmNet{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "hululululu"},  
+    Spec: danmtypes.DanmNetSpec{NetworkID: "hululululu", NetworkType: "hululululu"},
+  },
+  danmtypes.DanmNet{ 
+    Spec: danmtypes.DanmNetSpec{NetworkID: "nometa", NetworkType: "macvlan"},
+  },
 }
 
 var delegationRequiredTcs = []struct {
@@ -26,21 +48,8 @@ var delegationRequiredTcs = []struct {
   {"sriov", false, true},
   {"flannel", false, true},
   {"hululululu", false, true},
-}
-
-func TestIsDelegationRequired(t *testing.T) {
-  netClientStub := stubs.NewClientSetStub(testNets, nil)
-  for _, tc := range delegationRequiredTcs {
-    t.Run(tc.netName, func(t *testing.T) {
-      isDelRequired,_,err := cnidel.IsDelegationRequired(netClientStub,tc.netName,"hululululu")
-      if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
-        t.Errorf("Received error does not match with expectation: %b", tc.isErrorExpected)
-      }
-      if isDelRequired != tc.isDelegationExpected {
-        t.Errorf("Received delegation result does not match with expected")
-      }
-    })
-  }
+  {"error", true, false},
+  {"nometa", true, false},
 }
 
 var isDeviceNeededTcs = []struct {
@@ -50,6 +59,25 @@ var isDeviceNeededTcs = []struct {
   {"sriov", true},
   {"macvlan", false},
   {"neverhas", false},
+}
+
+func TestIsDelegationRequired(t *testing.T) {
+  netClientStub := stubs.NewClientSetStub(testNets, nil)
+  for _, tc := range delegationRequiredTcs {
+    t.Run(tc.netName, func(t *testing.T) {
+      isDelRequired,_,err := cnidel.IsDelegationRequired(netClientStub,tc.netName,"hululululu")
+      if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
+        var detailedErrorMessage string
+        if err != nil {
+          detailedErrorMessage = err.Error()
+        }
+        t.Errorf("Received error does not match with expectation: %t for TC: %s, detailed error message: %s", tc.isErrorExpected, tc.netName, detailedErrorMessage)
+      }
+      if isDelRequired != tc.isDelegationExpected {
+        t.Errorf("Received delegation result does not match with expected for TC: %s", tc.netName)
+      }
+    })
+  }
 }
 
 func TestIsDeviceNeeded(t *testing.T) {

@@ -22,7 +22,7 @@ func TestNewBitArray(t *testing.T) {
     t.Run("TestNewBitArray Size:"+strconv.Itoa(tt.inputSize), func(t *testing.T) {
       testArray,error := bitarray.NewBitArray(tt.inputSize)
       if (tt.isErrorExpected && nil==error) && (!tt.isErrorExpected && nil!=error) {
-        t.Errorf("BitArray initialization returned unexpected error result at test value %d: error expected %d, returned error %s", tt.inputSize, tt.isErrorExpected, error )
+        t.Errorf("BitArray initialization returned unexpected error result at test value %d: error expected %t, returned error %s", tt.inputSize, tt.isErrorExpected, error )
       }
       if tt.isErrorExpected  {
         return

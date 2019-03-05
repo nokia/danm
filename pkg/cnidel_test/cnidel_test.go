@@ -42,3 +42,21 @@ func TestIsDelegationRequired(t *testing.T) {
     })
   }
 }
+
+var isDeviceNeededTcs = []struct {
+  BackendName string
+  deviceNeeded bool
+}{
+  {"sriov", true},
+  {"macvlan", false},
+  {"neverhas", false},
+}
+
+func TestIsDeviceNeeded(t *testing.T) {
+  for _, tc := range isDeviceNeededTcs {
+    isDevNeeded := cnidel.IsDeviceNeeded(tc.BackendName)
+    if isDevNeeded != tc.deviceNeeded {
+      t.Errorf("Received device needed result does not match with expected")
+    }
+  }
+}

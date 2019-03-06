@@ -28,6 +28,8 @@
     * [DANM IPAM](#danm-ipam)
       * [IPv6 and dual-stack support](#ipv6-and-dual-stack-support)
     * [DANM IPVLAN CNI](#danm-ipvlan-cni)
+    * [Device Plugin Support](#device-plugin-support)
+      * [Using Intel SR-IOV CNI](#using-intel-sriov-cni)
   * [Usage of DANM's Netwatcher component](#usage-of-danms-netwatcher-component)
   * [Usage of DANM's Svcwatcher component](#usage-of-danms-svcwatcher-component)
     * [Feature description](#feature-description)
@@ -354,6 +356,78 @@ The CNI provisions IPVLAN interfaces in L2 mode, and supports the following extr
 * allocating IP addresses by using DANM's flexible, in-built IPAM module
 * provisioning generic IP routes into a configured routing table inside the Pod's network namespace
 * Pod-level controlled provisioning of policy-based IP routes into Pod's network namespace
+#### Device Plugin support
+DANM provides general support to CNIs which interwork with Kubernetes' Device Plugin mechanism such as SR-IOV CNI.
+When a properly configured Network Device Plugin runs, the allocatable resource list for the node should be updated with resource discovered by the plugin.
+##### Using Intel SR-IOV CNI
+SR-IOV Network Device Plugin allows to create a list of *netdevice* type resource definitions with *sriovMode*, where each resource definition can have one or more assigned *rootDevice* (Physical Function). The plugin looks for Virtual Funtions (VF) for each configured Physical Function (PF) and adds all discovered VF to the allocatable resource's list of the given Kubernetes Node. The Device Plugin resource name will be the device pool name on the Node. These device pools can be referred in Pod definition's resource request part on the usual way.
+
+In the following example, the "nokia.k8s.io/sriov_ens1f0" device pool name consists of the "nokia.k8s.io" prefix and "sriov_ens1f0" resourceName.
+
+For more information consult the plugin's users guide.
+```
+kubectl get nodes 172.30.101.104 -o json | jq '.status.allocatable'
+{
+  "cpu": "48",
+  "ephemeral-storage": "48308001098",
+  "hugepages-1Gi": "16Gi",
+  "memory": "246963760Ki",
+  "nokia.k8s.io/default": "0",
+  "nokia.k8s.io/sriov_ens1f0": "8",
+  "nokia.k8s.io/sriov_ens1f1": "8",
+  "pods": "110"
+}
+```
+DanmNet's schema definition contains an optional device_pool field where a specific device pool can be assigned to the given DanmNet.
+Before DANM invokes a CNI which expects a given resource to be attached to the Pod, it gathers all available device IDs from the DanmNet's device pool and passes one ID from the list to the CNI.
+
+The following DanmNet definition shows how to configure device_pool parameter for sriov network type.
+```
+apiVersion: danm.k8s.io/v1
+kind: DanmNet
+metadata:
+  name: sriov-a
+  namespace: example-sriov
+spec:
+  NetworkID: sriov-a
+  NetworkType: sriov
+  Options:
+    host_device: ens1f0
+    device_pool: "nokia.k8s.io/sriov_ens1f0"
+```
+The following Pod definition shows how to create resource request for each sriov type DanmNet.
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sriov-pod
+  namespace: example-sriov
+  labels:
+    env: test
+  annotations:
+    danm.k8s.io/interfaces: |
+      [
+        {"network":"management", "ip":"dynamic"},
+        {"network":"sriov-a", "ip":"none"},
+        {"network":"sriov-b", "ip":"none"}
+      ]
+spec:
+  containers:
+  - name: sriov-pod
+    image: busybox:latest
+    args:
+      - sleep
+      - "1000"
+    resources:
+      requests:
+        nokia.k8s.io/sriov_ens1f0: '1'
+        nokia.k8s.io/sriov_ens1f1: '1'
+      limits:
+        nokia.k8s.io/sriov_ens1f0: '1'
+        nokia.k8s.io/sriov_ens1f1: '1'
+  nodeSelector:
+    sriov: enabled
+```
 
 ### Usage of DANM's Netwatcher component
 Netwatcher is a mandatory component of the DANM networking suite.

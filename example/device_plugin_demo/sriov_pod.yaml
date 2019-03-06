@@ -21,10 +21,10 @@ spec:
       - "1000"
     resources:
       requests:
-        nokia.k8s.io/sriov_ens1f0: '3'
-        nokia.k8s.io/sriov_ens1f1: '3'
+        nokia.k8s.io/sriov_ens1f0: '1'
+        nokia.k8s.io/sriov_ens1f1: '1'
       limits:
-        nokia.k8s.io/sriov_ens1f0: '3'
-        nokia.k8s.io/sriov_ens1f1: '3'
+        nokia.k8s.io/sriov_ens1f0: '1'
+        nokia.k8s.io/sriov_ens1f1: '1'
   nodeSelector:
     sriov: enabled

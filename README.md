@@ -1,5 +1,7 @@
 # DANM
 [![Build Status](https://travis-ci.org/nokia/danm.svg?branch=master)](https://travis-ci.org/Nokia/danm)
+[![Unit Test Coverage](https://coveralls.io/repos/github/nokia/danm/badge.svg?branch=master)](https://coveralls.io/github/nokia/danm?branch=master)
+
 <img src="https://github.com/nokia/danm/raw/master/logo.png" width="100">
 
 ## Table of Contents

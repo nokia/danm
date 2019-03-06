@@ -3,6 +3,7 @@ dist: xenial
 
 env:
  - TRAVIS_PIPELINE=docker
+ - TRAVIS_PIPELINE=buildah
 
 language: go
 

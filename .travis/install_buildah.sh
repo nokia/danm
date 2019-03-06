@@ -1,7 +1,4 @@
 #!/bin/bash
-
-if [[ $WITH_BUILDAH == 'Y' ]]; then
-	
     sudo apt-get -y install software-properties-common
     sudo add-apt-repository -y ppa:alexlarsson/flatpak
     sudo add-apt-repository -y ppa:gophers/archive
@@ -26,5 +23,3 @@ if [[ $WITH_BUILDAH == 'Y' ]]; then
         registries = []
 
 EOF
-
-fi

@@ -188,11 +188,7 @@ func extractConnections(args *cniArgs) error {
   return nil
 }
 
-func getAllocatedDevices(args *cniArgs, devicePool string)(*[]string, error){
-  checkpoint, err := checkpoint_utils.GetCheckpoint()
-  if err != nil {
-    return nil, errors.New("failed to instantiate checkpoint object due to:" + err.Error())
-  }
+func getAllocatedDevices(args *cniArgs, checkpoint checkpoint_utils.Checkpoint, devicePool string)(*[]string, error){
   resourceMap, err := checkpoint.GetComputeDeviceMap(string(args.podUid))
   if err != nil || len(resourceMap) == 0 {
     return nil, errors.New("failed to retrieve Pod info from checkpoint object due to:" + err.Error())
@@ -204,6 +200,7 @@ func getAllocatedDevices(args *cniArgs, devicePool string)(*[]string, error){
 }
 
 func popDevice(devicePool string, allocatedDevices map[string]*[]string)(string, error) {
+  if len(allocatedDevices) == 0 { return "", errors.New("allocatedDevices is empty") }
   devices := (*allocatedDevices[devicePool])
   if len(devices) == 0 { return "", errors.New("devicePool is empty") }
   device, devices := devices[len(devices)-1], devices[:len(devices)-1]
@@ -218,6 +215,11 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
   }
   syncher := syncher.NewSyncher(len(args.interfaces))
   allocatedDevices := make(map[string]*[]string)
+
+  checkpoint, err := checkpoint_utils.GetCheckpoint()
+  if err != nil {
+    return nil, errors.New("failed to instantiate checkpoint object due to:" + err.Error())
+  }
   var cniRes *current.Result
   for nicID, nicParams := range args.interfaces {
     isDelegationRequired, netInfo, err := cnidel.IsDelegationRequired(danmClient, nicParams.Network, args.nameSpace)
@@ -228,7 +230,7 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
     if isDelegationRequired {
       if cnidel.IsDeviceNeeded(netInfo.Spec.NetworkType) {
         if _, ok := allocatedDevices[netInfo.Spec.Options.DevicePool]; !ok {
-          allocatedDevices[netInfo.Spec.Options.DevicePool], err = getAllocatedDevices(args, netInfo.Spec.Options.DevicePool)
+          allocatedDevices[netInfo.Spec.Options.DevicePool], err = getAllocatedDevices(args, checkpoint, netInfo.Spec.Options.DevicePool)
           if err != nil {
             return cniRes, errors.New("failed to get allocated devices due to:" + err.Error())
           }

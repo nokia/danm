@@ -131,19 +131,23 @@ func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCo
 func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep *danmtypes.DanmEp) (types.Result,error) {
   cniPath, cniArgs, err := getExecCniParams(cniType, netInfo, ep)
   if err != nil {
-    return nil, err
+    return nil, errors.New("exec CNI params couldn't be gathered:" + err.Error())
   }
   exec := invoke.RawExec{Stderr: os.Stderr}
   rawResult, err := exec.ExecPlugin(cniPath, rawConfig, cniArgs)
   if err != nil {
-    return nil, err
+    return nil, errors.New("OS exec call failed:" + err.Error())
   }
   versionDecoder := &version.ConfigDecoder{}
-  confVersion, err := versionDecoder.Decode(rawConfig)
-  if err != nil {
-    return nil, err
+  confVersion, err := versionDecoder.Decode(rawConfig)  
+  if err != nil || rawResult == nil {
+    return &current.Result{}, nil
   }
-  return version.NewResult(confVersion, rawResult)
+  convertedResult, err := version.NewResult(confVersion, rawResult)
+  if err != nil || convertedResult == nil {
+    return &current.Result{}, nil
+  }
+  return convertedResult, nil
 }
 
 func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (string,[]string,error) {
@@ -183,7 +187,7 @@ func DelegateInterfaceDelete(danmClient danmclientset.Interface, netInfo *danmty
     return err
   }
   cniType := netInfo.Spec.NetworkType
-  err = invoke.DelegateDel(cniType, rawConfig)
+  _, err = execCniPlugin(cniType, netInfo, rawConfig, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return errors.New("Error delegating DEL to CNI plugin:" + cniType + " because:" + err.Error())

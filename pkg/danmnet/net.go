@@ -216,11 +216,11 @@ func deleteHostInterface(ifId int, ifName string) error {
 }
 
 func invalidate(dnet *danmtypes.DanmNet) {
-  dnet.Spec.Validation = "False"
+  dnet.Spec.Validation = false
 }
 
 func validate(dnet *danmtypes.DanmNet) {
-  dnet.Spec.Validation = "True"
+  dnet.Spec.Validation = true
 }
 
 func setupHost(dnet *danmtypes.DanmNet) error {

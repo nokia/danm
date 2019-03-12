@@ -26,7 +26,7 @@ const (
 // The reserved IP address is represented by setting a bit in the network's BitArray type allocation matrix
 // The refreshed DanmNet object is modified in the K8s API server at the end
 func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4, req6 string) (string, string, string, error) {
-  if strings.ToLower(netInfo.Spec.Validation) != "true" {
+  if netInfo.Spec.Validation != true {
     return "", "", "", errors.New("Invalid network: " + netInfo.Spec.NetworkID)
   }
   tempNetSpec := netInfo

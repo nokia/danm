@@ -9,10 +9,9 @@ import (
 )
 
 var testNets = []danmtypes.DanmNet {
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "emptyVal", Validation: ""} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "falseValLower", Validation: "false"} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "falseValUpper", Validation: "FALSE"} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "emptyNet", Validation: "TRUE"} },
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "emptyVal", } },
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "falseVal", Validation: false} },
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "trueVal", Validation: true} },
 }
 
 var reserveTcs = []struct {
@@ -26,9 +25,8 @@ var reserveTcs = []struct {
   isMacExpected bool
 }{
   {"emptyVal", testNets[0], "", "", "", "", true, false},
-  {"falseValLower", testNets[1], "", "", "", "", true, false},
-  {"falseValUpper", testNets[2], "", "", "", "", true, false},
-  {"noIpsRequested", testNets[3], "", "", "", "", false, true},
+  {"falseVal", testNets[1], "", "", "", "", true, false},
+  {"noIpsRequested", testNets[2], "", "", "", "", false, true},
 }
 
 func TestReserve(t *testing.T) {

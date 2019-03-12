@@ -64,7 +64,7 @@ func PutDanmNet(client danmclientset.Interface, dnet *danmtypes.DanmNet) (bool,e
 // update validity in apiserver, don't care for 409 (PATCH or PUT)
 // create host specific network stuff: rt_tables, vlan, and vxlan interfaces
 func addDanmNet(client danmclientset.Interface, dn danmtypes.DanmNet) {
-  if dn.Spec.Validation != "" && dn.Spec.Validation == "True" {
+  if dn.Spec.Validation == true {
     err := setupHost(&dn)
     if err != nil {
       log.Println("ERROR: Failed to setup host interfaces for already validated Danmnet:" + dn.Spec.NetworkID +

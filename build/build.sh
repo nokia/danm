@@ -17,5 +17,5 @@ lister-gen --alsologtostderr --input-dirs github.com/nokia/danm/crd/apis/danm/v1
 informer-gen --alsologtostderr --input-dirs github.com/nokia/danm/crd/apis/danm/v1 --versioned-clientset-package github.com/nokia/danm/crd/client/clientset/versioned --listers-package github.com/nokia/danm/crd/client/listers --output-package github.com/nokia/danm/crd/client/informers 
 go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/pkg/danm
 go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/pkg/netwatcher
-go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/pkg/fakeipam
+go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/cmd/fakeipam
 go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/pkg/svcwatcher

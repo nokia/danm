@@ -10,38 +10,38 @@ import (
 )
 
 type cniOpResult struct {
-  cniName string
-  opResult error
-  cniResult *current.Result
+  CniName string
+  OpResult error
+  CniResult *current.Result
 }
 
 type Syncher struct {
-  expectedNumOfResults int
-  cniResults []cniOpResult
+  ExpectedNumOfResults int
+  CniResults []cniOpResult
   mux sync.Mutex
 }
 
 func NewSyncher(numOfResults int) *Syncher {
   syncher := Syncher{}
-  syncher.expectedNumOfResults = numOfResults
+  syncher.ExpectedNumOfResults = numOfResults
   return &syncher
 }
 
 func (synch *Syncher) PushResult(cniName string, opRes error, cniRes *current.Result) {
   cniOpResult := cniOpResult {
-    cniName: cniName,
-    opResult: opRes,
-    cniResult: cniRes,
+    CniName: cniName,
+    OpResult: opRes,
+    CniResult: cniRes,
   }
   synch.mux.Lock()
   defer synch.mux.Unlock()
-  synch.cniResults = append(synch.cniResults, cniOpResult)
+  synch.CniResults = append(synch.CniResults, cniOpResult)
 }
 
 func (synch *Syncher) GetAggregatedResult() error {
   //Time-out Pod creation if a plugin did not provide result within 10 seconds
   for i := 0; i < 1000; i++ {
-    if synch.expectedNumOfResults > len(synch.cniResults) {
+    if synch.ExpectedNumOfResults > len(synch.CniResults) {
       time.Sleep(10 * time.Millisecond)
       continue
     }
@@ -54,8 +54,8 @@ func (synch *Syncher) GetAggregatedResult() error {
 }
 
 func (synch *Syncher) wasAnyOperationErroneous() bool {
-  for _, cniRes := range synch.cniResults {
-    if cniRes.opResult != nil {
+  for _, cniRes := range synch.CniResults {
+    if cniRes.OpResult != nil {
       return true
     }
   }
@@ -64,9 +64,9 @@ func (synch *Syncher) wasAnyOperationErroneous() bool {
 
 func (synch *Syncher) mergeErrorMessages() error {
   var aggregatedErrors []string
-  for _, cniRes := range synch.cniResults {
-    if cniRes.opResult != nil {
-      aggregatedErrors = append(aggregatedErrors, "CNI operation for network:" + cniRes.cniName + " failed with:" + cniRes.opResult.Error())
+  for _, cniRes := range synch.CniResults {
+    if cniRes.OpResult != nil {
+      aggregatedErrors = append(aggregatedErrors, "CNI operation for network:" + cniRes.CniName + " failed with:" + cniRes.OpResult.Error())
     }
   }
   return fmt.Errorf(strings.Join(aggregatedErrors, "\n"))
@@ -74,18 +74,18 @@ func (synch *Syncher) mergeErrorMessages() error {
 
 func (synch *Syncher) MergeCniResults() *current.Result {
   aggregatedCniRes := current.Result{}
-  for _, cniRes := range synch.cniResults {
-    if cniRes.cniResult != nil {
-      aggregatedCniRes.Interfaces = append(aggregatedCniRes.Interfaces, cniRes.cniResult.Interfaces...)
-      aggregatedCniRes.IPs = append(aggregatedCniRes.IPs, cniRes.cniResult.IPs...)
-      aggregatedCniRes.Routes = append(aggregatedCniRes.Routes, cniRes.cniResult.Routes...)
+  for _, cniRes := range synch.CniResults {
+    if cniRes.CniResult != nil {
+      aggregatedCniRes.Interfaces = append(aggregatedCniRes.Interfaces, cniRes.CniResult.Interfaces...)
+      aggregatedCniRes.IPs = append(aggregatedCniRes.IPs, cniRes.CniResult.IPs...)
+      aggregatedCniRes.Routes = append(aggregatedCniRes.Routes, cniRes.CniResult.Routes...)
     }
   }
   return &aggregatedCniRes
 }
 
 func (synch *Syncher) WasAnyOperationErroneous() bool {
-  if len(synch.cniResults) == 0 {
+  if len(synch.CniResults) == 0 {
     return false
   }
   return synch.wasAnyOperationErroneous()

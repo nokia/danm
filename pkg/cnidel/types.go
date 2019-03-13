@@ -1,7 +1,7 @@
 package cnidel
 
 import (
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
 )
 
 type cniConfigReader func(netInfo *danmtypes.DanmNet, ipam danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error)

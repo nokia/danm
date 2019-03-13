@@ -1,8 +1,8 @@
 package stubs
 
 import (
-  client "github.com/nokia/danm/pkg/crd/client/clientset/versioned/typed/danm/v1"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  client "github.com/nokia/danm/crd/client/clientset/versioned/typed/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   rest "k8s.io/client-go/rest"
 )
 

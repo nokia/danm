@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
-	danmv1 "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
 	"reflect"
 )
 

@@ -11,7 +11,7 @@ import (
   "os/exec"
   "github.com/vishvananda/netlink"
   "github.com/containernetworking/plugins/pkg/ns"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
 )
 
 func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {

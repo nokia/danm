@@ -3,7 +3,7 @@ package stubs
 import (
   "errors"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   types "k8s.io/apimachinery/pkg/types"
   watch "k8s.io/apimachinery/pkg/watch"
 )

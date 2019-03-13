@@ -8,17 +8,16 @@ import (
 	"github.com/golang/glog"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-        "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/clientcmd"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-        v1core "k8s.io/client-go/kubernetes/typed/core/v1"
-        corev1 "k8s.io/api/core/v1"
-	danmclientset "github.com/nokia/danm/pkg/crd/client/clientset/versioned"
-	danminformers "github.com/nokia/danm/pkg/crd/client/informers/externalversions"
-	//"github.com/nokia/danm/pkg/crd/signals"
+	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
+	corev1 "k8s.io/api/core/v1"
+	danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
+	danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
 )
 
 var (
@@ -27,9 +26,6 @@ var (
 
 func main() {
 	flag.Parse()
-
-	// set up signals so we handle the first shutdown signal gracefully
-	//stopCh := signals.SetupSignalHandler()
 
 	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {

@@ -9,7 +9,7 @@ import (
   types "github.com/containernetworking/cni/pkg/types/020"
   gentypes "github.com/containernetworking/cni/pkg/types"
   "github.com/containernetworking/cni/pkg/version"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
 )
 
 //Fakeipam plugin is a very simple CNI-style IPAM plugin, which prints the received IP allocation information to its output.

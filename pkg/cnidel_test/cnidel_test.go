@@ -3,7 +3,7 @@ package cnidel_test
 import (
   "testing"
   "github.com/nokia/danm/pkg/cnidel"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/stubs"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

@@ -6,7 +6,7 @@ import (
   "io/ioutil"
   "encoding/json"
   "github.com/nokia/danm/pkg/danmep"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 

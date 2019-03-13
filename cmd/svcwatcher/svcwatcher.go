@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
 	danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
+	"github.com/nokia/danm/pkg/svccontrol"
 )
 
 var (
@@ -45,7 +46,7 @@ func main() {
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	danmInformerFactory := danminformers.NewSharedInformerFactory(danmClient, time.Second*30)
 
-	controller := NewController(kubeClient, danmClient,
+	controller := svccontrol.NewController(kubeClient, danmClient,
 		kubeInformerFactory.Core().V1().Pods(),
 		kubeInformerFactory.Core().V1().Services(),
 		kubeInformerFactory.Core().V1().Endpoints(),

@@ -18,4 +18,4 @@ informer-gen --alsologtostderr --input-dirs github.com/nokia/danm/crd/apis/danm/
 go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/cmd/danm
 go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/pkg/netwatcher
 go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/cmd/fakeipam
-go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/pkg/svcwatcher
+go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/cmd/svcwatcher

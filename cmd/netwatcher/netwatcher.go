@@ -7,7 +7,7 @@ import (
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/clientcmd"
   "k8s.io/client-go/tools/cache"
-  "github.com/nokia/danm/pkg/danmnet"
+  "github.com/nokia/danm/pkg/netcontrol"
 )
 
 func getClientConfig(kubeConfig *string) (*rest.Config, error) {
@@ -32,7 +32,7 @@ func main() {
     log.Println("ERROR: Parsing kubeconfig failed with error:" + err.Error() + " , exiting")
     os.Exit(-1)
   }
-  netHandler, err := danmnet.NewHandler(config)
+  netHandler, err := netcontrol.NewHandler(config)
   if err != nil {
     log.Println("ERROR: Creation of K8s DanmNet Controller failed with error:" + err.Error() + " , exiting")
     os.Exit(-1)

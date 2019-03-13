@@ -1,4 +1,4 @@
-package danmnet
+package netcontrol
 
 import (
   "encoding/binary"

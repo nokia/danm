@@ -1,4 +1,4 @@
-package main
+package metacni
 
 import (
   "errors"
@@ -12,7 +12,6 @@ import (
   "github.com/satori/go.uuid"
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/types"
-  "github.com/containernetworking/cni/pkg/version"
   "github.com/containernetworking/cni/pkg/types/current"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   k8s "k8s.io/apimachinery/pkg/types"
@@ -64,7 +63,7 @@ type cniArgs struct {
   podUid k8s.UID
 }
 
-func createInterfaces(args *skel.CmdArgs) error {
+func CreateInterfaces(args *skel.CmdArgs) error {
   cniArgs,err := extractCniArgs(args)
   if err != nil {
     log.Println("ERROR: ADD: CNI args cannot be loaded with error:" + err.Error())
@@ -83,7 +82,7 @@ func createInterfaces(args *skel.CmdArgs) error {
   if err != nil {
     //Best effort cleanup - not interested in possible errors, anyway could not do anything with them
     os.Setenv("CNI_COMMAND","DEL")
-    deleteInterfaces(args)
+    DeleteInterfaces(args)
     log.Println("ERROR: ADD: CNI network could not be set up with error:" + err.Error())
     return fmt.Errorf("CNI network could not be set up: %v", err)
   }
@@ -386,7 +385,7 @@ func addIpToResult(ip string, version string, cniResult *current.Result) {
   }
 }
 
-func deleteInterfaces(args *skel.CmdArgs) error {
+func DeleteInterfaces(args *skel.CmdArgs) error {
   cniArgs,err := extractCniArgs(args)
   log.Println("CNI DEL invoked with: ns:" + cniArgs.nameSpace + " PID:" + cniArgs.podId + " CID: " + cniArgs.containerId)
   if err != nil {
@@ -465,14 +464,4 @@ func deleteEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp) error {
 func deleteDanmNet(danmClient danmclientset.Interface, ep danmtypes.DanmEp, netInfo *danmtypes.DanmNet) error {
   ipam.GarbageCollectIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
   return danmep.DeleteIpvlanInterface(ep)
-}
-
-func main() {
-  var err error
-  f, err := os.OpenFile("/var/log/plugin.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0640)
-  if err == nil {
-    log.SetOutput(f)
-    defer f.Close()
-  }
-  skel.PluginMain(createInterfaces, deleteInterfaces, version.All)
 }

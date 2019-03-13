@@ -5,7 +5,7 @@ import (
   "os"
   "github.com/nokia/danm/pkg/ipam"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
-  "github.com/nokia/danm/pkg/stubs"
+  "github.com/nokia/danm/test/stubs"
 )
 
 var testNets = []danmtypes.DanmNet {

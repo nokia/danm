@@ -4,7 +4,7 @@ import (
   "testing"
   "github.com/nokia/danm/pkg/cnidel"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
-  "github.com/nokia/danm/pkg/stubs"
+  "github.com/nokia/danm/test/stubs"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -4,7 +4,7 @@ import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	danm "github.com/nokia/danm/pkg/crd/apis/danm"
+	"github.com/nokia/danm/crd/apis/danm"
 )
 
 // SchemeGroupVersion is group version used to register these objects
@@ -36,4 +36,3 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	meta_v1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }
-

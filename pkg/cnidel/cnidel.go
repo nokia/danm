@@ -12,8 +12,8 @@ import (
   "github.com/containernetworking/cni/pkg/version"
   "github.com/nokia/danm/pkg/danmep"
   "github.com/nokia/danm/pkg/ipam"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
-  danmclientset "github.com/nokia/danm/pkg/crd/client/clientset/versioned"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

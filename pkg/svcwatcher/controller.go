@@ -17,12 +17,11 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"strings"
 	"time"
-
-	danmv1 "github.com/nokia/danm/pkg/crd/apis/danm/v1"
-	danmclientset "github.com/nokia/danm/pkg/crd/client/clientset/versioned"
-	danmscheme "github.com/nokia/danm/pkg/crd/client/clientset/versioned/scheme"
-	danminformers "github.com/nokia/danm/pkg/crd/client/informers/externalversions/danm/v1"
-	danmlisters "github.com/nokia/danm/pkg/crd/client/listers/danm/v1"
+	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
+	danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
+	danmscheme "github.com/nokia/danm/crd/client/clientset/versioned/scheme"
+	danminformers "github.com/nokia/danm/crd/client/informers/externalversions/danm/v1"
+	danmlisters "github.com/nokia/danm/crd/client/listers/danm/v1"
 )
 
 type Controller struct {
@@ -576,12 +575,6 @@ func (c *Controller) addEps(obj interface{}) {
 		return
 	}
 	glog.Infof("addEps is called: %s %s", obj.(*corev1.Endpoints).GetName(), obj.(*corev1.Endpoints).GetNamespace())
-	//	var key string
-	//	var err error
-	//	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
-	//		return
-	//	}
-	//	c.workqueue.AddRateLimited(key)
 }
 
 func (c *Controller) updateEps(old, new interface{}) {

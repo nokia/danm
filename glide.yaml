@@ -1,4 +1,4 @@
-package: github.com/nokia/danm/pkg
+package: github.com/nokia/danm
 ignore:
 - github.com/vishvananda/netlink
 - github.com/nokia/danm/pkg/bitarray

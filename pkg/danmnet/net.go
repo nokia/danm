@@ -10,7 +10,7 @@ import (
   "syscall"
   "github.com/apparentlymart/go-cidr/cidr"
   "github.com/vishvananda/netlink"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
 )
 

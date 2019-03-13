@@ -7,9 +7,9 @@ import (
   "time"
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/cache"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
-  danmclientset "github.com/nokia/danm/pkg/crd/client/clientset/versioned"
-  danminformers "github.com/nokia/danm/pkg/crd/client/informers/externalversions"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
+  danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
 )
 
 // Handler represents an object watching the K8s API for changes in the DanmNet API path

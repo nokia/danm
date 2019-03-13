@@ -4,7 +4,7 @@ import (
   "testing"
   "os"
   "github.com/nokia/danm/pkg/ipam"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/stubs"
 )
 

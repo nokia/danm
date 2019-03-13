@@ -7,8 +7,8 @@ import (
   "strconv"
   "github.com/containernetworking/plugins/pkg/ns"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
-  danmclientset "github.com/nokia/danm/pkg/crd/client/clientset/versioned"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
 )
 
 const (

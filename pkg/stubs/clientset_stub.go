@@ -2,8 +2,8 @@ package stubs
 
 import (
   discovery "k8s.io/client-go/discovery"
-  danmv1 "github.com/nokia/danm/pkg/crd/client/clientset/versioned/typed/danm/v1"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
+  danmv1 "github.com/nokia/danm/crd/client/clientset/versioned/typed/danm/v1"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
 )
 
 type ClientSetStub struct {

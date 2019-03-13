@@ -35,7 +35,7 @@ func IsDelegationRequired(danmClient danmclientset.Interface, nid, namespace str
     if err != nil {
       detailedErrorMessage = err.Error()
     }
-    return false, nil, errors.New("NID:" + nid + " in namespace:" + namespace + " cannot be GET from K8s API server, becuase of error:" + detailedErrorMessage)
+    return false, nil, errors.New("NID:" + nid + " in namespace:" + namespace + " cannot be GET from K8s API server, because of error:" + detailedErrorMessage)
   }
   neType := netInfo.Spec.NetworkType
   if neType == "ipvlan" || neType == "" {

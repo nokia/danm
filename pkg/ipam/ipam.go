@@ -13,7 +13,7 @@ import (
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-  "github.com/nokia/danm/pkg/danmnet"
+  "github.com/nokia/danm/pkg/netcontrol"
   "github.com/nokia/danm/pkg/bitarray"
 )
 
@@ -71,7 +71,7 @@ func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, ip stri
 }
 
 func updateDanmNetAllocation (danmClient danmclientset.Interface, netInfo danmtypes.DanmNet) (bool,error,danmtypes.DanmNet) {
-  resourceConflicted, err := danmnet.PutDanmNet(danmClient, &netInfo)
+  resourceConflicted, err := netcontrol.PutDanmNet(danmClient, &netInfo)
   if err != nil {
     return false, errors.New("DanmNet update failed with error:" + err.Error()), danmtypes.DanmNet{}
   }
@@ -92,9 +92,9 @@ func updateDanmNetAllocation (danmClient danmclientset.Interface, netInfo danmty
 func resetIP(netInfo *danmtypes.DanmNet, rip string) {
   ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
   _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-  ipnetNum := danmnet.Ip2int(ipnet.IP)
+  ipnetNum := netcontrol.Ip2int(ipnet.IP)
   ip, _, _ := net.ParseCIDR(rip)
-  reserved := danmnet.Ip2int(ip)
+  reserved := netcontrol.Ip2int(ip)
   ba.Reset(reserved - ipnetNum)
   netInfo.Spec.Options.Alloc = ba.Encode()
 }
@@ -131,13 +131,13 @@ func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string, macAddr 
     }
     ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
     _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-    ipnetNum := danmnet.Ip2int(ipnet.IP)
-    begin := danmnet.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start)) - ipnetNum
-    end := danmnet.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End)) - ipnetNum
+    ipnetNum := netcontrol.Ip2int(ipnet.IP)
+    begin := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start)) - ipnetNum
+    end := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End)) - ipnetNum
     for i:=begin;i<end;i++ {
       if !ba.Get(uint32(i)) {
         ones, _ := ipnet.Mask.Size()
-        *ip4 = (danmnet.Int2ip(ipnetNum + i)).String() + "/" + strconv.Itoa(ones)
+        *ip4 = (netcontrol.Int2ip(ipnetNum + i)).String() + "/" + strconv.Itoa(ones)
         ba.Set(uint32(i))
         netInfo.Spec.Options.Alloc = ba.Encode()
         break
@@ -156,8 +156,8 @@ func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string, macAddr 
     _, ipnetFromNet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
     if ipnetFromNet.Contains(ip) && ipnetFromNet.Mask.String() == ipnet.Mask.String() {
       ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
-      ipnetNum := danmnet.Ip2int(ipnetFromNet.IP)
-      requested := danmnet.Ip2int(ip)
+      ipnetNum := netcontrol.Ip2int(ipnetFromNet.IP)
+      requested := netcontrol.Ip2int(ip)
       if ba.Get(requested - ipnetNum) {
         return errors.New("requested fix ip address is already in use")
       }
@@ -187,9 +187,9 @@ func allocIPv6(reqType string, netInfo *danmtypes.DanmNet, ip6 *string, macAddr 
     bigeui.SetString(eui, 16)
     ip6addr, ip6net, _ := net.ParseCIDR(net6)
     ss := big.NewInt(0)
-    ss.Add(danmnet.Ip62int(ip6addr), bigeui)
+    ss.Add(netcontrol.Ip62int(ip6addr), bigeui)
     maskLen, _ := ip6net.Mask.Size()
-    *ip6 = (danmnet.Int2ip6(ss)).String() + "/" + strconv.Itoa(maskLen)
+    *ip6 = (netcontrol.Int2ip6(ss)).String() + "/" + strconv.Itoa(maskLen)
   } else {
     net6 := netInfo.Spec.Options.Net6
     if net6 == "" {

@@ -3,7 +3,6 @@ package ipam
 import (
   "errors"
   "fmt"
-  "log"
   "net"
   "strconv"
   "strings"
@@ -106,35 +105,33 @@ func allocateIP(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string, 
   var err error
   err = nil
   if req4 != "" {
-    err = allocIPv4(req4, netInfo, &ip4, macAddr)
+    err = allocIPv4(req4, netInfo, &ip4)
     if err != nil {
-      log.Println("ip4 allocation is failed:", err)
       return "", "", "", err
     }
   }
   if req6 != "" {
     err = allocIPv6(req6, netInfo, &ip6, macAddr)
     if err != nil {
-      log.Println("ip6 allocation is failed:", err)
       return "", "", "", err
     }
   }
   return ip4, ip6, macAddr, err
 }
 
-func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string, macAddr string) (error) {
+func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string) (error) {
   if reqType == "none" {
     return nil
   } else if reqType == "dynamic" {
     if netInfo.Spec.Options.Alloc == "" {
-      return errors.New("Ipv4 address cannot be dynamically allocated for an L2 network")
+      return errors.New("Ipv4 address cannot be dynamically allocated for an L2 network!")
     }
     ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
     _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
     ipnetNum := netcontrol.Ip2int(ipnet.IP)
     begin := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start)) - ipnetNum
     end := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End)) - ipnetNum
-    for i:=begin;i<end;i++ {
+    for i:=begin; i<=end; i++ {
       if !ba.Get(uint32(i)) {
         ones, _ := ipnet.Mask.Size()
         *ip4 = (netcontrol.Int2ip(ipnetNum + i)).String() + "/" + strconv.Itoa(ones)
@@ -143,30 +140,31 @@ func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string, macAddr 
         break
       }
     }
+    if *ip4 == "" {
+      return errors.New("IPv4 address cannot be dynamically allocated, all addresses are reserved!")
+    }
   } else {
     ip, ipnet, _ := net.ParseCIDR(reqType)
     if ip == nil {
-      return errors.New("IPv4 allocation failure, invalid fix ip")
+      return errors.New("IPv4 allocation failure, invalid static IP requested!")
     }
     if netInfo.Spec.Options.Alloc == "" {
-      //fix ip address allocation without cidr/pool
-      *ip4 = reqType
-      return nil
+      return errors.New("static IP cannot be allocated for a L2 network!")
     }
     _, ipnetFromNet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-    if ipnetFromNet.Contains(ip) && ipnetFromNet.Mask.String() == ipnet.Mask.String() {
-      ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
-      ipnetNum := netcontrol.Ip2int(ipnetFromNet.IP)
-      requested := netcontrol.Ip2int(ip)
-      if ba.Get(requested - ipnetNum) {
-        return errors.New("requested fix ip address is already in use")
-      }
-      ba.Set(requested - ipnetNum)
-      netInfo.Spec.Options.Alloc = ba.Encode()
-      *ip4 = reqType
-      return nil
+    if !(ipnetFromNet.Contains(ip) && ipnetFromNet.Mask.String() == ipnet.Mask.String()) {
+      return errors.New("static ip is not part of network CIDR/allocation pool")
     }
-    return errors.New("fix ip is not part of network CIDR/allocation pool")
+    ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
+    ipnetNum := netcontrol.Ip2int(ipnetFromNet.IP)
+    requested := netcontrol.Ip2int(ip)
+    if ba.Get(requested - ipnetNum) {
+      return errors.New("requested fix ip address is already in use")
+    }
+    ba.Set(requested - ipnetNum)
+    netInfo.Spec.Options.Alloc = ba.Encode()
+    *ip4 = reqType
+    return nil
   }
   return nil
 }

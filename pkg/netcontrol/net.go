@@ -59,6 +59,12 @@ func Int2ip6(nn *big.Int) net.IP {
   return ip
 }
 
+func getBroadcastAddress(subnet *net.IPNet) (net.IP) {
+  ip := make(net.IP, len(subnet.IP.To4()))
+  binary.BigEndian.PutUint32(ip, binary.BigEndian.Uint32(subnet.IP.To4())|^binary.BigEndian.Uint32(net.IP(subnet.Mask).To4()))
+  return ip
+}
+
 func validateNetwork(dnet *danmtypes.DanmNet) error {
   err := validateDanmNet(dnet)
   if err != nil {
@@ -94,24 +100,32 @@ func validateIpv4Fields(dnet *danmtypes.DanmNet) error {
     }
     return nil
   }
-  _, ipnet, err := net.ParseCIDR(cidr)
-  if err != nil {
-    return errors.New("Invalid CIDR parameter: " + cidr)
-  }
-  bitArray, err := createBitArray(ipnet)
+  err := ValidateAllocationPool(dnet)
   if err != nil {
     return err
   }
-  err = reserveGatewayIps(dnet.Spec.Options.Routes, bitArray, ipnet)
-  if err != nil {
-    return err
-  }
-  err = validateAllocationPool(dnet, ipnet)
+  bitArray, err := CreateAllocationArray(dnet)
   if err != nil {
     return err
   }
   dnet.Spec.Options.Alloc = bitArray.Encode()
   return nil
+}
+
+func CreateAllocationArray(dnet *danmtypes.DanmNet) (*bitarray.BitArray,error) {
+  _, ipnet, err := net.ParseCIDR(dnet.Spec.Options.Cidr)
+  if err != nil {
+    return nil, errors.New("Invalid CIDR parameter: " + dnet.Spec.Options.Cidr)
+  }
+  bitArray, err := createBitArray(ipnet)
+  if err != nil {
+    return nil, err
+  }
+  err = reserveGatewayIps(dnet.Spec.Options.Routes, bitArray, ipnet)
+  if err != nil {
+    return nil, err
+  }
+  return bitArray, nil
 }
 
 func createBitArray(ipnet *net.IPNet) (*bitarray.BitArray,error) {
@@ -138,18 +152,22 @@ func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ip
   return nil
 }
 
-func validateAllocationPool(dnet *danmtypes.DanmNet, ipnet *net.IPNet) error {
+func ValidateAllocationPool(dnet *danmtypes.DanmNet) error {
+  _, ipnet, err := net.ParseCIDR(dnet.Spec.Options.Cidr)
+  if err != nil {
+    return errors.New("Invalid CIDR parameter: " + dnet.Spec.Options.Cidr)
+  }
   if dnet.Spec.Options.Pool.Start == "" {
     dnet.Spec.Options.Pool.Start = (Int2ip(Ip2int(ipnet.IP) + 1)).String()
   }
   if dnet.Spec.Options.Pool.End == "" {
-    dnet.Spec.Options.Pool.End = (Int2ip(Ip2int(ipnet.IP) + 1)).String()
+    dnet.Spec.Options.Pool.End = (Int2ip(Ip2int(getBroadcastAddress(ipnet)) - 1)).String()
   }
   if !ipnet.Contains(net.ParseIP(dnet.Spec.Options.Pool.Start)) || !ipnet.Contains(net.ParseIP(dnet.Spec.Options.Pool.End)) {
     return errors.New("Allocation pool is outside of defined CIDR")
   }
   if Ip2int(net.ParseIP(dnet.Spec.Options.Pool.End)) - Ip2int(net.ParseIP(dnet.Spec.Options.Pool.Start)) <= 0 {
-    return errors.New("Allocation pool start is bigger than end")
+    return errors.New("Allocation pool start:" + dnet.Spec.Options.Pool.Start + " is bigger than end:" + dnet.Spec.Options.Pool.End)
   }
   return nil
 }

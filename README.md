@@ -333,16 +333,16 @@ The flexible IPAM module also allows Pods to define the IP allocation scheme bes
 The application can even ask DANM to forego the allocation of any IPs to their interface in case a L2 network interface is required.
 ##### IPv6 and dual-stack support
 DANM's IPAM module supports both IPv6, and dual-stack (one IPv4, and one IPv6 address provisioned to the same interface) addresses!
-To configure an IPv6 CIDR for a DanmNet, network amdinistrator shall fill the "net6" attribute. Additionally, IP routes for IPv6 subnets can be configured via "routes6".
-If both "cidr", and "net6" are configured for a DanmNet, then Pods connecting to that network can ask one IPv4 address, one IPv6 address, or even both at the same time!
+To configure an IPv6 CIDR for a DanmNet, network amdinistrator shall configure the "net6" attribute. Additionally, IP routes for IPv6 subnets can be configured via "routes6".
+If both "cidr", and "net6" are configured for a DanmNet, then Pods connecting to that network can ask either one IPv4 or IPv6 address, or even both at the same time!
 
 That being said, network administrators using IPv6, or dual-stack features need to be aware of the current restrictions of the solution:
-* dynamic IPs are randomly allocated from the IPv6 CIDR according to the following algorithm:
-  * the IP is prefixed with the IPv6 CIDR of the network
+* dynamic IPs are randomly allocated from the defined IPv6 subnet according to the following algorithm:
+  * the IP is prefixed with the net6 parameter of the network
   * MAC address is randomly generated for the EUI64
-* the smallest supported IPv6 CIDR is /64
-* allocation pools are cannot be defined for IPv6 CIDR
-* DANM does not change kernel level parameters NICs such as "disable_ipv6", "auto_ra", or "autoconf"
+* the smallest supported IPv6 subnet is /64
+* allocation pools cannot be defined for IPv6 subnets
+* DANM does not change kernel level config parameters -such as "disable_ipv6", "auto_ra", or "autoconf"- of host devices, or container interfaces
 #### DANM IPVLAN CNI
 DANM's IPVLAN CNI uses the Linux kernel's IPVLAN module to provision high-speed, low-latency network interfaces for applications which need better performance than a bridge (or any other overlay technology) can provide.
 

@@ -10,6 +10,11 @@ type ClientSetStub struct {
   danmClient *ClientStub
 }
 
+type ReservedIpsList struct {
+  NetworkId string
+  Ips []string
+}
+
 func (c *ClientSetStub) DanmV1() danmv1.DanmV1Interface {
   return c.danmClient
 }
@@ -22,8 +27,8 @@ func (c *ClientSetStub) Discovery() discovery.DiscoveryInterface {
   return nil
 }
 
-func NewClientSetStub(nets []danmtypes.DanmNet, eps []danmtypes.DanmEp) *ClientSetStub {
+func NewClientSetStub(nets []danmtypes.DanmNet, eps []danmtypes.DanmEp, ips []ReservedIpsList) *ClientSetStub {
   var clientSet ClientSetStub
-  clientSet.danmClient = newClientStub(nets, eps)
+  clientSet.danmClient = newClientStub(nets, eps, ips)
   return &clientSet
 }

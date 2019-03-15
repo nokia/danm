@@ -62,7 +62,7 @@ var isDeviceNeededTcs = []struct {
 }
 
 func TestIsDelegationRequired(t *testing.T) {
-  netClientStub := stubs.NewClientSetStub(testNets, nil)
+  netClientStub := stubs.NewClientSetStub(testNets, nil, nil)
   for _, tc := range delegationRequiredTcs {
     t.Run(tc.netName, func(t *testing.T) {
       isDelRequired,_,err := cnidel.IsDelegationRequired(netClientStub,tc.netName,"hululululu")

@@ -1,7 +1,6 @@
 package ipam_test
 
 import (
-  "log"
   "net"
   "os"
   "strings"
@@ -14,13 +13,18 @@ import (
 )
 
 var testNets = []danmtypes.DanmNet {
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "emptyVal", } },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "falseVal", Validation: false} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "trueVal", Validation: true} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "cidr", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "fullIpv4", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.0/30"}} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "net6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Cidr: "192.168.1.64/26",}} },
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "smallNet6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/69"}} },
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "emptyVal", }},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "falseVal", Validation: false}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "trueVal", Validation: true}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "cidr", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "fullIpv4", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.0/30"}}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "net6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Cidr: "192.168.1.64/26",}}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "smallNet6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/69"}}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "conflict", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64"}}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "conflicterror", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64"}}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "conflictFree", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "conflicterrorFree", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "error", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
 }
 
 var reserveTcs = []struct {
@@ -59,8 +63,40 @@ var reserveTcs = []struct {
   {"staticInvalidIPv6", 5, "", "2a00:8a00:a000:1193:hulu:lulu:lulu:lulu/64", "", "", true, false},
   {"staticNetmaskMismatchIPv6", 5, "", "2a00:8a00:a000:2193:f816:3eff:fe24:e348/64", "", "", true, false},
   {"staticIPv6Success", 5, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, false},
-  {"dynamicDualStackSuccess", 5, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193", false, false},
-  {"staticDualStackSuccess", 5, "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, false},  
+  {"dynamicDualStackSuccess", 5, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193", false, true},
+  {"staticDualStackSuccess", 5, "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, true},
+  {"resolvedConflictDuringUpdate", 7, "", "dynamic", "", "2a00:8a00:a000:1193", false, true},
+  {"unresolvedConflictDuringUpdate", 8, "", "dynamic", "", "", true, false},
+  {"errorUpdate", 11, "", "dynamic", "", "", true, false},
+}
+
+var freeTcs = []struct {
+  netName string
+  netIndex int
+  allocatedIp string
+  isErrorExpected bool
+}{
+  {"l2Network", 2, "192.168.1.126/26", false},
+  {"noAssignedIp", 3, "", false},
+  {"successfulFree", 4, "192.168.1.2/30", false},
+  {"noNetmask", 4, "192.168.1.2", false},
+  {"outOfRange", 4, "192.168.1.10/30", false},
+  {"invalidIp", 4, "192.168.hululu/30", false},
+  {"ipv6", 4, "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false},
+  {"resolvedConflictDuringUpdate", 9, "192.168.1.69/26", false},
+  {"unresolvedConflictDuringUpdate", 10, "192.168.1.69/26", true},
+  {"errorUpdate", 11, "192.168.1.69/26", true},
+}
+
+var gcTcs = []struct {
+  netName string
+  netIndex int
+  allocatedIp4 string
+  allocatedIp6 string
+}{
+  {"ip4OnlyGc", 5, "192.168.1.110/26", ""},
+  {"ip6OnlyGc", 5, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64"},
+  {"dualStackGc", 5, "192.168.1.108/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64"},
 }
 
 func TestReserve(t *testing.T) {
@@ -70,12 +106,7 @@ func TestReserve(t *testing.T) {
   }
   for _, tc := range reserveTcs {
     t.Run(tc.netName, func(t *testing.T) {
-      var ips []stubs.ReservedIpsList
-      if tc.expectedIp4 != "" {
-        strippedIp := strings.Split(tc.expectedIp4, "/")
-        expectedAllocation := stubs.ReservedIpsList{NetworkId: testNets[tc.netIndex].Spec.NetworkID, Ips: []string {strippedIp[0],},}
-        ips = append(ips, expectedAllocation)
-      }
+      ips := createExpectedAllocationsList(tc.expectedIp4,true,tc.netIndex)
       netClientStub := stubs.NewClientSetStub(testNets, nil, ips)
       ip4, ip6, mac, err := ipam.Reserve(netClientStub, testNets[tc.netIndex], tc.requestedIp4, tc.requestedIp6)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
@@ -97,6 +128,38 @@ func TestReserve(t *testing.T) {
   }
 }
 
+func TestFree(t *testing.T) {
+  err := setupAllocationPools(testNets)
+  if err != nil {
+    t.Errorf("Allocation pool for testnets could not be set-up because:%v", err)
+  }
+  for _, tc := range freeTcs {
+    t.Run(tc.netName, func(t *testing.T) {
+      ips := createExpectedAllocationsList(tc.allocatedIp,false,tc.netIndex)
+      netClientStub := stubs.NewClientSetStub(testNets, nil, ips)
+      err := ipam.Free(netClientStub, testNets[tc.netIndex], tc.allocatedIp)
+      if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
+        t.Errorf("Received error:%v does not match with expectation", err)
+        return
+      }
+    })
+  }
+}
+
+func TestGarbageCollectIps(t *testing.T) {
+  err := setupAllocationPools(testNets)
+  if err != nil {
+    t.Errorf("Allocation pool for testnets could not be set-up because:%v", err)
+  }
+  for _, tc := range gcTcs {
+    t.Run(tc.netName, func(t *testing.T) {
+      ips := createExpectedAllocationsList(tc.allocatedIp4,false,tc.netIndex)
+      netClientStub := stubs.NewClientSetStub(testNets, nil, ips)
+      ipam.GarbageCollectIps(netClientStub, &testNets[tc.netIndex], tc.allocatedIp4, tc.allocatedIp6)
+    })
+  }
+}
+
 func setupAllocationPools(nets []danmtypes.DanmNet) error {
   for index, net := range nets {
     if net.Spec.Options.Cidr != "" {
@@ -110,9 +173,7 @@ func setupAllocationPools(nets []danmtypes.DanmNet) error {
         return err
       }
       if strings.HasPrefix(net.Spec.NetworkID, "full") {
-        log.Println("lofaaaasz before:" + net.Spec.Options.Alloc)
         exhaustNetwork(&net)
-        log.Println("lofaaaasz after:" + net.Spec.Options.Alloc)
       }
       testNets[index].Spec = net.Spec
     }
@@ -132,8 +193,19 @@ func exhaustNetwork(netInfo *danmtypes.DanmNet) {
     netInfo.Spec.Options.Alloc = ba.Encode()
 }
 
+func createExpectedAllocationsList(ip string, isExpectedToBeSet bool, index int) []stubs.ReservedIpsList {
+  var ips []stubs.ReservedIpsList
+  if ip != "" {
+    strippedIp := strings.Split(ip, "/")
+    reservation := stubs.Reservation {Ip: strippedIp[0], Set: isExpectedToBeSet,}
+    expectedAllocation := stubs.ReservedIpsList{NetworkId: testNets[index].Spec.NetworkID, Reservations: []stubs.Reservation {reservation,},}
+    ips = append(ips, expectedAllocation)
+  }
+  return ips
+}
+
 func TestMain(m *testing.M) {
-  code := m.Run() 
+  code := m.Run()
   os.Exit(code)
 }
 

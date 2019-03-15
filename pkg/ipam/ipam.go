@@ -9,15 +9,12 @@ import (
   "time"
   "math/big"
   "math/rand"
+  meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
-  meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+  client "github.com/nokia/danm/crd/client/clientset/versioned/typed/danm/v1"
   "github.com/nokia/danm/pkg/netcontrol"
   "github.com/nokia/danm/pkg/bitarray"
-)
-
-const (
-  backOffTimer = 50
 )
 
 // Reserve inspects the DanmNet object received as an input, and allocates an IPv4 or IPv6 address from the appropriate allocation pool
@@ -29,12 +26,13 @@ func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4
     return "", "", "", errors.New("Invalid network: " + netInfo.Spec.NetworkID)
   }
   tempNetSpec := netInfo
+  netClient := danmClient.DanmV1().DanmNets(netInfo.ObjectMeta.Namespace)
   for {
     ip4, ip6, macAddr, err := allocateIP(&tempNetSpec, req4, req6)
     if err != nil {
       return "", "", "", errors.New("failed to allocate IP address for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
     }
-    retryNeeded, err, newNetSpec := updateDanmNetAllocation(danmClient, tempNetSpec)
+    retryNeeded, err, newNetSpec := updateDanmNetAllocation(netClient, tempNetSpec)
     if err != nil {
       return "", "", "", err
     }
@@ -55,9 +53,10 @@ func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, ip stri
     return nil
   }
   tempNetSpec := netInfo
+  netClient := danmClient.DanmV1().DanmNets(netInfo.ObjectMeta.Namespace)
   for {
     resetIP(&tempNetSpec, ip)
-    retryNeeded, err, newNetSpec := updateDanmNetAllocation(danmClient, tempNetSpec)
+    retryNeeded, err, newNetSpec := updateDanmNetAllocation(netClient, tempNetSpec)
     if err != nil {
       return err
     }
@@ -69,18 +68,15 @@ func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, ip stri
   }
 }
 
-func updateDanmNetAllocation (danmClient danmclientset.Interface, netInfo danmtypes.DanmNet) (bool,error,danmtypes.DanmNet) {
-  resourceConflicted, err := netcontrol.PutDanmNet(danmClient, &netInfo)
+func updateDanmNetAllocation (netClient client.DanmNetInterface, netInfo danmtypes.DanmNet) (bool,error,danmtypes.DanmNet) {
+  resourceConflicted, err := netcontrol.PutDanmNet(netClient, &netInfo)
   if err != nil {
     return false, errors.New("DanmNet update failed with error:" + err.Error()), danmtypes.DanmNet{}
   }
   if resourceConflicted {
-    //Randomizing backoff time to decrease the possibility of conflicts
-    randomBackoff := rand.Intn(backOffTimer) 
-    time.Sleep(time.Duration(randomBackoff) * time.Millisecond)
-    newNetSpec, err := danmClient.DanmV1().DanmNets(netInfo.ObjectMeta.Namespace).Get(netInfo.Spec.NetworkID, meta_v1.GetOptions{})
+    newNetSpec, err := netClient.Get(netInfo.Spec.NetworkID, meta_v1.GetOptions{})
     if err != nil {
-        return false, errors.New("After IP address reservation conflict, network cannot be read again!"), danmtypes.DanmNet{}
+      return false, errors.New("After IP address reservation conflict, network cannot be read again!"), danmtypes.DanmNet{}
     }
     return true, nil, *newNetSpec
   }
@@ -92,8 +88,16 @@ func resetIP(netInfo *danmtypes.DanmNet, rip string) {
   ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
   _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
   ipnetNum := netcontrol.Ip2int(ipnet.IP)
-  ip, _, _ := net.ParseCIDR(rip)
+  ip, _, err := net.ParseCIDR(rip)
+  if err != nil {
+    //Invalid IP, nothing to do here. Next call would crash if we wouldn't return
+    return
+  }
   reserved := netcontrol.Ip2int(ip)
+  if !ipnet.Contains(ip) {
+    //IP is outside of CIDR, nothing to do here. Next call would crash if we wouldn't return
+    return
+  }
   ba.Reset(reserved - ipnetNum)
   netInfo.Spec.Options.Alloc = ba.Encode()
 }

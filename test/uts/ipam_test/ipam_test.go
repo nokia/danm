@@ -19,7 +19,8 @@ var testNets = []danmtypes.DanmNet {
   danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "trueVal", Validation: true} },
   danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "cidr", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}} },
   danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "fullIpv4", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.0/30"}} },
-
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "net6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Cidr: "192.168.1.64/26",}} },
+  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "smallNet6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/69"}} },
 }
 
 var reserveTcs = []struct {
@@ -52,6 +53,14 @@ var reserveTcs = []struct {
   {"staticSuccessFirstIPv4", 3, "192.168.1.65/26", "", "192.168.1.65/26", "", false, true},
   {"staticFailAfterLastIPv4", 3, "192.168.1.127/26", "", "", "", true, false},
   {"staticFailBeforeFirstIPv4", 3, "192.168.1.64/26", "", "", "", true, false},
+  {"dynamicIPv6Success", 5, "", "dynamic", "", "2a00:8a00:a000:1193", false, true},
+  {"dynamicNotSupportedCidrSizeIPv6", 6, "", "dynamic", "", "", true, false}, //basically anything smaller than /64. Restriction must be fixed some day!
+  {"staticL2IPv6", 4, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "", true, false},
+  {"staticInvalidIPv6", 5, "", "2a00:8a00:a000:1193:hulu:lulu:lulu:lulu/64", "", "", true, false},
+  {"staticNetmaskMismatchIPv6", 5, "", "2a00:8a00:a000:2193:f816:3eff:fe24:e348/64", "", "", true, false},
+  {"staticIPv6Success", 5, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, false},
+  {"dynamicDualStackSuccess", 5, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193", false, false},
+  {"staticDualStackSuccess", 5, "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, false},  
 }
 
 func TestReserve(t *testing.T) {
@@ -63,8 +72,8 @@ func TestReserve(t *testing.T) {
     t.Run(tc.netName, func(t *testing.T) {
       var ips []stubs.ReservedIpsList
       if tc.expectedIp4 != "" {
-        strippedId := strings.Split(tc.expectedIp4, "/")
-        expectedAllocation := stubs.ReservedIpsList{NetworkId: testNets[tc.netIndex].Spec.NetworkID, Ips: []string {strippedId[0],},}
+        strippedIp := strings.Split(tc.expectedIp4, "/")
+        expectedAllocation := stubs.ReservedIpsList{NetworkId: testNets[tc.netIndex].Spec.NetworkID, Ips: []string {strippedIp[0],},}
         ips = append(ips, expectedAllocation)
       }
       netClientStub := stubs.NewClientSetStub(testNets, nil, ips)
@@ -81,8 +90,8 @@ func TestReserve(t *testing.T) {
       if ip4 != tc.expectedIp4 {
         t.Errorf("Allocated IP4 address:%s does not match with expected:%s", ip4, tc.expectedIp4)
       }
-      if ip6 != tc.expectedIp6 {
-        t.Errorf("Allocated IP6 address:%s does not match with expected:%s", ip6, tc.expectedIp6)
+      if !strings.HasPrefix(ip6,tc.expectedIp6) {
+        t.Errorf("Allocated IP6 address:%s does not prefixed with the expected CIDR:%s", ip6, tc.expectedIp6)
       }
     })
   }

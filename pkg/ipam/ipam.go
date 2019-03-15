@@ -146,7 +146,7 @@ func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string) (error) 
   } else {
     ip, ipnet, _ := net.ParseCIDR(reqType)
     if ip == nil {
-      return errors.New("IPv4 allocation failure, invalid static IP requested!")
+      return errors.New("IPv4 allocation failure, invalid static IP requested:" + reqType)
     }
     if netInfo.Spec.Options.Alloc == "" {
       return errors.New("static IP cannot be allocated for a L2 network!")
@@ -175,7 +175,7 @@ func allocIPv6(reqType string, netInfo *danmtypes.DanmNet, ip6 *string, macAddr 
   } else if reqType == "dynamic" {
     net6 := netInfo.Spec.Options.Net6
     if net6 == "" {
-      return errors.New("ipv6 dynamic address requested without defined ipv6 prefix")
+      return errors.New("ipv6 dynamic address requested without defined IPv6 prefix")
     }
     numMac, _ := strconv.ParseInt(strings.Replace(macAddr, ":", "", -1), 16, 0)
     numMac = numMac^0x020000000000
@@ -187,21 +187,24 @@ func allocIPv6(reqType string, netInfo *danmtypes.DanmNet, ip6 *string, macAddr 
     ss := big.NewInt(0)
     ss.Add(netcontrol.Ip62int(ip6addr), bigeui)
     maskLen, _ := ip6net.Mask.Size()
+    if maskLen>64 {
+      return errors.New("IPv6 subnets smaller than /64 are not supported at the moment!")
+    }
     *ip6 = (netcontrol.Int2ip6(ss)).String() + "/" + strconv.Itoa(maskLen)
   } else {
     net6 := netInfo.Spec.Options.Net6
     if net6 == "" {
-      //ipv6 fix address for L2 pipe
-      *ip6 = reqType
-      return nil
+      return errors.New("Static IPv6 address cannot be allocated for an L2 network!")
     }
     _, ip6net, _ := net.ParseCIDR(net6)
-    ip6addr, _, _ := net.ParseCIDR(reqType)
-    if ip6net.Contains(ip6addr) {
-      *ip6 = reqType
-      return nil
+    ip6addr, _, err := net.ParseCIDR(reqType)
+    if err != nil {
+      return errors.New("Static IPv6 address allocation failed, requested IP is malformed:" + reqType)
     }
-    return errors.New("fix ip6 is not part of net6")
+    if !ip6net.Contains(ip6addr) {
+      return errors.New("Requested static IPv6 address is not part of net6 prefix!")
+    }
+    *ip6 = reqType
   }
   return nil
 }

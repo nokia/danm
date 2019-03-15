@@ -12,7 +12,12 @@ type ClientSetStub struct {
 
 type ReservedIpsList struct {
   NetworkId string
-  Ips []string
+  Reservations []Reservation
+}
+
+type Reservation struct {
+  Ip string
+  Set bool
 }
 
 func (c *ClientSetStub) DanmV1() danmv1.DanmV1Interface {

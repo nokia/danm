@@ -8,6 +8,7 @@ import (
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/cache"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  client "github.com/nokia/danm/crd/client/clientset/versioned/typed/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
 )
@@ -47,9 +48,9 @@ func (dnetHandler Handler) CreateController() cache.Controller {
   return controller
 }
 
-func PutDanmNet(client danmclientset.Interface, dnet *danmtypes.DanmNet) (bool,error) {
+func PutDanmNet(client client.DanmNetInterface, dnet *danmtypes.DanmNet) (bool,error) {
   var wasResourceAlreadyUpdated bool = false
-  _, err := client.DanmV1().DanmNets(dnet.Namespace).Update(dnet)
+  _, err := client.Update(dnet)
   if err != nil {
     if strings.Contains(err.Error(),danmtypes.OptimisticLockErrorMsg) {
       wasResourceAlreadyUpdated = true
@@ -87,7 +88,8 @@ func addDanmNet(client danmclientset.Interface, dn danmtypes.DanmNet) {
 }
 
 func updateValidity(client danmclientset.Interface, dn *danmtypes.DanmNet) {
-  updateConflicted, err := PutDanmNet(client, dn)
+  netClient := client.DanmV1().DanmNets(dn.ObjectMeta.Namespace)
+  updateConflicted, err := PutDanmNet(netClient, dn)
   if err != nil {
     log.Println("ERROR: Cannot update network:" + dn.Spec.NetworkID + ",err:" + err.Error())
   }

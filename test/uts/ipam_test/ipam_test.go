@@ -55,13 +55,19 @@ var reserveTcs = []struct {
 }
 
 func TestReserve(t *testing.T) {
-  netClientStub := stubs.NewClientSetStub(testNets, nil)
   err := setupAllocationPools(testNets)
   if err != nil {
     t.Errorf("Allocation pool for testnets could not be set-up because:%v", err)
   }
   for _, tc := range reserveTcs {
     t.Run(tc.netName, func(t *testing.T) {
+      var ips []stubs.ReservedIpsList
+      if tc.expectedIp4 != "" {
+        strippedId := strings.Split(tc.expectedIp4, "/")
+        expectedAllocation := stubs.ReservedIpsList{NetworkId: testNets[tc.netIndex].Spec.NetworkID, Ips: []string {strippedId[0],},}
+        ips = append(ips, expectedAllocation)
+      }
+      netClientStub := stubs.NewClientSetStub(testNets, nil, ips)
       ip4, ip6, mac, err := ipam.Reserve(netClientStub, testNets[tc.netIndex], tc.requestedIp4, tc.requestedIp6)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         t.Errorf("Received error:%v does not match with expectation", err)

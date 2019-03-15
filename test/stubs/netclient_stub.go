@@ -2,26 +2,43 @@ package stubs
 
 import (
   "errors"
+  "net"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   types "k8s.io/apimachinery/pkg/types"
   watch "k8s.io/apimachinery/pkg/watch"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  "github.com/nokia/danm/pkg/bitarray"
+  "github.com/nokia/danm/pkg/netcontrol"
 )
-  
+
 type NetClientStub struct{
   testNets []danmtypes.DanmNet
+  reservedIpsList []ReservedIpsList
 }
 
-func newNetClientStub(nets []danmtypes.DanmNet) NetClientStub {
-  return NetClientStub{testNets: nets}
+func newNetClientStub(nets []danmtypes.DanmNet, ips []ReservedIpsList) NetClientStub {
+  return NetClientStub{testNets: nets, reservedIpsList: ips}
 }
-  
+
 func (netClient NetClientStub) Create(obj *danmtypes.DanmNet) (*danmtypes.DanmNet, error) {
   return nil, nil
 }
 
 func (netClient NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmNet, error) {
-  return nil, nil
+  for _, reservation := range netClient.reservedIpsList {
+    if obj.Spec.NetworkID == reservation.NetworkId {
+      ba := bitarray.NewBitArrayFromBase64(obj.Spec.Options.Alloc)
+      _, ipnet, _ := net.ParseCIDR(obj.Spec.Options.Cidr)
+      ipnetNum := netcontrol.Ip2int(ipnet.IP)
+      for _, ipToBeChecked := range reservation.Ips {
+        ipInInt := netcontrol.Ip2int(net.ParseIP(ipToBeChecked)) - ipnetNum
+        if !ba.Get(uint32(ipInInt)) {
+          return nil, errors.New("Reservation failure, IP:" + ipToBeChecked + " must be reserved in DanmNet:" + obj.Spec.NetworkID)
+        }
+      }
+    }
+  }
+  return obj, nil
 }
 
 func (netClient NetClientStub) Delete(name string, options *meta_v1.DeleteOptions) error {
@@ -54,3 +71,6 @@ func (netClient NetClientStub) Patch(name string, pt types.PatchType, data []byt
   return nil, nil
 }
 
+func (netClient NetClientStub) AddReservedIpsList(reservedIps []ReservedIpsList) {
+  netClient.reservedIpsList = reservedIps
+}

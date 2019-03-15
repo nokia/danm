@@ -9,10 +9,11 @@ import (
 type ClientStub struct {
   testNets []danmtypes.DanmNet
   testEps []danmtypes.DanmEp
+  reservedIps []ReservedIpsList
 }
 
 func (client *ClientStub) DanmNets(namespace string) client.DanmNetInterface {
-  return newNetClientStub(client.testNets)
+  return newNetClientStub(client.testNets, client.reservedIps)
 }
 
 func (client *ClientStub) DanmEps(namespace string) client.DanmEpInterface {
@@ -23,9 +24,10 @@ func (c *ClientStub) RESTClient() rest.Interface {
   return nil
 }
 
-func newClientStub(nets []danmtypes.DanmNet, eps []danmtypes.DanmEp ) *ClientStub {
+func newClientStub(nets []danmtypes.DanmNet, eps []danmtypes.DanmEp, ips []ReservedIpsList) *ClientStub {
   return &ClientStub {
     testNets: nets,
     testEps: eps,
+    reservedIps: ips,
   }
 }

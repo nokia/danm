@@ -1,5 +1,8 @@
 #!/bin/sh
 
+echo 'Updating alpine base image'
+docker pull alpine:latest
+
 echo 'Building DANM builder container'
 docker build --no-cache --tag=danm_builder:1.0 build/
 

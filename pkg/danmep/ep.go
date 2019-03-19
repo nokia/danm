@@ -49,9 +49,6 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
       log.Println("Could not switch back to default ns during IPVLAN interface creation:" + err.Error())
     }
   }()
-  //cns,_ := ns.GetCurrentNS()
-  cpath := origns.Path()
-  log.Println("EP NS BASE PATH:" + cpath)
   iface, err := netlink.LinkByName(device)
   if err != nil {
     return errors.New("cannot find host device because:" + err.Error())
@@ -138,7 +135,7 @@ func sendGratArps(srcAddrIpV4, srcAddrIpV6, ifaceName string) {
     err = executeArping(srcAddrIpV6, ifaceName)
   }
   if err != nil {
-    log.Println(err.Error())
+    log.Println("WARNING: sending gARP Reply failed with error:" + err.Error(), " , but we will ignore that for now!")
   }
 }
 

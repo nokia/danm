@@ -2,11 +2,10 @@ package cnidel
 
 import (  
   "errors"
-  "log"
-  "io/ioutil"
   "encoding/json"
-  "github.com/nokia/danm/pkg/danmep"
+  "io/ioutil"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  "github.com/nokia/danm/pkg/danmep"
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 
@@ -80,7 +79,6 @@ func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamC
     MTU:    1500,
     Ipam:   ipamOptions,
   }
-  log.Printf("LOFASZ MACVLAN CONFIG %v/n",macvlanConfig)
   rawConfig, err := json.Marshal(macvlanConfig)
   if err != nil {
     return nil, errors.New("Error putting together CNI config for MACVLAN plugin: " + err.Error())

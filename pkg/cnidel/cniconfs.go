@@ -33,12 +33,12 @@ var (
 )
 
 //This function creates CNI configuration for all static-level backends
+//The CNI binary matching with NetowrkType is invoked with the CNI config file matching with NetworkID parameter
 func readCniConfigFile(netInfo *danmtypes.DanmNet) ([]byte, error) {
-  cniType := netInfo.Spec.NetworkType
-  //TODO: the path from where the config is read should not be hard-coded
-  rawConfig, err := ioutil.ReadFile("/etc/cni/net.d/" + cniType + ".conf")
+  cniConfig := netInfo.Spec.NetworkID
+  rawConfig, err := ioutil.ReadFile(cniConfigDir + "/" + cniConfig + ".conf")
   if err != nil {
-    return nil, errors.New("Could not load CNI config file for plugin:" + cniType)
+    return nil, errors.New("Could not load CNI config file: " + cniConfig +" for plugin:" + netInfo.Spec.NetworkType)
   }
   return rawConfig, nil
 }

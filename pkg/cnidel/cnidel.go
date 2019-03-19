@@ -21,9 +21,7 @@ var (
   ipamType = "fakeipam"
   defaultDataDir = "/var/lib/cni/networks"
   flannelBridge = getEnv("FLANNEL_BRIDGE", "cbr0")
-  dpdkNicDriver = os.Getenv("DPDK_NIC_DRIVER")
-  dpdkDriver = os.Getenv("DPDK_DRIVER")
-  dpdkTool = os.Getenv("DPDK_TOOL")
+  cniConfigDir = getEnv("CNI_CONF_DIR", "/etc/cni/net.d")
 )
 
 // IsDelegationRequired decides if the interface creation operations should be delegated to a 3rd party CNI, or can be handled by DANM
@@ -104,7 +102,10 @@ func getCniIpamConfig(options danmtypes.DanmNetOption, ip4, ip6 string) danmtype
     subnet string
     ip string
   )
-  if options.Cidr != "" {
+  if ip4 == "" && ip6 == "" {
+    return danmtypes.IpamConfig{}
+  }
+  if ip4 != "" {
     ip = ip4
     subnet = options.Cidr
   } else {

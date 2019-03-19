@@ -245,7 +245,7 @@ Events:                  <none>
 ```
 
 __BE WARNED: DANM stores pretty important information in DanmNet objects. Under no circumstances shall a DanmNet be deleted, if there are any runnning Pods referencing it!__
-__Such action will undoubtedly lead to undefined behaviour!__
+__Such action will undoubtedly lead to ruin and DANMation!__
 #### Generally supported DANM API features
 ##### Naming container interfaces
 Generally speaking, you need to care about how the network interfaces of your Pods are named inside their respective network namespaces.
@@ -276,7 +276,7 @@ Pay special attention to the DanmNet attribute called "NetworkType". This parame
 In case this parameter is set to "ipvlan", or is missing; then DANM's in-built IPVLAN CNI plugin creates the network (see next chapter for details).
 In case this attribute is provided and set to another value than "ipvlan", then network management is delegated to the CNI plugin with the same name.
 The binary will be searched in the configured CNI binary directory.
-Example: when a Pod is created and requests a network connection to a DanmNet with "NetworkType" set to "flannel", then DANM will delegate the creation of this network interface to the /opt/cni/bin/flannel binary.
+Example: when a Pod is created and requests a network connection to a DanmNet with "NetworkType" set to "flannel", then DANM will delegate the creation of this network interface to the <CONFIGURED_CNI_PATH_IN_KUBELET>/flannel binary.
 ##### Creating the configuration for delegated CNI operations
 We strongly believe that network management in general should be driven by one, generic API. Therefore, DANM is capable to "translate" the generic options coming from a DanmNet object into the specific "language" the delegated CNI plugin understands.
 This way users can dynamically configure various networking solutions via the same, abstract interface without caring about how a specific option is called exactly in the terminology of the delegated solution.
@@ -285,13 +285,13 @@ A generic framework supporting this method is built into DANM's code, but still 
 As a result, DANM currently supports two integration levels:
 
  - **Dynamic integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be controlled on a per network level, taken directly from a DanmNet object
- - **Static integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be only configured on a per node level, via a static CNI configuration files (Note: this is the default CNI configuration method)
+ - **Static integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be only configured via static CNI configuration files (Note: this is the default CNI configuration method)
 
 Our aim is to integrate all the popular CNIs into the DANM eco-system over time, but currently the following CNI's achieved dynamic integration level:
 
  - DANM's own, in-built IPVLAN CNI plugin
 	 - Set the "NetworkType" parameter to value "ipvlan" to use this backend
-- Intel's DPDK-capable [SR-IOV CNI plugin](https://github.com/intel/sriov-cni )
+- Intel's [SR-IOV CNI plugin](https://github.com/intel/sriov-cni )
 	- Set the "NetworkType" parameter to value "sriov" to use this backend
 - Generic MACVLAN CNI from the CNI plugins example repository [MACVLAN CNI plugin](https://github.com/containernetworking/plugins/blob/master/plugins/main/macvlan/macvlan.go )
 	- Set the "NetworkType" parameter to value "macvlan" to use this backend
@@ -299,9 +299,12 @@ Our aim is to integrate all the popular CNIs into the DANM eco-system over time,
 No separate configuration needs to be provided to DANM when it connects Pods to DanmNets, if the network is backed by a CNI plugin with dynamic integration level.
 Everything happens automatically based on the DanmNet API itself!
 
-When network management is delegated to CNI plugins with static integration level; DANM will read their configuration from the configured CNI config directory.
-For example, when a Pod is connected to a DanmNet with "NetworkType" set to "flannel", DANM will pass the content of /etc/cni/net.d/flannel.conf file to the /opt/cni/bin/flannel binary by invoking a standard CNI operation.
-Generally supported DANM API-based features are configured even in this case.
+When network management is delegated to CNI plugins with static integration level; DANM reads their configuration from the configured CNI config directory.
+The directory can be configured via setting the "CNI_CONF_DIR" environment variable in DANM CNI's context (be it in the host namespace, or inside a Kubelet container). Default value is "/etc/cni/net.d".
+In case there are multiple configuration files present for the same backend, users can control which one is used in a specific network provisioning operation via the NetworkID DanmNet parameter.
+
+So, all in all: a Pod connecting to a DanmNet with "NetworkType" set to "bridge", and "NetworkID" set to "example_network" gets an interface provisioned by the <CONFIGURED_CNI_PATH_IN_KUBELET>/bridge binary based on the <CNI_CONF_DIR>/example_network.conf file!
+In addition to simply delegating the interface creation operation, generally supported DANM API-based features -such as static and dynamic IP route provisioning, flexible interface naming- are also configured by DANM.
 ##### Connecting Pods to DanmNets
 Pods can request network connections to DanmNets by defining one or more network connections in the annotation of their (template) spec field, according to the schema described in the **schema/network_attach.yaml** file.
 

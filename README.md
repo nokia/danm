@@ -112,7 +112,7 @@ Note, that the project itself depends on Golang 1.10+ and glide being available,
 
 It is actually as easy as go get-ting the repository from GitHub, and executing the build_danm.sh script from the root of the project!
 ```
-go get https://github.com/nokia/danm
+go get -d github.com/nokia/danm
 cd $GOPATH/src/github.com/nokia/danm
 ./build_danm.sh
 ```

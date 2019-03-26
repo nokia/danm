@@ -17,9 +17,11 @@ ignore:
 - github.com/nokia/danm/pkg/svcwatcher
 import:
 - package: k8s.io/client-go
-  version: v8.0.0
+  version: kubernetes-1.11.1
 - package: github.com/containernetworking/cni
   version: v0.6.0
+- package: github.com/containernetworking/plugins
+  version: v0.7.5
 - package: github.com/intel/multus-cni
   version: 8bf358071ab54b8f38d10027ccf81a29dfb78b3d
 - package: github.com/intel/sriov-cni

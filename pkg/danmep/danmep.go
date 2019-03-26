@@ -2,10 +2,12 @@ package danmep
 
 import (
   "errors"
+  "fmt"
   "log"
   "runtime"
   "strconv"
   "github.com/containernetworking/plugins/pkg/ns"
+  "github.com/containernetworking/plugins/pkg/utils/sysctl"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
@@ -15,6 +17,19 @@ const (
   defaultNamespace = "default"
   dockerApiVersion = "1.22"
 )
+
+type sysctlData struct {
+  sysctlName  string
+  sysctlValue string
+}
+var sysctls = map[string][]sysctlData {
+  "enable_ipv6_on_iface": {
+    {"net.ipv6.conf.%s.disable_ipv6", "0"},
+  },
+  "disable_ipv6_on_iface": {
+    {"net.ipv6.conf.%s.disable_ipv6", "1"},
+  },
+}
 
 // DeleteIpvlanInterface deletes a Pod's IPVLAN network interface based on the related DanmEp
 func DeleteIpvlanInterface(ep danmtypes.DanmEp) (error) { 
@@ -101,4 +116,38 @@ func CreateRoutesInNetNs(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, ) error {
     return errors.New("failed to enter network namespace of CID:"+ep.Spec.Netns+" with error:"+err.Error())
   }
   return addIpRoutes(ep,dnet)
+}
+
+func SetDanmEpSysctls(ep danmtypes.DanmEp) error {
+  runtime.LockOSThread()
+  defer runtime.UnlockOSThread()
+  // save the current namespace
+  origNs, err := ns.GetCurrentNS()
+  if err != nil {
+    return errors.New("failed to get current network namespace due to:" + err.Error())
+  }
+  // enter to the Pod's network namespace
+  podNs, err := ns.GetNS(ep.Spec.Netns)
+  if err != nil {
+    return errors.New("failed to get Pod's network namespace due to:" + err.Error())
+  }
+  err = podNs.Set()
+  if err != nil {
+    return errors.New("failed to switch to Pod's network namespace due to:" + err.Error())
+  }
+  defer func() {
+    podNs.Close()
+    origNs.Set()
+  }()
+  // set sysctls for IPv6 (since IPv6 is enabled on all interfaces, let's disable on those where it is not needed)
+  if ep.Spec.Iface.AddressIPv6 == "" {
+    for _, s := range sysctls["disable_ipv6_on_iface"] {
+      sstr := fmt.Sprintf(s.sysctlName, ep.Spec.Iface.Name)
+      _, err = sysctl.Sysctl(sstr, s.sysctlValue)
+      if err != nil {
+        return errors.New("failed to set sysctl due to:" + err.Error())
+      }
+    }
+  }
+  return nil
 }

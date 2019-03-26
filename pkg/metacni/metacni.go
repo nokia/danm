@@ -6,6 +6,7 @@ import (
   "log"
   "net"
   "os"
+  "runtime"
   "strconv"
   "strings"
   "encoding/json"
@@ -13,6 +14,8 @@ import (
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/types"
   "github.com/containernetworking/cni/pkg/types/current"
+  "github.com/containernetworking/plugins/pkg/ns"
+  "github.com/containernetworking/plugins/pkg/utils/sysctl"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   k8s "k8s.io/apimachinery/pkg/types"
   "k8s.io/client-go/rest"
@@ -207,14 +210,46 @@ func popDevice(devicePool string, allocatedDevices map[string]*[]string)(string,
   return device, nil
 }
 
+func preparePodForIpv6(args *cniArgs) error {
+  runtime.LockOSThread()
+  defer runtime.UnlockOSThread()
+  // save the current namespace
+  origNs, err := ns.GetCurrentNS()
+  if err != nil {
+    return errors.New("failed to get current network namespace due to:" + err.Error())
+  }
+  // enter to the Pod's network namespace
+  podNs, err := ns.GetNS(args.netns)
+  if err != nil {
+    return errors.New("failed to get Pod's network namespace due to:" + err.Error())
+  }
+  err = podNs.Set()
+  if err != nil {
+    return errors.New("failed to switch to Pod's network namespace due to:" + err.Error())
+  }
+  defer func() {
+    podNs.Close()
+    origNs.Set()
+  }()
+  // set sysctl
+  _, err = sysctl.Sysctl("net.ipv6.conf.all.disable_ipv6", "0")
+  if err != nil {
+    return errors.New("failed to set sysctl due to:" + err.Error())
+  }
+  return nil
+}
+
 func setupNetworking(args *cniArgs) (*current.Result, error) {
   danmClient, err := createDanmClient(args.stdIn)
   if err != nil {
     return nil, errors.New("failed to create DanmClient due to:" + err.Error())
   }
+  err = preparePodForIpv6(args)
+  if err != nil {
+    return nil, errors.New("failed to prepare Pod for IPv6 due to:" + err.Error())
+  }
   syncher := syncher.NewSyncher(len(args.interfaces))
   allocatedDevices := make(map[string]*[]string)
-
   checkpoint, err := checkpoint_utils.GetCheckpoint()
   if err != nil {
     return nil, errors.New("failed to instantiate checkpoint object due to:" + err.Error())
@@ -255,19 +290,27 @@ func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset
     AddressIPv6: iface.Ip6,
     Proutes:     iface.Proutes,
     Proutes6:    iface.Proutes6,
-    DeviceID:  iface.Device,
+    DeviceID:    iface.Device,
   }
   ep, err := createDanmEp(epIfaceSpec, netInfo.Spec.NetworkID, netInfo.Spec.NetworkType, args)
   if err != nil {
     syncher.PushResult(iface.Network, errors.New("DanmEp object could not be created due to error:" + err.Error()), nil)
+    return
   }
   delegatedResult,err := cnidel.DelegateInterfaceSetup(danmClient, netInfo, &ep)
   if err != nil {
     syncher.PushResult(iface.Network, errors.New("CNI delegation failed due to error:" + err.Error()), nil)
+    return
   }
   err = putDanmEp(args, ep)
   if err != nil {
     syncher.PushResult(iface.Network, errors.New("DanmEp object could not be PUT to K8s due to error:" + err.Error()), nil)
+    return
+  }
+  err = danmep.SetDanmEpSysctls(ep)
+  if err != nil {
+    syncher.PushResult(iface.Network, errors.New("Sysctls could not be set due to error:" + err.Error()), nil)
+    return
   }
   syncher.PushResult(iface.Network, nil, delegatedResult)
 }
@@ -291,18 +334,28 @@ func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Inte
   if err != nil {
     ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
     syncher.PushResult(iface.Network, errors.New("DanmEp object could not be created due to error:" + err.Error()), nil)
+    return
   }
   err = putDanmEp(args, ep)
   if err != nil {
     ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
     syncher.PushResult(iface.Network, errors.New("EP could not be PUT into K8s due to error:" + err.Error()), nil)
+    return
   } 
   err = danmep.AddIpvlanInterface(netInfo, ep)
   if err != nil {
     ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
     deleteEp(danmClient, ep)
     syncher.PushResult(iface.Network, errors.New("IPVLAN interface could not be created due to error:" + err.Error()), nil)
-  } 
+    return
+  }
+  err = danmep.SetDanmEpSysctls(ep)
+  if err != nil {
+    ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
+    deleteEp(danmClient, ep)
+    syncher.PushResult(iface.Network, errors.New("Sysctls could not be set due to error:" + err.Error()), nil)
+    return
+  }
   danmResult := &current.Result{}
   addIfaceToResult(ep.Spec.EndpointID, epSpec.MacAddress, args.containerId, danmResult)
   if (ip4 != "") {

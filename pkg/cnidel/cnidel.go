@@ -163,6 +163,7 @@ func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, ep *danmtypes.
     "CNI_IFNAME="      + ep.Spec.Iface.Name,
     "CNI_ARGS="        + os.Getenv("CNI_ARGS"),
     "CNI_PATH="        + os.Getenv("CNI_PATH"),
+    "PATH="            + os.Getenv("PATH"),
   }
   return cniPath, cniArgs, nil
 }

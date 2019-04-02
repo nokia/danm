@@ -20,8 +20,8 @@ import (
 var (
   ipamType = "fakeipam"
   defaultDataDir = "/var/lib/cni/networks"
-  flannelBridge = getEnv("FLANNEL_BRIDGE", "cbr0")
-  cniConfigDir = getEnv("CNI_CONF_DIR", "/etc/cni/net.d")
+  flannelBridge = GetEnv("FLANNEL_BRIDGE", "cbr0")
+  cniConfigDir = GetEnv("CNI_CONF_DIR", "/etc/cni/net.d")
 )
 
 // IsDelegationRequired decides if the interface creation operations should be delegated to a 3rd party CNI, or can be handled by DANM
@@ -35,7 +35,7 @@ func IsDelegationRequired(danmClient danmclientset.Interface, nid, namespace str
     }
     return false, nil, errors.New("NID:" + nid + " in namespace:" + namespace + " cannot be GET from K8s API server, because of error:" + detailedErrorMessage)
   }
-  neType := netInfo.Spec.NetworkType
+  neType := strings.ToLower(netInfo.Spec.NetworkType)
   if neType == "ipvlan" || neType == "" {
     return false, netInfo, nil
   }
@@ -240,7 +240,7 @@ func ConvertCniResult(rawCniResult types.Result) *current.Result {
   return convertedResult
 }
 
-func getEnv(key, fallback string) string {
+func GetEnv(key, fallback string) string {
   if value, doesExist := os.LookupEnv(key); doesExist {
     return value
   }

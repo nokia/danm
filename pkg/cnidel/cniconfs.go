@@ -38,7 +38,7 @@ func readCniConfigFile(netInfo *danmtypes.DanmNet) ([]byte, error) {
   cniConfig := netInfo.Spec.NetworkID
   rawConfig, err := ioutil.ReadFile(cniConfigDir + "/" + cniConfig + ".conf")
   if err != nil {
-    return nil, errors.New("Could not load CNI config file: " + cniConfig +" for plugin:" + netInfo.Spec.NetworkType)
+    return nil, errors.New("Could not load CNI config file: " + cniConfig +".conf for plugin:" + netInfo.Spec.NetworkType)
   }
   return rawConfig, nil
 }

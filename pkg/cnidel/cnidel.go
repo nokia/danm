@@ -54,7 +54,10 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
     if err != nil {
       return nil, errors.New("IP address reservation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
     }
-    ipamOptions = getCniIpamConfig(netInfo.Spec.Options, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    ipamOptions, err = getCniIpamConfig(netInfo.Spec.Options, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    if err != nil {
+      return nil, errors.New("IPAM config creation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())    
+    }
   }
   rawConfig, err := getCniPluginConfig(netInfo, ipamOptions, ep)
   if err != nil {
@@ -97,13 +100,13 @@ func IsDeviceNeeded(cniType string) bool {
   return false
 }
 
-func getCniIpamConfig(options danmtypes.DanmNetOption, ip4, ip6 string) danmtypes.IpamConfig {
+func getCniIpamConfig(options danmtypes.DanmNetOption, ip4, ip6 string) (danmtypes.IpamConfig,error) {
   var (
     subnet string
     ip string
   )
   if ip4 == "" && ip6 == "" {
-    return danmtypes.IpamConfig{}
+    return danmtypes.IpamConfig{}, errors.New("unfortunetaly 3rd party CNI plugins usually don't support not putting any IPs on an interface, so with heavy hearts but we need to fail this network delegation operation")
   }
   if ip4 != "" {
     ip = ip4
@@ -116,11 +119,11 @@ func getCniIpamConfig(options danmtypes.DanmNetOption, ip4, ip6 string) danmtype
     Type: ipamType,
     Subnet: subnet,
     Ip: strings.Split(ip, "/")[0],
-  }
+  }, nil
 }
 
 func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
-  cniType := netInfo.Spec.NetworkType
+  cniType := strings.ToLower(netInfo.Spec.NetworkType)
   for _, cni := range supportedNativeCnis {
     if cni.BackendName == cniType {
       return cni.readConfig(netInfo, ipamOptions, ep)

@@ -49,6 +49,9 @@ var testEps = []danmtypes.DanmEp {
     ObjectMeta: meta_v1.ObjectMeta {Name: "dynamicIpv4"},
     Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Address: "dynamic",},},
   },
+  danmtypes.DanmEp{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "noIps"},
+  },
 }
 
 var delegationRequiredTcs = []struct {
@@ -82,6 +85,7 @@ var delSetupTcs = []struct {
   isErrorExpected bool
 }{
   {"ipamNeededError", "ipamNeeded", "dynamicIpv4", true},
+  {"emptyIpamconfigError", "ipamNeeded", "noIps", true},
 }
 
 func TestIsDelegationRequired(t *testing.T) {

@@ -50,7 +50,7 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
     return nil, errors.New("failed to get the name of the sriov PF for device "+ ep.Spec.Iface.DeviceID +" due to:" + err.Error())
   }
   vlanid := netInfo.Spec.Options.Vlan
-  sriovConfig := sriovNet {
+  sriovConfig := SriovNet {
     Name:      netInfo.Spec.NetworkID,
     Type:      "sriov",
     PfName:    pfname,
@@ -72,7 +72,7 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
 //This function creates CNI configuration for the dynamic-level MACVLAN backend
 func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
   hDev := danmep.DetermineHostDeviceName(netInfo)
-  macvlanConfig := macvlanNet {
+  macvlanConfig := MacvlanNet {
     Master: hDev,
    //TODO: make these params configurable if required
     Mode:   "bridge",

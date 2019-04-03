@@ -4,11 +4,27 @@ import (
   "log"
   "os"
   "testing"
+  "io/ioutil"
+  "path/filepath"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/test/stubs"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const (
+  cniTestConfigDir = "/etc/cni/net.d"
+  cniTestConfigFile = "cnitest.conf"
+)
+
+var (
+  cniTesterDir = filepath.Join(os.Getenv("GOPATH"),"bin")
+)
+
+type CniConf struct {
+  ConfName string
+  Conftent []byte
+}
 
 var testNets = []danmtypes.DanmNet {
   danmtypes.DanmNet{
@@ -42,6 +58,18 @@ var testNets = []danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "ipamNeeded"}, 
     Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "cidr", Validation: true,},
   },
+  danmtypes.DanmNet {
+    ObjectMeta: meta_v1.ObjectMeta {Name: "flannel-test"}, 
+    Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "flannel_conf", Validation: true,},
+  },
+}
+
+var expectedCniConfigs = []CniConf {
+  {"flannel", []byte(`{"cnitype":"flannel","cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
+}
+
+var testCniConfFiles = []CniConf {
+  {"flannel_conf.conf", []byte(`{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}`)},
 }
 
 var testEps = []danmtypes.DanmEp {
@@ -50,7 +78,7 @@ var testEps = []danmtypes.DanmEp {
     Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Address: "dynamic",},},
   },
   danmtypes.DanmEp{
-    ObjectMeta: meta_v1.ObjectMeta {Name: "noIps"},
+    ObjectMeta: meta_v1.ObjectMeta {Name: "noIps"}, Spec: danmtypes.DanmEpSpec{Iface: danmtypes.DanmEpIface{Name: "eth0"}},
   },
 }
 
@@ -82,10 +110,12 @@ var delSetupTcs = []struct {
   tcName string
   netName string
   epName string
+  cniConfName string
   isErrorExpected bool
 }{
-  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", true},
-  {"emptyIpamconfigError", "ipamNeeded", "noIps", true},
+  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", "", true},
+  {"emptyIpamconfigError", "ipamNeeded", "noIps", "", true},
+  {"staticCniSuccess", "flannel-test", "noIps", "flannel", false},
 }
 
 func TestIsDelegationRequired(t *testing.T) {
@@ -146,8 +176,16 @@ func TestCalculateIfaceName(t *testing.T) {
 
 func TestDelegateInterfaceSetup(t *testing.T) {
   netClientStub := stubs.NewClientSetStub(testNets, nil, nil)
+  err := setupDelTest()
+  if err != nil {
+    t.Errorf("Test suite could not be set-up because:%s", err.Error())
+  }
   for _, tc := range delSetupTcs {
     t.Run(tc.tcName, func(t *testing.T) {
+      err = setupDelTestTc(tc.cniConfName)
+      if err != nil {
+        t.Errorf("TC could not be set-up because:%s", err.Error())
+      }
       testNet := getTestNet(tc.netName)
       testEp := getTestEp(tc.epName)
       cniRes, err := cnidel.DelegateInterfaceSetup(netClientStub,testNet,testEp)
@@ -163,6 +201,58 @@ func TestDelegateInterfaceSetup(t *testing.T) {
       }
     })
   }
+}
+
+func setupDelTest() error {
+  os.RemoveAll(cniTestConfigDir)
+  err := os.MkdirAll(cniTestConfigDir, os.ModePerm)
+  if err != nil {
+    return err
+  }
+  err = os.Setenv("CNI_PATH", cniTesterDir)
+  if err != nil {
+    return err
+  }
+  err = os.Setenv("CNI_COMMAND", "ADD")
+  if err != nil {
+    return err
+  }
+  err = os.Setenv("CNI_CONTAINERID", "12346")
+  if err != nil {
+    return err
+  }
+  err = os.Setenv("CNI_NETNS", "argsdfhtz")
+  if err != nil {
+    return err
+  }
+  os.RemoveAll(filepath.Join(cniTesterDir, "flannel"))
+  err = os.Symlink(filepath.Join(cniTesterDir, "cnitest"), filepath.Join(cniTesterDir, "flannel"))
+  if err != nil {
+    return err
+  }
+  for _, confFile := range testCniConfFiles {
+    err = ioutil.WriteFile(filepath.Join(cniTestConfigDir, confFile.ConfName), confFile.Conftent, 0666)
+    if err != nil {
+      return err
+    }
+  }
+  return nil
+}
+
+func setupDelTestTc(expectedCniConfig string) error {
+  var expectedConf CniConf
+  for _, conf := range expectedCniConfigs {
+    if conf.ConfName == expectedCniConfig {
+      expectedConf = conf
+      break
+    }
+  }
+  os.Remove(filepath.Join(cniTestConfigDir, cniTestConfigFile))
+  err := ioutil.WriteFile(filepath.Join(cniTestConfigDir, cniTestConfigFile), expectedConf.Conftent, 0666)
+  if err != nil {
+    return err
+  }
+  return nil
 }
 
 func getTestNet(netId string) *danmtypes.DanmNet {

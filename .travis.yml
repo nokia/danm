@@ -3,20 +3,21 @@ dist: xenial
 
 env:
  - TRAVIS_PIPELINE=docker
- - TRAVIS_PIPELINE=buildah
+## TODO: figure out why buildah pipeline is flaky, even with sudo
+## - TRAVIS_PIPELINE=buildah
 
 language: go
 
-go: 1.11.x
+go: 1.12.x
   
 services: docker
 
 install:
- - ./.travis/install_buildah.sh
+## - sudo ./.travis/install_buildah.sh
  - go get golang.org/x/tools/cmd/cover
  - go get github.com/mattn/goveralls
 
 script:
   - ./build_danm.sh
   - ./run_uts.sh
-  - $GOPATH/bin/goveralls -coverprofile=coverage3.out -service=travis-ci -repotoken ZY6MA490QABNKGnJgYLi53QTDuTC4H69K
+  - $GOPATH/bin/goveralls -coverprofile=$GOPATH/src/github.com/nokia/danm/coverage3.out -service=travis-ci -repotoken ZY6MA490QABNKGnJgYLi53QTDuTC4H69K

@@ -14,7 +14,7 @@ type cniBackendConfig struct {
 }
 
 // sriovNet represent the configuration of sriov plugin v1.0.0
-type sriovNet struct {
+type SriovNet struct {
   // the name of the network
   Name   string     `json:"name"`
   // currently constant "sriov"
@@ -44,7 +44,7 @@ type VfInformation struct {
   Vfid    int    `json:"vfid"`
 }
 
-type macvlanNet struct {
+type MacvlanNet struct {
   //Name of the master NIC the MACVLAN slave needs to be connected to
   Master string `json:"master"`
   //The mode in which the MACVLAN slave is configured (default bridge)

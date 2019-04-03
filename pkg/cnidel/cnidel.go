@@ -160,7 +160,7 @@ func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, ep *danmtypes.
   if err != nil {
     return "", nil, err
   }
-  cniArgs := []string{
+  cniArgs := []string {
     "CNI_COMMAND="     + os.Getenv("CNI_COMMAND"),
     "CNI_CONTAINERID=" + os.Getenv("CNI_CONTAINERID"),
     "CNI_NETNS="       + os.Getenv("CNI_NETNS"),

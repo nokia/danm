@@ -7,6 +7,7 @@ import (
   "reflect"
   "encoding/json"
   "io/ioutil"
+  "github.com/containernetworking/cni/pkg/types"
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/version"
@@ -17,23 +18,26 @@ const (
   cniTestConfigFile = "/etc/cni/net.d/cnitest.conf"
 )
 
-type PartialCniConfig struct {
-  CniType  string `json:"cnitype"`
+type TestConfig struct {
+  CniExpectations `json:"cniexp"`
+}
+
+type CniExpectations struct {
+  CniType    string `json:"cnitype"`
+  Ip         string `json:"ip"`
+  ReturnType string `json:"return"`
 }
 
 type SriovCniTestConfig struct {
-  CniType  string          `json:"cnitype"`
   CniConf  cnidel.SriovNet `json:"cniconf"`
 }
 
 type MacvlanCniTestConfig struct {
-  CniType  string            `json:"cnitype"`
   CniConf  cnidel.MacvlanNet `json:"cniconf"`
 }
 
 type FlannelCniTestConfig struct {
-  CniType  string      `json:"cnitype"`
-  CniConf  FlannelConf `json:"cniconf"`
+  CniConf  FlannelConf     `json:"cniconf"`
 }
 
 type FlannelConf struct {
@@ -48,26 +52,40 @@ type FlannelDelegate struct {
 }
 
 func testSetup(args *skel.CmdArgs) error {
-  var preConfig PartialCniConfig
+  var tcConf TestConfig
   expectedCniConf, err := ioutil.ReadFile(cniTestConfigFile)
   if err != nil {
     return errors.New("could not read expected CNI config from disk, because:" + err.Error())
   }
-  err = json.Unmarshal(expectedCniConf, &preConfig)
+  err = json.Unmarshal(expectedCniConf, &tcConf)
   if err != nil {
-    return errors.New("could not unmarshal partial CNI config, because:" + err.Error())
+    return errors.New("could not unmarshal test CNI config, because:" + err.Error())
   }
-  if preConfig.CniType == "sriov" {
+  if tcConf.CniExpectations.CniType == "sriov" {
     err = validateSriovConfig(args.StdinData, expectedCniConf)
-  } else if preConfig.CniType == "macvlan" {
+  } else if tcConf.CniExpectations.CniType == "macvlan" {
     err = validateMacvlanConfig(args.StdinData, expectedCniConf)
-  } else if preConfig.CniType == "flannel" {
+  } else if tcConf.CniExpectations.CniType == "flannel" {
     err = validateFlannelConfig(args.StdinData, expectedCniConf)
   }
   if err != nil {
     return err
   }
-  var cniRes current.Result
+  cniRes := current.Result {CNIVersion: "0.3.1"}
+  if tcConf.CniExpectations.Ip != "" {
+    iface := &current.Interface{
+      Name: "eth0",
+      Mac: "AA:BB:CC:DD:EE:FF",
+      Sandbox: "hululululu",
+    }
+    cniRes.Interfaces = append(cniRes.Interfaces, iface)
+    ip, _ := types.ParseCIDR(tcConf.CniExpectations.Ip)
+    ipConf := &current.IPConfig {
+      Version: "4",
+      Address: *ip,
+    }
+    cniRes.IPs = append(cniRes.IPs, ipConf)
+  }
   return cniRes.Print()
 }
 

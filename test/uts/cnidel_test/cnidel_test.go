@@ -1,8 +1,8 @@
 package cnidel_test
 
 import (
-  "log"
   "os"
+  "strings"
   "testing"
   "io/ioutil"
   "path/filepath"
@@ -18,7 +18,7 @@ const (
 )
 
 var (
-  cniTesterDir = filepath.Join(os.Getenv("GOPATH"),"bin")
+  cniTesterDir = cniTestConfigDir
 )
 
 type CniConf struct {
@@ -62,10 +62,19 @@ var testNets = []danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "flannel-test"}, 
     Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "flannel_conf", Validation: true,},
   },
+  danmtypes.DanmNet {
+    ObjectMeta: meta_v1.ObjectMeta {Name: "no-conf"}, 
+    Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "hulululu", Validation: true,},
+  },
+  danmtypes.DanmNet {
+    ObjectMeta: meta_v1.ObjectMeta {Name: "no-binary"}, 
+    Spec: danmtypes.DanmNetSpec{NetworkType: "flanel", NetworkID: "flannel_conf", Validation: true,},
+  },
 }
 
 var expectedCniConfigs = []CniConf {
-  {"flannel", []byte(`{"cnitype":"flannel","cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
+  {"flannel", []byte(`{"cniexp":{"cnitype":"flannel"},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
+  {"flannel-ip", []byte(`{"cniexp":{"cnitype":"flannel","ip":"10.244.10.30/24"},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
 }
 
 var testCniConfFiles = []CniConf {
@@ -111,11 +120,15 @@ var delSetupTcs = []struct {
   netName string
   epName string
   cniConfName string
+  expectedIp string
   isErrorExpected bool
 }{
-  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", "", true},
-  {"emptyIpamconfigError", "ipamNeeded", "noIps", "", true},
-  {"staticCniSuccess", "flannel-test", "noIps", "flannel", false},
+  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", "", "", true},
+  {"emptyIpamconfigError", "ipamNeeded", "noIps", "", "", true},
+  {"staticCniSuccess", "flannel-test", "noIps", "flannel", "", false},
+  {"staticCniNoConfig", "no-conf", "noIps", "", "", true},
+  {"staticCniNoBinary", "no-binary", "noIps", "flannel", "", true},
+  {"staticCniWithIp", "flannel-test", "noIps", "flannel-ip", "10.244.10.30", false},
 }
 
 func TestIsDelegationRequired(t *testing.T) {
@@ -196,8 +209,13 @@ func TestDelegateInterfaceSetup(t *testing.T) {
         }
         t.Errorf("Received error does not match with expectation: %t for TC: %s, detailed error message: %s", tc.isErrorExpected, tc.tcName, detailedErrorMessage)
       }
-      if cniRes == nil {
-        log.Println("we gonna fill this validation later")    
+      if tc.expectedIp != "" {
+        if cniRes == nil {
+          t.Errorf("CNI Result cannot be empty when we expect an IP!")  
+        }
+        if strings.HasPrefix(tc.expectedIp, testEp.Spec.Iface.Address) {
+          t.Errorf("Expected IP:%s is not saved in DanmEp.Spec.Iface's respective address field:%s", tc.expectedIp, testEp.Spec.Iface.Address)  
+        }
       }
     })
   }
@@ -226,7 +244,11 @@ func setupDelTest() error {
     return err
   }
   os.RemoveAll(filepath.Join(cniTesterDir, "flannel"))
-  err = os.Symlink(filepath.Join(cniTesterDir, "cnitest"), filepath.Join(cniTesterDir, "flannel"))
+  input, err := ioutil.ReadFile(filepath.Join(os.Getenv("GOPATH"),"bin","cnitest"))
+  if err != nil {
+    return err
+  }
+  err = ioutil.WriteFile(filepath.Join(cniTesterDir, "flannel"), input, 777)
   if err != nil {
     return err
   }

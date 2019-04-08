@@ -4,8 +4,8 @@ import (
   "errors"
   "log"
   "os"
-  "path/filepath"
   "strings"
+  "path/filepath"
   "github.com/containernetworking/cni/pkg/invoke"
   "github.com/containernetworking/cni/pkg/types"
   "github.com/containernetworking/cni/pkg/types/current"
@@ -70,16 +70,15 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, errors.New("Error delegating ADD to CNI plugin:" + cniType + " because:" + err.Error())
   }
-  delegatedResult := ConvertCniResult(cniResult)
-  if delegatedResult != nil {
-    setEpIfaceAddress(delegatedResult, &ep.Spec.Iface)
+  if cniResult != nil {
+    setEpIfaceAddress(cniResult, &ep.Spec.Iface)
   }
   err = danmep.CreateRoutesInNetNs(*ep, netInfo)
   if err != nil {
     // We don't consider this serious error, so we only log a warning about the issue.
     log.Println("WARNING: Could not create IP routes for CNI:" + cniType + " because:" + err.Error())
   }
-  return delegatedResult, nil
+  return cniResult, nil
 }
 
 func isIpamNeeded(cniType string) bool {
@@ -132,7 +131,7 @@ func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCo
   return readCniConfigFile(netInfo)
 }
 
-func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep *danmtypes.DanmEp) (types.Result,error) {
+func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep *danmtypes.DanmEp) (*current.Result,error) {
   cniPath, cniArgs, err := getExecCniParams(cniType, netInfo, ep)
   if err != nil {
     return nil, errors.New("exec CNI params couldn't be gathered:" + err.Error())
@@ -143,7 +142,7 @@ func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte,
     return nil, errors.New("OS exec call failed:" + err.Error())
   }
   versionDecoder := &version.ConfigDecoder{}
-  confVersion, err := versionDecoder.Decode(rawConfig)  
+  confVersion, err := versionDecoder.Decode(rawResult)  
   if err != nil || rawResult == nil {
     return &current.Result{}, nil
   }
@@ -151,7 +150,10 @@ func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte,
   if err != nil || convertedResult == nil {
     return &current.Result{}, nil
   }
-  return convertedResult, nil
+  finalResult := convertCniResult(convertedResult)
+  log.Println("lofasz version:" + convertedResult.Version() + " and struct:" + convertedResult.String())
+  log.Println("lofasz2 version:" + finalResult.Version() + " and struct:" + finalResult.String())
+  return finalResult, nil
 }
 
 func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (string,[]string,error) {
@@ -234,7 +236,7 @@ func flannelIpExhaustionWorkaround(ip string) {
 
 // ConvertCniResult converts a CNI result from an older API version to the latest format
 // Returns nil if conversion is unsuccessful
-func ConvertCniResult(rawCniResult types.Result) *current.Result {
+func convertCniResult(rawCniResult types.Result) *current.Result {
   convertedResult, err := current.NewResultFromResult(rawCniResult)
   if err != nil {
     log.Println("Delegated CNI result could not be converted:" + err.Error())

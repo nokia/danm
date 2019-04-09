@@ -1,6 +1,6 @@
 package cnidel
 
-import (  
+import (
   "errors"
   "log"
   "os"
@@ -54,9 +54,14 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
     if err != nil {
       return nil, errors.New("IP address reservation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
     }
+   //TODO: as netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
+   //Therefore, anyone wishing to further update the same DanmNet later on will use an outdated representation as the input.
+   //IPAM should be refactored to always pass back the up-to-date DanmNet object.
+   //I guess it is okay now because we only want to free IPs, and RV differences are resolved by the generated client code.
+   //log.Println("inside cnidel testnet alloc after:" + netInfo.Spec.Options.Alloc)
     ipamOptions, err = getCniIpamConfig(netInfo.Spec.Options, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
-      return nil, errors.New("IPAM config creation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())    
+      return nil, errors.New("IPAM config creation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
     }
   }
   rawConfig, err := getCniPluginConfig(netInfo, ipamOptions, ep)
@@ -142,7 +147,7 @@ func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte,
     return nil, errors.New("OS exec call failed:" + err.Error())
   }
   versionDecoder := &version.ConfigDecoder{}
-  confVersion, err := versionDecoder.Decode(rawResult)  
+  confVersion, err := versionDecoder.Decode(rawResult)
   if err != nil || rawResult == nil {
     return &current.Result{}, nil
   }
@@ -259,5 +264,5 @@ func CalculateIfaceName(chosenName, defaultName string) string {
   if chosenName != "" {
     return chosenName
   }
-  return defaultName 
+  return defaultName
 }

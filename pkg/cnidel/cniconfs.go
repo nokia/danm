@@ -1,6 +1,6 @@
 package cnidel
 
-import (  
+import (
   "errors"
   "encoding/json"
   "io/ioutil"

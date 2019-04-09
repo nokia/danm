@@ -9,6 +9,7 @@ import (
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/test/stubs"
+  "github.com/nokia/danm/test/utils"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,41 +41,46 @@ var testNets = []danmtypes.DanmNet {
     Spec: danmtypes.DanmNetSpec{NetworkID: "IPVLAN-UPPER", NetworkType: "IPVLAN"},
   },
   danmtypes.DanmNet{
-    ObjectMeta: meta_v1.ObjectMeta {Name: "sriov"},  
+    ObjectMeta: meta_v1.ObjectMeta {Name: "sriov"},
     Spec: danmtypes.DanmNetSpec{NetworkID: "sriov", NetworkType: "sriov"},
   },
   danmtypes.DanmNet{
-    ObjectMeta: meta_v1.ObjectMeta {Name: "flannel"},  
+    ObjectMeta: meta_v1.ObjectMeta {Name: "flannel"},
     Spec: danmtypes.DanmNetSpec{NetworkID: "flannel", NetworkType: "flannel"},
   },
   danmtypes.DanmNet{
-    ObjectMeta: meta_v1.ObjectMeta {Name: "hululululu"},  
+    ObjectMeta: meta_v1.ObjectMeta {Name: "hululululu"},
     Spec: danmtypes.DanmNetSpec{NetworkID: "hululululu", NetworkType: "hululululu"},
   },
-  danmtypes.DanmNet{ 
+  danmtypes.DanmNet{
     Spec: danmtypes.DanmNetSpec{NetworkID: "nometa", NetworkType: "macvlan"},
   },
   danmtypes.DanmNet {
-    ObjectMeta: meta_v1.ObjectMeta {Name: "ipamNeeded"}, 
+    ObjectMeta: meta_v1.ObjectMeta {Name: "ipamNeeded"},
     Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "cidr", Validation: true,},
   },
   danmtypes.DanmNet {
-    ObjectMeta: meta_v1.ObjectMeta {Name: "flannel-test"}, 
+    ObjectMeta: meta_v1.ObjectMeta {Name: "flannel-test"},
     Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "flannel_conf", Validation: true,},
   },
   danmtypes.DanmNet {
-    ObjectMeta: meta_v1.ObjectMeta {Name: "no-conf"}, 
+    ObjectMeta: meta_v1.ObjectMeta {Name: "no-conf"},
     Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "hulululu", Validation: true,},
   },
   danmtypes.DanmNet {
-    ObjectMeta: meta_v1.ObjectMeta {Name: "no-binary"}, 
+    ObjectMeta: meta_v1.ObjectMeta {Name: "no-binary"},
     Spec: danmtypes.DanmNetSpec{NetworkType: "flanel", NetworkID: "flannel_conf", Validation: true,},
+  },
+  danmtypes.DanmNet {
+    ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-v4"},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "eno1"}},
   },
 }
 
 var expectedCniConfigs = []CniConf {
   {"flannel", []byte(`{"cniexp":{"cnitype":"flannel"},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
   {"flannel-ip", []byte(`{"cniexp":{"cnitype":"flannel","ip":"10.244.10.30/24"},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
+  {"macvlan-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26"},"cniconf":{"name":"danm","type":"macvlan","master":"eno1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"192.168.1.64/26","ip":"192.168.1.65"}}}`)},
 }
 
 var testCniConfFiles = []CniConf {
@@ -84,7 +90,7 @@ var testCniConfFiles = []CniConf {
 var testEps = []danmtypes.DanmEp {
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "dynamicIpv4"},
-    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Address: "dynamic",},},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f0", Address: "dynamic",},},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "noIps"}, Spec: danmtypes.DanmEpSpec{Iface: danmtypes.DanmEpIface{Name: "eth0"}},
@@ -129,6 +135,7 @@ var delSetupTcs = []struct {
   {"staticCniNoConfig", "no-conf", "noIps", "", "", true},
   {"staticCniNoBinary", "no-binary", "noIps", "flannel", "", true},
   {"staticCniWithIp", "flannel-test", "noIps", "flannel-ip", "10.244.10.30", false},
+  {"dynamicMacvlanIpv4", "macvlan-v4", "dynamicIpv4", "macvlan-ip4", "192.168.1.65", false},
 }
 
 func TestIsDelegationRequired(t *testing.T) {
@@ -211,10 +218,10 @@ func TestDelegateInterfaceSetup(t *testing.T) {
       }
       if tc.expectedIp != "" {
         if cniRes == nil {
-          t.Errorf("CNI Result cannot be empty when we expect an IP!")  
+          t.Errorf("CNI Result cannot be empty when we expect an IP!")
         }
         if strings.HasPrefix(tc.expectedIp, testEp.Spec.Iface.Address) {
-          t.Errorf("Expected IP:%s is not saved in DanmEp.Spec.Iface's respective address field:%s", tc.expectedIp, testEp.Spec.Iface.Address)  
+          t.Errorf("Expected IP:%s is not saved in DanmEp.Spec.Iface's respective address field:%s", tc.expectedIp, testEp.Spec.Iface.Address)
         }
       }
     })
@@ -243,20 +250,27 @@ func setupDelTest() error {
   if err != nil {
     return err
   }
-  os.RemoveAll(filepath.Join(cniTesterDir, "flannel"))
-  input, err := ioutil.ReadFile(filepath.Join(os.Getenv("GOPATH"),"bin","cnitest"))
-  if err != nil {
-    return err
-  }
-  err = ioutil.WriteFile(filepath.Join(cniTesterDir, "flannel"), input, 777)
-  if err != nil {
-    return err
+  testPlugins := [3]string{"flannel","macvlan","sriov"}
+  for _, plugin := range testPlugins {
+    os.RemoveAll(filepath.Join(cniTesterDir, plugin))
+    input, err := ioutil.ReadFile(filepath.Join(os.Getenv("GOPATH"),"bin","cnitest"))
+    if err != nil {
+      return err
+    }
+    err = ioutil.WriteFile(filepath.Join(cniTesterDir, plugin), input, 777)
+    if err != nil {
+      return err
+    }
   }
   for _, confFile := range testCniConfFiles {
     err = ioutil.WriteFile(filepath.Join(cniTestConfigDir, confFile.ConfName), confFile.Conftent, 0666)
     if err != nil {
       return err
     }
+  }
+  err = utils.SetupAllocationPools(testNets)
+  if err != nil {
+    return err
   }
   return nil
 }

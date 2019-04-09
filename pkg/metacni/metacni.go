@@ -395,13 +395,13 @@ func createDanmEp(epInput danmtypes.DanmEpIface, netId string, neType string, ar
     Labels: args.labels,
   }
   typeMeta := meta_v1.TypeMeta {
-      APIVersion: danmtypes.SchemeGroupVersion.String(), 
+      APIVersion: danmtypes.SchemeGroupVersion.String(),
       Kind: "DanmEp",
   }
   ep := danmtypes.DanmEp{
     TypeMeta: typeMeta,
     ObjectMeta: meta,
-    Spec: epSpec, 
+    Spec: epSpec,
   }
   return ep, nil
 }

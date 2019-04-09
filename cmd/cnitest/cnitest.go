@@ -94,6 +94,21 @@ func validateSriovConfig(receivedCniConfig, expectedCniConfig []byte) error {
 }
 
 func validateMacvlanConfig(receivedCniConfig, expectedCniConfig []byte) error {
+  var recMacvlanConf cnidel.MacvlanNet
+  err := json.Unmarshal(receivedCniConfig, &recMacvlanConf)
+  if err != nil {
+    return errors.New("Received MACVLAN config could not be unmarshalled, because:" + err.Error())
+  }
+  log.Printf("Received MACVLAN config:%v",recMacvlanConf)
+  var expMacvlanConf MacvlanCniTestConfig
+  err = json.Unmarshal(expectedCniConfig, &expMacvlanConf)
+  if err != nil {
+    return errors.New("Expected MACVLAN config could not be unmarshalled, because:" + err.Error())
+  }
+  log.Printf("Expected MACVLAN config:%v",expMacvlanConf.CniConf)
+  if !reflect.DeepEqual(recMacvlanConf, expMacvlanConf.CniConf) {
+    return errors.New("Received MACVLAN delegate configuration does not match with expected!")
+  }
   return nil
 }
 
@@ -104,13 +119,13 @@ func validateFlannelConfig(receivedCniConfig, expectedCniConfig []byte) error {
     return errors.New("Received Flannel config could not be unmarshalled, because:" + err.Error())
   }
   log.Printf("Received Flannel config:%v",recFlannelConf)
-  var expFlannelConfg FlannelCniTestConfig
-  err = json.Unmarshal(expectedCniConfig, &expFlannelConfg)
+  var expFlannelConf FlannelCniTestConfig
+  err = json.Unmarshal(expectedCniConfig, &expFlannelConf)
   if err != nil {
     return errors.New("Expected Flannel config could not be unmarshalled, because:" + err.Error())
   }
-  log.Printf("Expected Flannel config:%v",expFlannelConfg.CniConf)
-  if !reflect.DeepEqual(recFlannelConf, expFlannelConfg.CniConf) {
+  log.Printf("Expected Flannel config:%v",expFlannelConf.CniConf)
+  if !reflect.DeepEqual(recFlannelConf, expFlannelConf.CniConf) {
     return errors.New("Received Flannel delegate configuration does not match with expected!")
   }
   return nil

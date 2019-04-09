@@ -1,15 +1,13 @@
 package ipam_test
 
 import (
-  "net"
   "os"
   "strings"
   "testing"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
-  "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/ipam"
-  "github.com/nokia/danm/pkg/netcontrol"
   "github.com/nokia/danm/test/stubs"
+  "github.com/nokia/danm/test/utils"
 )
 
 var testNets = []danmtypes.DanmNet {
@@ -100,7 +98,7 @@ var gcTcs = []struct {
 }
 
 func TestReserve(t *testing.T) {
-  err := setupAllocationPools(testNets)
+  err := utils.SetupAllocationPools(testNets)
   if err != nil {
     t.Errorf("Allocation pool for testnets could not be set-up because:%v", err)
   }
@@ -129,7 +127,7 @@ func TestReserve(t *testing.T) {
 }
 
 func TestFree(t *testing.T) {
-  err := setupAllocationPools(testNets)
+  err := utils.SetupAllocationPools(testNets)
   if err != nil {
     t.Errorf("Allocation pool for testnets could not be set-up because:%v", err)
   }
@@ -147,7 +145,7 @@ func TestFree(t *testing.T) {
 }
 
 func TestGarbageCollectIps(t *testing.T) {
-  err := setupAllocationPools(testNets)
+  err := utils.SetupAllocationPools(testNets)
   if err != nil {
     t.Errorf("Allocation pool for testnets could not be set-up because:%v", err)
   }
@@ -158,39 +156,6 @@ func TestGarbageCollectIps(t *testing.T) {
       ipam.GarbageCollectIps(netClientStub, &testNets[tc.netIndex], tc.allocatedIp4, tc.allocatedIp6)
     })
   }
-}
-
-func setupAllocationPools(nets []danmtypes.DanmNet) error {
-  for index, net := range nets {
-    if net.Spec.Options.Cidr != "" {
-      bitArray, err := netcontrol.CreateAllocationArray(&net)
-      if err != nil {
-        return err
-      }
-      net.Spec.Options.Alloc = bitArray.Encode()
-      err = netcontrol.ValidateAllocationPool(&net)
-      if err != nil {
-        return err
-      }
-      if strings.HasPrefix(net.Spec.NetworkID, "full") {
-        exhaustNetwork(&net)
-      }
-      testNets[index].Spec = net.Spec
-    }
-  }
-  return nil
-}
-
-func exhaustNetwork(netInfo *danmtypes.DanmNet) {
-    ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
-    _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-    ipnetNum := netcontrol.Ip2int(ipnet.IP)
-    begin := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start)) - ipnetNum
-    end := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End)) - ipnetNum
-    for i:=begin;i<=end;i++ {
-        ba.Set(uint32(i))
-    }
-    netInfo.Spec.Options.Alloc = ba.Encode()
 }
 
 func createExpectedAllocationsList(ip string, isExpectedToBeSet bool, index int) []stubs.ReservedIpsList {

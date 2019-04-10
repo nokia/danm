@@ -357,12 +357,12 @@ func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Inte
     return
   }
   danmResult := &current.Result{}
-  addIfaceToResult(ep.Spec.EndpointID, epSpec.MacAddress, args.containerId, danmResult)
+  AddIfaceToResult(ep.Spec.EndpointID, epSpec.MacAddress, args.containerId, danmResult)
   if (ip4 != "") {
-    addIpToResult(ip4,"4",danmResult)
+    AddIpToResult(ip4,"4",danmResult)
   }
   if (ip6 != "") {
-    addIpToResult(ip6,"6",danmResult)
+    AddIpToResult(ip6,"6",danmResult)
   }
   syncher.PushResult(iface.Network, nil, danmResult)
 }
@@ -418,7 +418,7 @@ func putDanmEp(args *cniArgs, ep danmtypes.DanmEp) error {
   return nil
 }
 
-func addIfaceToResult(epid string, macAddress string, sandBox string, cniResult *current.Result) {
+func AddIfaceToResult(epid string, macAddress string, sandBox string, cniResult *current.Result) {
   iface := &current.Interface{
     Name: epid,
     Mac: macAddress,
@@ -427,7 +427,7 @@ func addIfaceToResult(epid string, macAddress string, sandBox string, cniResult 
   cniResult.Interfaces = append(cniResult.Interfaces, iface)
 }
 
-func addIpToResult(ip string, version string, cniResult *current.Result) {
+func AddIpToResult(ip string, version string, cniResult *current.Result) {
   if ip != "" {
     ip, _ := types.ParseCIDR(ip)
     ipConf := &current.IPConfig {

@@ -3,15 +3,18 @@ package main
 import (
   "errors"
   "log"
+  "net"
   "os"
   "reflect"
   "encoding/json"
   "io/ioutil"
   "github.com/containernetworking/cni/pkg/types"
+  "github.com/containernetworking/cni/pkg/types/020"
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/version"
   "github.com/nokia/danm/pkg/cnidel"
+  "github.com/nokia/danm/pkg/metacni"
 )
 
 const (
@@ -23,9 +26,11 @@ type TestConfig struct {
 }
 
 type CniExpectations struct {
-  CniType    string `json:"cnitype"`
-  Ip         string `json:"ip"`
-  ReturnType string `json:"return"`
+  CniType    string            `json:"cnitype"`
+  Ip         string            `json:"ip,omitempty"`
+  Ip6        string            `json:"ip6,omitempty"`
+  Env        map[string]string `json:"env,omitempty"`
+  ReturnType string            `json:"return,omitempty"`
 }
 
 type SriovCniTestConfig struct {
@@ -61,39 +66,44 @@ func testSetup(args *skel.CmdArgs) error {
   if err != nil {
     return errors.New("could not unmarshal test CNI config, because:" + err.Error())
   }
+  err = checkEnvVars(tcConf.Env)
+  if err != nil {
+    return errors.New("ENV variables were not set to expected value:" + err.Error())
+  }
   if tcConf.CniExpectations.CniType == "sriov" {
     err = validateSriovConfig(args.StdinData, expectedCniConf)
   } else if tcConf.CniExpectations.CniType == "macvlan" {
-    err = validateMacvlanConfig(args.StdinData, expectedCniConf)
+    err = validateMacvlanConfig(args.StdinData, expectedCniConf, tcConf)
   } else if tcConf.CniExpectations.CniType == "flannel" {
     err = validateFlannelConfig(args.StdinData, expectedCniConf)
   }
   if err != nil {
     return err
   }
-  cniRes := current.Result {CNIVersion: "0.3.1"}
-  if tcConf.CniExpectations.Ip != "" {
-    iface := &current.Interface{
-      Name: "eth0",
-      Mac: "AA:BB:CC:DD:EE:FF",
-      Sandbox: "hululululu",
-    }
-    cniRes.Interfaces = append(cniRes.Interfaces, iface)
-    ip, _ := types.ParseCIDR(tcConf.CniExpectations.Ip)
-    ipConf := &current.IPConfig {
-      Version: "4",
-      Address: *ip,
-    }
-    cniRes.IPs = append(cniRes.IPs, ipConf)
+  var cniRes types.Result
+  if tcConf.CniExpectations.ReturnType == "" || tcConf.CniExpectations.ReturnType == "current" {
+    cniRes = createCurrentCniResult(tcConf)
+  } else {
+    cniRes = createType020CniResult(tcConf)
   }
   return cniRes.Print()
+}
+
+func checkEnvVars(vars map[string]string) error {
+  for key, expValue := range vars {
+    realValue := os.Getenv(key)
+    if realValue != expValue {
+      return errors.New("expected env value:" + expValue + " for key:" + key + " does not match observed env value:" + realValue)
+    }
+  }
+  return nil
 }
 
 func validateSriovConfig(receivedCniConfig, expectedCniConfig []byte) error {
   return nil
 }
 
-func validateMacvlanConfig(receivedCniConfig, expectedCniConfig []byte) error {
+func validateMacvlanConfig(receivedCniConfig, expectedCniConfig []byte, tcConf TestConfig) error {
   var recMacvlanConf cnidel.MacvlanNet
   err := json.Unmarshal(receivedCniConfig, &recMacvlanConf)
   if err != nil {
@@ -104,6 +114,12 @@ func validateMacvlanConfig(receivedCniConfig, expectedCniConfig []byte) error {
   err = json.Unmarshal(expectedCniConfig, &expMacvlanConf)
   if err != nil {
     return errors.New("Expected MACVLAN config could not be unmarshalled, because:" + err.Error())
+  }
+  if tcConf.CniExpectations.Ip6 != "" {
+    if recMacvlanConf.Ipam.Ip == "" {
+      return errors.New("Received MACVLAN CNI config does not contain IPv6 address under ipam section, but it shall!")
+    }
+    recMacvlanConf.Ipam.Ip = ""
   }
   log.Printf("Expected MACVLAN config:%v",expMacvlanConf.CniConf)
   if !reflect.DeepEqual(recMacvlanConf, expMacvlanConf.CniConf) {
@@ -129,6 +145,41 @@ func validateFlannelConfig(receivedCniConfig, expectedCniConfig []byte) error {
     return errors.New("Received Flannel delegate configuration does not match with expected!")
   }
   return nil
+}
+
+func createCurrentCniResult(tcConf TestConfig) *current.Result {
+  cniRes := current.Result {CNIVersion: "0.3.1"}
+  if tcConf.CniExpectations.Ip != "" ||  tcConf.CniExpectations.Ip6 != "" {
+    metacni.AddIfaceToResult("eth0", "AA:BB:CC:DD:EE:FF", "hululululu", &cniRes)
+  }
+  if tcConf.CniExpectations.Ip != "" {
+    metacni.AddIpToResult(tcConf.CniExpectations.Ip, "4", &cniRes)
+  }
+  if tcConf.CniExpectations.Ip6 != "" {
+    metacni.AddIpToResult(tcConf.CniExpectations.Ip6, "6", &cniRes)
+  }
+  return &cniRes
+}
+
+func createType020CniResult(tcConf TestConfig) *types020.Result {
+  cniRes := types020.Result {CNIVersion: "0.2.0"}
+  if tcConf.CniExpectations.Ip != "" {
+    addIpToType20(tcConf.CniExpectations.Ip, 4, &cniRes)
+  }
+  if tcConf.CniExpectations.Ip6 != "" {
+    addIpToType20(tcConf.CniExpectations.Ip6, 6, &cniRes)
+  }
+  return &cniRes
+}
+
+func addIpToType20(ip string, version int, cniRes *types020.Result) {
+  _,ipNet,_ := net.ParseCIDR(ip)
+  ipConf := types020.IPConfig{IP: *ipNet}
+  if version == 4 {
+    cniRes.IP4 = &ipConf
+  } else if version == 6 {
+    cniRes.IP6 = &ipConf
+  }
 }
 
 func testDelete(args *skel.CmdArgs) error {

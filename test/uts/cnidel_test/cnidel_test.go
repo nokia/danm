@@ -73,14 +73,21 @@ var testNets = []danmtypes.DanmNet {
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-v4"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "eno1"}},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "ens1f0"}},
+  },
+  danmtypes.DanmNet {
+    ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-v6"},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
   },
 }
 
 var expectedCniConfigs = []CniConf {
   {"flannel", []byte(`{"cniexp":{"cnitype":"flannel"},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
-  {"flannel-ip", []byte(`{"cniexp":{"cnitype":"flannel","ip":"10.244.10.30/24"},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
-  {"macvlan-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26"},"cniconf":{"name":"danm","type":"macvlan","master":"eno1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"192.168.1.64/26","ip":"192.168.1.65"}}}`)},
+  {"flannel-ip", []byte(`{"cniexp":{"cnitype":"flannel","ip":"10.244.10.30/24","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
+  {"macvlan-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f0"}},"cniconf":{"name":"danm","type":"macvlan","master":"ens1f0","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"192.168.1.64/26","ip":"192.168.1.65"}}}`)},
+  {"macvlan-ip6", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"}},"cniconf":{"name":"danm","type":"macvlan","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"2a00:8a00:a000:1193::/64"}}}`)},
+  {"macvlan-ip4-type020", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f0"},"return":"020"},"cniconf":{"name":"danm","type":"macvlan","master":"ens1f0","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"192.168.1.64/26","ip":"192.168.1.65"}}}`)},
+  {"macvlan-ip6-type020", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"},"return":"020"},"cniconf":{"name":"danm","type":"macvlan","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"2a00:8a00:a000:1193::/64"}}}`)},
 }
 
 var testCniConfFiles = []CniConf {
@@ -91,6 +98,10 @@ var testEps = []danmtypes.DanmEp {
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "dynamicIpv4"},
     Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f0", Address: "dynamic",},},
+  },
+  danmtypes.DanmEp{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "dynamicIpv6"},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f1", AddressIPv6: "dynamic",},},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "noIps"}, Spec: danmtypes.DanmEpSpec{Iface: danmtypes.DanmEpIface{Name: "eth0"}},
@@ -127,15 +138,19 @@ var delSetupTcs = []struct {
   epName string
   cniConfName string
   expectedIp string
+  expectedIp6 string
   isErrorExpected bool
 }{
-  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", "", "", true},
-  {"emptyIpamconfigError", "ipamNeeded", "noIps", "", "", true},
-  {"staticCniSuccess", "flannel-test", "noIps", "flannel", "", false},
-  {"staticCniNoConfig", "no-conf", "noIps", "", "", true},
-  {"staticCniNoBinary", "no-binary", "noIps", "flannel", "", true},
-  {"staticCniWithIp", "flannel-test", "noIps", "flannel-ip", "10.244.10.30", false},
-  {"dynamicMacvlanIpv4", "macvlan-v4", "dynamicIpv4", "macvlan-ip4", "192.168.1.65", false},
+  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", "", "", "", true},
+  {"emptyIpamconfigError", "ipamNeeded", "noIps", "", "", "", true},
+  {"staticCniSuccess", "flannel-test", "noIps", "flannel", "", "", false},
+  {"staticCniNoConfig", "no-conf", "noIps", "", "", "", true},
+  {"staticCniNoBinary", "no-binary", "noIps", "flannel", "", "", true},
+  {"staticCniWithIp", "flannel-test", "noIps", "flannel-ip", "10.244.10.30", "", false},
+  {"dynamicMacvlanIpv4", "macvlan-v4", "dynamicIpv4", "macvlan-ip4", "192.168.1.65", "", false},
+  {"dynamicMacvlanIpv6", "macvlan-v6", "dynamicIpv6", "macvlan-ip6", "", "2a00:8a00:a000:1193", false},
+  {"dynamicMacvlanIpv4Type020Result", "macvlan-v4", "dynamicIpv4", "macvlan-ip4-type020", "192.168.1.65", "", false},
+  {"dynamicMacvlanIpv6Type020Result", "macvlan-v6", "dynamicIpv6", "macvlan-ip6-type020", "", "2a00:8a00:a000:1193", false},
 }
 
 func TestIsDelegationRequired(t *testing.T) {
@@ -222,6 +237,14 @@ func TestDelegateInterfaceSetup(t *testing.T) {
         }
         if strings.HasPrefix(tc.expectedIp, testEp.Spec.Iface.Address) {
           t.Errorf("Expected IP:%s is not saved in DanmEp.Spec.Iface's respective address field:%s", tc.expectedIp, testEp.Spec.Iface.Address)
+        }
+      }
+      if tc.expectedIp6 != "" {
+        if cniRes == nil {
+          t.Errorf("CNI Result cannot be empty when we expect an IPv6!")
+        }
+        if strings.HasPrefix(tc.expectedIp6, testEp.Spec.Iface.AddressIPv6) {
+          t.Errorf("Expected IP:%s is not saved in DanmEp.Spec.Iface's respective address field:%s", tc.expectedIp6, testEp.Spec.Iface.AddressIPv6)
         }
       }
     })

@@ -123,10 +123,14 @@ type Interface struct {
 
 type IpamConfig struct {
   Type      string      `json:"type"`
-  Subnet    string      `json:"subnet"`
+  Ips       []IpamIp    `json:"ips"`
+}
+
+type IpamIp struct {
+  IpCidr    string      `json:"ipcidr"`
   Routes    []IpamRoute `json:"routes,omitEmpty"`
   DefaultGw string      `json:"gateway,omitEmpty"`
-  Ip        string      `json:"ip"`
+  Version   int         `json:"version"`
 }
 
 type IpamRoute struct {

@@ -3,7 +3,6 @@ package main
 import (
   "errors"
   "net"
-  "strings"
   "encoding/json"
   "github.com/containernetworking/cni/pkg/skel"
   types "github.com/containernetworking/cni/pkg/types/020"
@@ -40,7 +39,7 @@ func loadIpamConfig(rawConfig []byte) (danmtypes.IpamConfig,error) {
   if  err != nil {
     return danmtypes.IpamConfig{}, err
   }
-  if cniConf.Ipam.Ip == "" {
+  if len(cniConf.Ipam.Ips) == 0 {
     return danmtypes.IpamConfig{}, errors.New("No IP was passed to fake IPAM")
   }
   return cniConf.Ipam, nil
@@ -49,30 +48,43 @@ func loadIpamConfig(rawConfig []byte) (danmtypes.IpamConfig,error) {
 //TODO: CNI 0.2.0 style of result is used because SRIOV plugin can't handle newer format
 //This should be generalized though, and return result should be current.Result in most cases
 func createCniResult(ipamConf danmtypes.IpamConfig) (*types.Result,error) {
-  _, ip, err := net.ParseCIDR(ipamConf.Ip + "/" + strings.Split(ipamConf.Subnet, "/")[1])
-  if err != nil {
-    return nil, errors.New("Can't parse IP from IPAM config because:"+err.Error())
-  }
-  ip.IP = net.ParseIP(ipamConf.Ip)
-  var routes []gentypes.Route
-  for _, route := range ipamConf.Routes {
-    _, destNet, err := net.ParseCIDR(route.Dst)
-    if err == nil {
-      routes = append(routes, gentypes.Route {
-        Dst: *destNet,
-        GW: net.ParseIP(route.Gw),
+  var ip net.IP
+  var ipNet = new(net.IPNet)
+  var ip4 = new(types.IPConfig)
+  var ip6 = new(types.IPConfig)
+  var cniRoutes = []gentypes.Route{}
+  for _, ipamIp := range ipamConf.Ips {
+    ip, ipNet, _ = net.ParseCIDR(ipamIp.IpCidr)
+    cniRoutes = nil
+    for _, ipamRoute := range ipamIp.Routes {
+      _, routeNet, _ := net.ParseCIDR(ipamRoute.Dst)
+      cniRoutes = append(cniRoutes, gentypes.Route {
+        Dst: *routeNet,
+        GW: net.ParseIP(ipamRoute.Gw),
       })
     }
+    ipNet.IP = ip
+    // CNI Result can have only one IP for each Version.
+    // In case multiple IPs are set with the same Version, the last one is used.
+    switch ipamIp.Version {
+    case 4:
+      ip4 = &types.IPConfig{
+        IP: *ipNet,
+        Gateway: net.ParseIP(ipamIp.DefaultGw),
+        Routes: cniRoutes,
+      }
+    case 6:
+      ip6 = &types.IPConfig{
+        IP: *ipNet,
+        Gateway: net.ParseIP(ipamIp.DefaultGw),
+        Routes: cniRoutes,
+      }
+    }
   }
-  ipConf := &types.IPConfig{
-    IP: *ip,
-    Gateway: net.ParseIP(ipamConf.DefaultGw),
-    Routes: routes,
-  }
-  cniRes := &types.Result{IP4: ipConf}
+  cniRes := &types.Result{IP4: ip4, IP6: ip6}
   return cniRes, nil
 }
-  
+
 func freeIp(args *skel.CmdArgs) error {
   return nil
 }

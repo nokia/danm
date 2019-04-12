@@ -111,13 +111,13 @@ func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (danmtypes.Ip
   }
   if ip4 != "" {
     ipSlice = append(ipSlice, danmtypes.IpamIp{
-                                IpCidr: ip4 + "/" + strings.Split(netinfo.Spec.Options.Cidr, "/")[1],
+                                IpCidr: ip4,
                                 Version: 4,
                               })
   }
   if ip6 != "" {
     ipSlice = append(ipSlice, danmtypes.IpamIp{
-                                IpCidr: ip6 + "/" + strings.Split(netinfo.Spec.Options.Net6, "/")[1],
+                                IpCidr: ip6,
                                 Version: 6,
                               })
   }

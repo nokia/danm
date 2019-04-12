@@ -128,12 +128,5 @@ type IpamConfig struct {
 
 type IpamIp struct {
   IpCidr    string      `json:"ipcidr"`
-  Routes    []IpamRoute `json:"routes,omitEmpty"`
-  DefaultGw string      `json:"gateway,omitEmpty"`
   Version   int         `json:"version"`
-}
-
-type IpamRoute struct {
-  Dst string `json:"dst"`
-  Gw  string `json:"gw,omitEmpty"`
 }

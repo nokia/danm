@@ -198,7 +198,25 @@ func addIpToType20(ip string, version int, cniRes *types020.Result) {
 }
 
 func testDelete(args *skel.CmdArgs) error {
-  return nil
+  var tcConf TestConfig
+  expectedCniConf, err := ioutil.ReadFile(cniTestConfigFile)
+  if err != nil {
+    return errors.New("DEL could not read expected CNI config from disk, because:" + err.Error())
+  }
+  err = json.Unmarshal(expectedCniConf, &tcConf)
+  if err != nil {
+    return errors.New("DEL could not unmarshal test CNI config, because:" + err.Error())
+  }
+  err = checkEnvVars(tcConf.Env)
+  if err != nil {
+    return errors.New("DEL ENV variables were not set to expected value:" + err.Error())
+  }
+  if tcConf.CniExpectations.CniType == "macvlan" {
+    err = validateMacvlanConfig(args.StdinData, expectedCniConf, tcConf)
+  } else if tcConf.CniExpectations.CniType == "flannel" {
+    err = validateFlannelConfig(args.StdinData, expectedCniConf)
+  }
+  return err
 }
 
 func main() {

@@ -104,26 +104,27 @@ func IsDeviceNeeded(cniType string) bool {
   return false
 }
 
-func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (danmtypes.IpamConfig,error) {
-  var (
-    subnet string
-    ip string
-  )
+func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (danmtypes.IpamConfig, error) {
+  var ipSlice = []danmtypes.IpamIp{}
   if ip4 == "" && ip6 == "" && netinfo.Spec.NetworkType != "sriov" {
     return danmtypes.IpamConfig{}, errors.New("unfortunetaly 3rd party CNI plugins usually don't support foregoing putting any IPs on an interface, so with heavy hearts but we need to fail this network delegation operation")
   }
   if ip4 != "" {
-    ip = ip4
-    subnet = netinfo.Spec.Options.Cidr
-  } else {
-    ip = ip6
-    subnet = netinfo.Spec.Options.Net6
+    ipSlice = append(ipSlice, danmtypes.IpamIp{
+                                IpCidr: ip4 + "/" + strings.Split(netinfo.Spec.Options.Cidr, "/")[1],
+                                Version: 4,
+                              })
   }
-  return danmtypes.IpamConfig {
-    Type: ipamType,
-    Subnet: subnet,
-    Ip: strings.Split(ip, "/")[0],
-  }, nil
+  if ip6 != "" {
+    ipSlice = append(ipSlice, danmtypes.IpamIp{
+                                IpCidr: ip6 + "/" + strings.Split(netinfo.Spec.Options.Net6, "/")[1],
+                                Version: 6,
+                              })
+  }
+  return  danmtypes.IpamConfig{
+            Type: ipamType,
+            Ips: ipSlice,
+          }, nil
 }
 
 func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {

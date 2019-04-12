@@ -59,7 +59,7 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
     Ipam:      ipamOptions,
     DeviceID:  ep.Spec.Iface.DeviceID,
   }
-  if ipamOptions.Ip != "" {
+  if len(ipamOptions.Ips) > 0 {
     sriovConfig.L2Mode = false
   }
   rawConfig, err := json.Marshal(sriovConfig)

@@ -156,8 +156,6 @@ func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte,
     return &current.Result{}, nil
   }
   finalResult := convertCniResult(convertedResult)
-  log.Println("lofasz version:" + convertedResult.Version() + " and struct:" + convertedResult.String())
-  log.Println("lofasz2 version:" + finalResult.Version() + " and struct:" + finalResult.String())
   return finalResult, nil
 }
 

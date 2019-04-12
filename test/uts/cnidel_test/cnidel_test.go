@@ -21,6 +21,8 @@ const (
 
 var (
   cniTesterDir = cniTestConfigDir
+  defaultDataDir = "/var/lib/cni/networks"
+  flannelBridge = "cbr0"
 )
 
 type CniConf struct {
@@ -58,7 +60,7 @@ var testNets = []danmtypes.DanmNet {
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "ipamNeeded"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "cidr", Validation: true,},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "cidr", Validation: true,},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "flannel-test"},
@@ -84,6 +86,10 @@ var testNets = []danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "sriov-test"},
     Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "sriov-test", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Vlan: 500}},
   },
+  danmtypes.DanmNet {
+    ObjectMeta: meta_v1.ObjectMeta {Name: "full-macvlan"},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "full", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "ens1f0"}},
+  },
 }
 
 var expectedCniConfigs = []CniConf {
@@ -95,6 +101,8 @@ var expectedCniConfigs = []CniConf {
   {"macvlan-ip6-type020", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"},"return":"020"},"cniconf":{"name":"danm","type":"macvlan","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"2a00:8a00:a000:1193::/64"}}}`)},
   {"sriov-l3", []byte(`{"cniexp":{"cnitype":"sriov","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name":"sriov-test","type":"sriov","master":"enp175s0f1","l2enable":false,"vlan":500,"deviceID":"0000:af:06.0","ipam":{"type":"fakeipam","subnet":"192.168.1.64/26","ip":"192.168.1.65"}}}`)},
   {"sriov-l2", []byte(`{"cniexp":{"cnitype":"sriov","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name":"sriov-test","type":"sriov","master":"enp175s0f1","l2enable":true,"vlan":500,"deviceID":"0000:af:06.0","ipam":{"type":"fakeipam","subnet":"","ip":""}}}`)},
+  {"deleteflannel", []byte(`{"cniexp":{"cnitype":"flannel","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"eth0"}},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
+  {"deletemacvlan", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"ens1f0"}},"cniconf":{"name":"danm","type":"macvlan","master":"ens1f0","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"","ip":""}}}`)},
 }
 
 var testCniConfFiles = []CniConf {
@@ -120,6 +128,14 @@ var testEps = []danmtypes.DanmEp {
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "noneWithDeviceId"},
     Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "none", DeviceID: "0000:af:06.0"},},
+  },
+  danmtypes.DanmEp{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "deleteFlannel"},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "10.244.10.30"},},
+  },
+  danmtypes.DanmEp{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "withAddress"},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f0", Address: "192.168.1.65",},},
   },
 }
 
@@ -169,7 +185,17 @@ var delSetupTcs = []struct {
   {"dynamicSriovNoDeviceId", "sriov-test", "dynamicIpv4", "", "", "", true},
   {"dynamicSriovL3", "sriov-test", "dynamicIpv4WithDeviceId", "sriov-l3", "", "", false},
   {"dynamicSriovL2", "sriov-test", "noneWithDeviceId", "sriov-l2", "", "", false},
+}
 
+var delDeleteTcs = []struct {
+  tcName string
+  netName string
+  epName string
+  cniConfName string
+  isErrorExpected bool
+}{
+  {"flannel", "flannel-test", "deleteFlannel", "deleteflannel", false},
+  {"macvlan", "full-macvlan", "withAddress", "deletemacvlan", false},
 }
 
 func TestIsDelegationRequired(t *testing.T) {
@@ -230,7 +256,7 @@ func TestCalculateIfaceName(t *testing.T) {
 
 func TestDelegateInterfaceSetup(t *testing.T) {
   netClientStub := stubs.NewClientSetStub(testNets, nil, nil)
-  err := setupDelTest()
+  err := setupDelTest("ADD")
   if err != nil {
     t.Errorf("Test suite could not be set-up because:%s", err.Error())
   }
@@ -268,9 +294,57 @@ func TestDelegateInterfaceSetup(t *testing.T) {
       }
     })
   }
+  err = teardownDelTest()
+  if err != nil {
+    t.Errorf("Test suite setup could not be reversed because:%s", err.Error())
+  }
 }
 
-func setupDelTest() error {
+func TestDelegateInterfaceDelete(t *testing.T) {
+  netClientStub := stubs.NewClientSetStub(testNets, nil, nil)
+  err := setupDelTest("DEL")
+  if err != nil {
+    t.Errorf("Test suite could not be set-up because:%s", err.Error())
+  }
+  for _, tc := range delDeleteTcs {
+    t.Run(tc.tcName, func(t *testing.T) {
+      err = setupDelTestTc(tc.cniConfName)
+      if err != nil {
+        t.Errorf("TC could not be set-up because:%s", err.Error())
+      }
+      testNet := getTestNet(tc.netName)
+      testEp := getTestEp(tc.epName)
+      if testNet.Spec.NetworkType == "flannel" && testEp.Spec.Iface.Address != "" {
+        var dataDir = filepath.Join(defaultDataDir, flannelBridge)
+        err = os.MkdirAll(dataDir, os.ModePerm)
+        if err != nil {
+          t.Errorf("Delete TC Flannel prereq could not be set-up because:%s", err.Error())
+        }
+        _,err = os.Create(filepath.Join(dataDir, testEp.Spec.Iface.Address))
+        if err != nil {
+          t.Errorf("Delete TC Flannel prereq could not be set-up because:%s", err.Error())
+        }
+      }
+      err := cnidel.DelegateInterfaceDelete(netClientStub,testNet,testEp)
+      if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
+        var detailedErrorMessage string
+        if err != nil {
+          detailedErrorMessage = err.Error()
+        }
+        t.Errorf("Received error does not match with expectation: %t for TC: %s, detailed error message: %s", tc.isErrorExpected, tc.tcName, detailedErrorMessage)
+      }
+      if testNet.Spec.NetworkType == "flannel" && testEp.Spec.Iface.Address != "" {
+        var ipFile = filepath.Join(defaultDataDir, flannelBridge, testEp.Spec.Iface.Address)
+        _,err = os.Lstat(ipFile)
+        if err == nil {
+          t.Errorf("IP file:" + ipFile + " was not cleaned-up by Flannel IP exhaustion protection code!")
+        }
+      }
+    })
+  }
+}
+
+func setupDelTest(opType string) error {
   os.RemoveAll(cniTestConfigDir)
   err := os.MkdirAll(cniTestConfigDir, os.ModePerm)
   if err != nil {
@@ -280,7 +354,7 @@ func setupDelTest() error {
   if err != nil {
     return err
   }
-  err = os.Setenv("CNI_COMMAND", "ADD")
+  err = os.Setenv("CNI_COMMAND", opType)
   if err != nil {
     return err
   }
@@ -314,9 +388,11 @@ func setupDelTest() error {
   if err != nil {
     return err
   }
-  err = sriov_utils.CreateTmpSysFs()
-  if err != nil {
-    return err
+  if opType == "ADD" {
+    err = sriov_utils.CreateTmpSysFs()
+    if err != nil {
+      return err
+    }
   }
   return nil
 }
@@ -334,8 +410,6 @@ func setupDelTestTc(expectedCniConfig string) error {
   if err != nil {
     return err
   }
-
-  
   return nil
 }
 
@@ -355,4 +429,8 @@ func getTestEp(epId string) *danmtypes.DanmEp {
     }
   }
   return nil
+}
+
+func teardownDelTest() error {
+  return sriov_utils.RemoveTmpSysFs()
 }

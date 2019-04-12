@@ -21,20 +21,14 @@ type SriovNet struct {
   Type   string     `json:"type"`
   // name of the PF since sriov cni v1.0.0
   PfName string     `json:"master"`
-  // interface name in the Container
-  IfName string     `json:"if0name,omitEmpty"`
   // if true then add VF as L2 mode only, IPAM will not be executed
   L2Mode bool       `json:"l2enable,omitEmpty"`
   // VLAN ID to assign for the VF
   Vlan   int        `json:"vlan,omitEmpty"`
   // IPAM configuration to be used for this network
   Ipam   danmtypes.IpamConfig `json:"ipam,omitEmpty"`
-  // CNI binary location
-  CNIDir string `json:"cniDir"`
   // Device PCI ID
   DeviceID string `json:"deviceID"`
-  // Device Info
-  DeviceInfo *VfInformation `json:"deviceinfo,omitempty"`
 }
 
 // VfInformation is a DeviceInfo desctiprtor expected by sriov plugin v1.0.0

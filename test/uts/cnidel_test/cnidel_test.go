@@ -6,6 +6,7 @@ import (
   "testing"
   "io/ioutil"
   "path/filepath"
+  sriov_utils "github.com/intel/sriov-cni/pkg/utils"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/test/stubs"
@@ -79,6 +80,10 @@ var testNets = []danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-v6"},
     Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
   },
+  danmtypes.DanmNet {
+    ObjectMeta: meta_v1.ObjectMeta {Name: "sriov-test"},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "sriov-test", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Vlan: 500}},
+  },
 }
 
 var expectedCniConfigs = []CniConf {
@@ -88,6 +93,8 @@ var expectedCniConfigs = []CniConf {
   {"macvlan-ip6", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"}},"cniconf":{"name":"danm","type":"macvlan","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"2a00:8a00:a000:1193::/64"}}}`)},
   {"macvlan-ip4-type020", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f0"},"return":"020"},"cniconf":{"name":"danm","type":"macvlan","master":"ens1f0","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"192.168.1.64/26","ip":"192.168.1.65"}}}`)},
   {"macvlan-ip6-type020", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"},"return":"020"},"cniconf":{"name":"danm","type":"macvlan","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","subnet":"2a00:8a00:a000:1193::/64"}}}`)},
+  {"sriov-l3", []byte(`{"cniexp":{"cnitype":"sriov","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name":"sriov-test","type":"sriov","master":"enp175s0f1","l2enable":false,"vlan":500,"deviceID":"0000:af:06.0","ipam":{"type":"fakeipam","subnet":"192.168.1.64/26","ip":"192.168.1.65"}}}`)},
+  {"sriov-l2", []byte(`{"cniexp":{"cnitype":"sriov","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name":"sriov-test","type":"sriov","master":"enp175s0f1","l2enable":true,"vlan":500,"deviceID":"0000:af:06.0","ipam":{"type":"fakeipam","subnet":"","ip":""}}}`)},
 }
 
 var testCniConfFiles = []CniConf {
@@ -105,6 +112,14 @@ var testEps = []danmtypes.DanmEp {
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "noIps"}, Spec: danmtypes.DanmEpSpec{Iface: danmtypes.DanmEpIface{Name: "eth0"}},
+  },
+  danmtypes.DanmEp{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "dynamicIpv4WithDeviceId"},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "dynamic", DeviceID: "0000:af:06.0"},},
+  },
+  danmtypes.DanmEp{
+    ObjectMeta: meta_v1.ObjectMeta {Name: "noneWithDeviceId"},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "none", DeviceID: "0000:af:06.0"},},
   },
 }
 
@@ -151,6 +166,10 @@ var delSetupTcs = []struct {
   {"dynamicMacvlanIpv6", "macvlan-v6", "dynamicIpv6", "macvlan-ip6", "", "2a00:8a00:a000:1193", false},
   {"dynamicMacvlanIpv4Type020Result", "macvlan-v4", "dynamicIpv4", "macvlan-ip4-type020", "192.168.1.65", "", false},
   {"dynamicMacvlanIpv6Type020Result", "macvlan-v6", "dynamicIpv6", "macvlan-ip6-type020", "", "2a00:8a00:a000:1193", false},
+  {"dynamicSriovNoDeviceId", "sriov-test", "dynamicIpv4", "", "", "", true},
+  {"dynamicSriovL3", "sriov-test", "dynamicIpv4WithDeviceId", "sriov-l3", "", "", false},
+  {"dynamicSriovL2", "sriov-test", "noneWithDeviceId", "sriov-l2", "", "", false},
+
 }
 
 func TestIsDelegationRequired(t *testing.T) {
@@ -295,6 +314,10 @@ func setupDelTest() error {
   if err != nil {
     return err
   }
+  err = sriov_utils.CreateTmpSysFs()
+  if err != nil {
+    return err
+  }
   return nil
 }
 
@@ -311,6 +334,8 @@ func setupDelTestTc(expectedCniConfig string) error {
   if err != nil {
     return err
   }
+
+  
   return nil
 }
 

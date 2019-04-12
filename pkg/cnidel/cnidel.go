@@ -59,7 +59,7 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
    //IPAM should be refactored to always pass back the up-to-date DanmNet object.
    //I guess it is okay now because we only want to free IPs, and RV differences are resolved by the generated client code.
    //log.Println("inside cnidel testnet alloc after:" + netInfo.Spec.Options.Alloc)
-    ipamOptions, err = getCniIpamConfig(netInfo.Spec.Options, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    ipamOptions, err = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
       return nil, errors.New("IPAM config creation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
     }
@@ -104,20 +104,20 @@ func IsDeviceNeeded(cniType string) bool {
   return false
 }
 
-func getCniIpamConfig(options danmtypes.DanmNetOption, ip4, ip6 string) (danmtypes.IpamConfig,error) {
+func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (danmtypes.IpamConfig,error) {
   var (
     subnet string
     ip string
   )
-  if ip4 == "" && ip6 == "" {
-    return danmtypes.IpamConfig{}, errors.New("unfortunetaly 3rd party CNI plugins usually don't support not putting any IPs on an interface, so with heavy hearts but we need to fail this network delegation operation")
+  if ip4 == "" && ip6 == "" && netinfo.Spec.NetworkType != "sriov" {
+    return danmtypes.IpamConfig{}, errors.New("unfortunetaly 3rd party CNI plugins usually don't support foregoing putting any IPs on an interface, so with heavy hearts but we need to fail this network delegation operation")
   }
   if ip4 != "" {
     ip = ip4
-    subnet = options.Cidr
+    subnet = netinfo.Spec.Options.Cidr
   } else {
     ip = ip6
-    subnet = options.Net6
+    subnet = netinfo.Spec.Options.Net6
   }
   return danmtypes.IpamConfig {
     Type: ipamType,

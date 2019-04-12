@@ -100,6 +100,21 @@ func checkEnvVars(vars map[string]string) error {
 }
 
 func validateSriovConfig(receivedCniConfig, expectedCniConfig []byte) error {
+  var recSriovConf cnidel.SriovNet
+  err := json.Unmarshal(receivedCniConfig, &recSriovConf)
+  if err != nil {
+    return errors.New("Received SR-IOV config could not be unmarshalled, because:" + err.Error())
+  }
+  log.Printf("Received SR-IOV config:%v",recSriovConf)
+  var expSriovConf SriovCniTestConfig
+  err = json.Unmarshal(expectedCniConfig, &expSriovConf)
+  if err != nil {
+    return errors.New("Expected SR-IOV config could not be unmarshalled, because:" + err.Error())
+  }
+  log.Printf("Expected SR-IOV config:%v",expSriovConf.CniConf)
+  if !reflect.DeepEqual(recSriovConf, expSriovConf.CniConf) {
+    return errors.New("Received SR-IOV delegate configuration does not match with expected!")
+  }
   return nil
 }
 

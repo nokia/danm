@@ -18,16 +18,30 @@ const (
   dockerApiVersion = "1.22"
 )
 
-type sysctlData struct {
+type sysctlFunction func(danmtypes.DanmEp) bool
+type sysctlObject struct {
   sysctlName  string
   sysctlValue string
 }
-var sysctls = map[string][]sysctlData {
-  "enable_ipv6_on_iface": {
-    {"net.ipv6.conf.%s.disable_ipv6", "0"},
+type sysctlTask struct {
+  sysctlFunc sysctlFunction
+  sysctlData []sysctlObject
+}
+
+var sysctls = []sysctlTask {
+  {
+    sysctlFunc: isIPv6Needed,
+    sysctlData: []sysctlObject {
+      {"net.ipv6.conf.%s.disable_ipv6", "0"},
+      {"net.ipv6.conf.%s.autoconf", "0"},
+      {"net.ipv6.conf.%s.accept_ra", "0"},
+    },
   },
-  "disable_ipv6_on_iface": {
-    {"net.ipv6.conf.%s.disable_ipv6", "1"},
+  {
+    sysctlFunc: isIPv6NotNeeded,
+    sysctlData: []sysctlObject {
+      {"net.ipv6.conf.%s.disable_ipv6", "1"},
+    },
   },
 }
 
@@ -139,15 +153,31 @@ func SetDanmEpSysctls(ep danmtypes.DanmEp) error {
     podNs.Close()
     origNs.Set()
   }()
-  // set sysctls for IPv6 (since IPv6 is enabled on all interfaces, let's disable on those where it is not needed)
-  if ep.Spec.Iface.AddressIPv6 == "" {
-    for _, s := range sysctls["disable_ipv6_on_iface"] {
-      sstr := fmt.Sprintf(s.sysctlName, ep.Spec.Iface.Name)
-      _, err = sysctl.Sysctl(sstr, s.sysctlValue)
-      if err != nil {
-        return errors.New("failed to set sysctl due to:" + err.Error())
+  // set sysctls
+  for _, s := range sysctls {
+    if s.sysctlFunc(ep) {
+      for _, ss := range s.sysctlData {
+        sss := fmt.Sprintf(ss.sysctlName, ep.Spec.Iface.Name)
+        _, err = sysctl.Sysctl(sss, ss.sysctlValue)
+        if err != nil {
+          return errors.New("failed to set sysctl due to:" + err.Error())
+        }
       }
     }
   }
   return nil
+}
+
+func isIPv6Needed(ep danmtypes.DanmEp) bool {
+  if ep.Spec.Iface.AddressIPv6 != "" {
+    return true
+  }
+  return false
+}
+
+func isIPv6NotNeeded(ep danmtypes.DanmEp) bool {
+  if ep.Spec.Iface.AddressIPv6 == "" {
+    return true
+  }
+  return false
 }

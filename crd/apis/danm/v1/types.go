@@ -123,7 +123,7 @@ type Interface struct {
 
 type IpamConfig struct {
   Type      string      `json:"type"`
-  Ips       []IpamIp    `json:"ips"`
+  Ips       []IpamIp    `json:"ips,omitempty"`
 }
 
 type IpamIp struct {

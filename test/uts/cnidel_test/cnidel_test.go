@@ -2,6 +2,7 @@ package cnidel_test
 
 import (
   "os"
+  "strconv"
   "strings"
   "testing"
   "io/ioutil"
@@ -254,12 +255,15 @@ func TestGetEnv(t *testing.T) {
 func TestCalculateIfaceName(t *testing.T) {
   testChosenName := "thechosenone"
   testDefaultName := "notthechosenone"
-  ifaceName := cnidel.CalculateIfaceName(testChosenName, testDefaultName)
-  if ifaceName != testChosenName {
+  testSequenceId := 4
+  expChosenName := testChosenName+strconv.Itoa(testSequenceId)
+  expDefName := testDefaultName+strconv.Itoa(testSequenceId)
+  ifaceName := cnidel.CalculateIfaceName(testChosenName, testDefaultName, testSequenceId)
+  if ifaceName != expChosenName {
     t.Errorf("Received value for explicitly set interface name: %s does not match with expected: %s", ifaceName, testChosenName)
   }
-  defIfaceName := cnidel.CalculateIfaceName("", testDefaultName)
-  if defIfaceName != testDefaultName {
+  defIfaceName := cnidel.CalculateIfaceName("", testDefaultName, testSequenceId)
+  if defIfaceName != expDefName {
     t.Errorf("Received value for default interface name: %s does not match with expected: %s", defIfaceName, testChosenName)
   }
 }

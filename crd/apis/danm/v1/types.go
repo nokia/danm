@@ -119,6 +119,7 @@ type Interface struct {
   Proutes6 map[string]string `json:"proutes6"`
   DefaultIfaceName string
   Device string `json:"Device,omitempty"`
+  SequenceId int
 }
 
 type IpamConfig struct {

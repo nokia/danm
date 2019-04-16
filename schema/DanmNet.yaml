@@ -62,10 +62,11 @@ spec:
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
     # OPTIONAL - IPv6 CIDR FORMAT (e.g. "2001:db8::/45"). Netmask of the subnet cannot be higher than /64 (i.e. /65 and upwards).
     net6: ## SUBNET_CIDR ##
-    # Interfaces connected to this network are renamed to "container_prefix" inside the container.
-    # If not provided, DANM dynamically allocates a name for each container interface belonging to this network in Pod instantiation time.
+    # Interfaces connected to this network are renamed inside the Pod's network namespace to a string starting with "container_prefix".
+    # If not provided, DANM uses "eth" as the prefix.
+    # In both cases DANM dynamically suffixes the interface names in Pod instantiation time with a unique integer number, corresponding to the sequence number of the interface during the specific network creation operation.
+    # Thus it becomes guaranteed no network interfaces will ever receive the same name, even if more than one belongs to the same DanmNet.
     # Generally supported parameter, works with all NetworkTypes (except where the CNI backend itself is not following the CNI standard, such is the case with Flannel).
-    # Do not specify container_prefix in case multiple interfaces are provisioned from the same DanmNet.
     # OPTIONAL - STRING
     container_prefix: ## INTERNAL_IF_NAME ##
     # Policy-based IP routes belonging to this network are installed into this routing table, when a user defines them in her Pod's network allocation annotation.

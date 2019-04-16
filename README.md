@@ -253,12 +253,13 @@ The hard reality to keep in mind is that you shall always have an interface lite
 If such an interface does not exist after CNI is invoked (also having an IPv4 address), the state of the Pod will be considered "faulty", and it will be re-created in a loop.
 To be able to comply with this Kubernetes limitation, DANM supports both explicit, and implicit interface naming schemes for all NetworkTypes!
 
-An interface connected to a DanmNet containing the container_prefix attribute will be always named accordingly. You can use this API to explicitly set descriptive, unique names to NICs connecting to this network.
-In case container_prefix is not set in an interface's network descriptor, DANM automatically names the interface "ethX", where X is a unique integer number corresponding to the sequence number of the network connection (e.g. the first interface defined in the annotation is called "eth0", second interface "eth1" etc.)
+An interface connected to a DanmNet containing the container_prefix attribute is always named accordingly. You can use this API to explicitly set descriptive, unique names to NICs connecting to this network.
+In case container_prefix is not set in an interface's network descriptor, DANM automatically uses the "eth" as the prefix when naming the interface.
+Regardless which prefix is used, the interface name is also suffixed with an integer number corresponding to the sequence number of the network connection (e.g. the first interface defined in the annotation is called "eth0", second interface "eth1" etc.)
 DANM even supports the mixing of the networking schemes within the same Pod, and it supports the whole naming scheme for all network backends.
-While the feature provides complete control over the name of interfaces, ultimately it is the network administrators' responsibility to:
- - make sure exactly one interface is named eth0 in every Pod
- - don't configure multiple NICs into the same Pod with clashing names (e.g. provisioning two implicitly named interfaces, and then a third one explicitly named "eth0", or "eth1" etc.)
+This enables network administrators to even connect Pods to the same network more than once!
+While the feature provides complete control over the name of interfaces, ultimately it is the network administrators' responsibility to make sure exactly one interface is named eth0 in every Pod.
+
 ##### Provisioning static IP routes
 We recognize that not all networking involves an overlay technology, so provisioning IP routes directly into the Pod's network namespace needs to be generally supported.
 Network administrators can define routing rules for both IPv4, and IPv6 destination subnets under the "routes", and "routes6" attributes respectively.

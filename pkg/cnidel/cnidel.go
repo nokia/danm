@@ -4,6 +4,7 @@ import (
   "errors"
   "log"
   "os"
+  "strconv"
   "strings"
   "path/filepath"
   "github.com/containernetworking/cni/pkg/invoke"
@@ -259,9 +260,9 @@ func GetEnv(key, fallback string) string {
 // CalculateIfaceName decides what should be the name of a container's interface.
 // If a name is explicitly set in the related DanmNet API object, the NIC will be named accordingly.
 // If a name is not explicitly set, then DANM will name the interface ethX where X=sequence number of the interface
-func CalculateIfaceName(chosenName, defaultName string) string {
+func CalculateIfaceName(chosenName, defaultName string, sequenceId int) string {
   if chosenName != "" {
-    return chosenName
+    return chosenName + strconv.Itoa(sequenceId)
   }
-  return defaultName
+  return defaultName + strconv.Itoa(sequenceId)
 }

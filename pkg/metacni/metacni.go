@@ -7,7 +7,6 @@ import (
   "net"
   "os"
   "runtime"
-  "strconv"
   "strings"
   "encoding/json"
   "github.com/satori/go.uuid"
@@ -30,14 +29,18 @@ import (
   checkpoint_utils "github.com/intel/multus-cni/checkpoint"
 )
 
-var (
-  apiHost = os.Getenv("API_SERVERS")
+const (
   danmApiPath = "danm.k8s.io"
   danmIfDefinitionSyntax = danmApiPath + "/interfaces"
   v1Endpoint = "/api/v1/"
   cniVersion = "0.3.1"
-  kubeConf string
   defaultNetworkName = "default"
+  defaultIfName = "eth"
+)
+
+var (
+  apiHost = os.Getenv("API_SERVERS")
+  kubeConf string
 )
 
 type NetConf struct {
@@ -260,7 +263,8 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
     if err != nil {
       return cniRes, errors.New("failed to get DanmNet due to:" + err.Error())
     }
-    nicParams.DefaultIfaceName = "eth" + strconv.Itoa(nicID)
+    nicParams.SequenceId = nicID
+    nicParams.DefaultIfaceName = defaultIfName
     if isDelegationRequired {
       if cnidel.IsDeviceNeeded(netInfo.Spec.NetworkType) {
         if _, ok := allocatedDevices[netInfo.Spec.Options.DevicePool]; !ok {
@@ -285,7 +289,7 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
 
 func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) {
   epIfaceSpec := danmtypes.DanmEpIface {
-    Name:        cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName),
+    Name:        cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName, iface.SequenceId),
     Address:     iface.Ip,
     AddressIPv6: iface.Ip6,
     Proutes:     iface.Proutes,
@@ -322,7 +326,7 @@ func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Inte
     syncher.PushResult(iface.Network, errors.New("IP address reservation failed for network:" + netId + " with error:" + err.Error()), nil)
   }
   epSpec := danmtypes.DanmEpIface {
-    Name: cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName),
+    Name: cnidel.CalculateIfaceName(netInfo.Spec.Options.Prefix, iface.DefaultIfaceName, iface.SequenceId),
     Address: ip4,
     AddressIPv6: ip6,
     MacAddress: macAddr,

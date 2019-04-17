@@ -7,11 +7,10 @@ import (
   "os"
   "runtime"
   "strconv"
-  "strings"
-  "os/exec"
   "github.com/vishvananda/netlink"
   "github.com/containernetworking/plugins/pkg/ns"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  "github.com/j-keck/arping"
 )
 
 func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
@@ -32,6 +31,10 @@ func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
 
 // TODO: Refactor this, as cyclomatic complexity is too high
 func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device string) error {
+  var (
+    addr4, addr6 net.IP
+    pref4, pref6 *net.IPNet
+  )
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   origns, err := ns.GetCurrentNS()
@@ -86,11 +89,11 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
   }
   ip := ep.Spec.Iface.Address
   if ip != "" {
-    addr, pref, err := net.ParseCIDR(ip)
+    addr4, pref4, err = net.ParseCIDR(ip)
     if err != nil {
       return errors.New("cannot parse ip4 address because:" + err.Error())
     }
-    ipAddr := &netlink.Addr{IPNet: &net.IPNet{IP: addr, Mask: pref.Mask}}
+    ipAddr := &netlink.Addr{IPNet: &net.IPNet{IP: addr4, Mask: pref4.Mask}}
     err = netlink.AddrAdd(iface, ipAddr)
     if err != nil {
       return errors.New("Cannot add ip4 address to IPVLAN interface because:" + err.Error())
@@ -99,11 +102,11 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
   ip6 := ep.Spec.Iface.AddressIPv6
   // TODO: Refactor, duplicate of 87-98
   if ip6 != "" {
-    addr6, pref,  err := net.ParseCIDR(ip6)
+    addr6, pref6, err = net.ParseCIDR(ip6)
     if err != nil {
       return errors.New("cannot parse ip6 address because:" + err.Error())
     }
-    ipAddr6 := &netlink.Addr{IPNet: &net.IPNet{IP: addr6, Mask: pref.Mask}}
+    ipAddr6 := &netlink.Addr{IPNet: &net.IPNet{IP: addr6, Mask: pref6.Mask}}
     err = netlink.AddrAdd(iface, ipAddr6)
     if err != nil {
       return errors.New("Cannot add ip6 address to IPVLAN interface because:" + err.Error())
@@ -118,38 +121,15 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
   if err != nil {
     return errors.New("cannot set renamed IPVLAN interface to up because:" + err.Error())
   }
-  sendGratArps(ip, ip6, dstPrefix)
+  if ip != "" {
+    err = arping.GratuitousArpOverIfaceByName(addr4, dstPrefix)
+    if err != nil {
+      return errors.New("cannot send gARP because:" + err.Error())
+    }
+  }
   err = addIpRoutes(ep, dnet)
   if err != nil {
     return errors.New("IP routes could not be provisioned, because:" + err.Error())
-  }
-  return nil
-}
-
-func sendGratArps(srcAddrIpV4, srcAddrIpV6, ifaceName string) {
-  var err error
-  if srcAddrIpV4!="" {
-    err = executeArping(srcAddrIpV4, ifaceName)
-  }
-  if srcAddrIpV6!="" {
-    err = executeArping(srcAddrIpV6, ifaceName)
-  }
-  if err != nil {
-    log.Println("WARNING: sending gARP Reply failed with error:" + err.Error(), " , but we will ignore that for now!")
-  }
-}
-
-func executeArping(srcAddr, ifaceName string) error {
-  address,_,err := net.ParseCIDR(srcAddr)
-  if err != nil {
-    return errors.New("IP address parsing during gARP update was unsuccessful:" + err.Error())
-  }
-  iface := strings.TrimSpace(ifaceName)
-  ip := strings.TrimSpace(address.String())
-  cmd := exec.Command("arping","-c1","-A","-I"+iface,ip) // #nosec
-  err = cmd.Run()
-  if err != nil {
-    return errors.New("gARP update for IP address: " + address.String() + " was unsuccessful:" + err.Error())
   }
   return nil
 }

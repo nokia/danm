@@ -257,14 +257,19 @@ func TestCalculateIfaceName(t *testing.T) {
   testDefaultName := "notthechosenone"
   testSequenceId := 4
   expChosenName := testChosenName+strconv.Itoa(testSequenceId)
-  expDefName := testDefaultName+strconv.Itoa(testSequenceId)
   ifaceName := cnidel.CalculateIfaceName(testChosenName, testDefaultName, testSequenceId)
   if ifaceName != expChosenName {
     t.Errorf("Received value for explicitly set interface name: %s does not match with expected: %s", ifaceName, testChosenName)
   }
+  expDefName := testDefaultName+strconv.Itoa(testSequenceId)
   defIfaceName := cnidel.CalculateIfaceName("", testDefaultName, testSequenceId)
   if defIfaceName != expDefName {
     t.Errorf("Received value for default interface name: %s does not match with expected: %s", defIfaceName, testChosenName)
+  }
+  expFirstNicName := "eth0"
+  firstIfaceName := cnidel.CalculateIfaceName(testChosenName, testDefaultName, 0)
+  if firstIfaceName != expFirstNicName {
+    t.Errorf("The first interface shall always be named eth0, regardless what the user wants")
   }
 }
 

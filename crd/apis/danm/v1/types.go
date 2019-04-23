@@ -79,6 +79,7 @@ type DanmEp struct {
 
 type DanmEpSpec struct {
   NetworkID   string      `json:"NetworkID"`
+  NetworkName string      `json:"NetworkName"`
   NetworkType string      `json:"NetworkType"`
   EndpointID  string      `json:"EndpointID"`
   Iface       DanmEpIface `json:"Interface"`
@@ -86,8 +87,6 @@ type DanmEpSpec struct {
   Pod         string      `json:"Pod"`
   CID         string      `json:"CID,omitempty"`
   Netns       string      `json:"netns,omitempty"`
-  Creator     string      `json:"Creator,omitempty"`
-  Expires     string      `json:"Expires,omitempty"`
 }
 
 type DanmEpIface struct {

@@ -296,7 +296,7 @@ func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset
     Proutes6:    iface.Proutes6,
     DeviceID:    iface.Device,
   }
-  ep, err := createDanmEp(epIfaceSpec, netInfo.Spec.NetworkID, netInfo.Spec.NetworkType, args)
+  ep, err := createDanmEp(epIfaceSpec, netInfo, args)
   if err != nil {
     syncher.PushResult(iface.Network, errors.New("DanmEp object could not be created due to error:" + err.Error()), nil)
     return
@@ -333,8 +333,7 @@ func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Inte
     Proutes: iface.Proutes,
     Proutes6: iface.Proutes6,
   }
-  networkType := "ipvlan"
-  ep, err := createDanmEp(epSpec, netId, networkType, args)
+  ep, err := createDanmEp(epSpec, netInfo, args)
   if err != nil {
     ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
     syncher.PushResult(iface.Network, errors.New("DanmEp object could not be created due to error:" + err.Error()), nil)
@@ -371,7 +370,7 @@ func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Inte
   syncher.PushResult(iface.Network, nil, danmResult)
 }
 
-func createDanmEp(epInput danmtypes.DanmEpIface, netId string, neType string, args *cniArgs) (danmtypes.DanmEp, error) {
+func createDanmEp(epInput danmtypes.DanmEpIface, netInfo *danmtypes.DanmNet, args *cniArgs) (danmtypes.DanmEp, error) {
   epidInt, err := uuid.NewV4()
   if err != nil {
     return danmtypes.DanmEp{}, errors.New("uuid.NewV4 returned error during EP creation:" + err.Error())
@@ -381,16 +380,19 @@ func createDanmEp(epInput danmtypes.DanmEpIface, netId string, neType string, ar
   if err != nil {
     return danmtypes.DanmEp{}, errors.New("OS.Hostname returned error during EP creation:" + err.Error())
   }
+  if netInfo.Spec.NetworkType == "" {
+    netInfo.Spec.NetworkType = "ipvlan" 
+  }
   epSpec := danmtypes.DanmEpSpec {
-    NetworkID: netId,
-    NetworkType: neType,
+    NetworkID: netInfo.Spec.NetworkID,
+    NetworkName: netInfo.ObjectMeta.Name,
+    NetworkType: netInfo.Spec.NetworkType,
     EndpointID: epid,
     Iface: epInput,
     Host: host,
     Pod: args.podId,
     CID: args.containerId,
     Netns: args.netns,
-    Creator: "danm",
   }
   meta := meta_v1.ObjectMeta {
     Name: epid,
@@ -476,7 +478,7 @@ func deleteInterface(args *cniArgs, syncher *syncher.Syncher, ep danmtypes.DanmE
     syncher.PushResult(ep.Spec.NetworkID, errors.New("failed to create danmClient:" + err.Error()), nil)
     return
   }
-  netInfo, err := danmClient.DanmV1().DanmNets(args.nameSpace).Get(ep.Spec.NetworkID, meta_v1.GetOptions{})
+  netInfo, err := danmClient.DanmV1().DanmNets(args.nameSpace).Get(ep.Spec.NetworkName, meta_v1.GetOptions{})
   if err != nil {
     syncher.PushResult(ep.Spec.NetworkID, errors.New("failed to get DanmNet:"+ err.Error()), nil)
     return

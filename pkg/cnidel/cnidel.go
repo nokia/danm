@@ -261,6 +261,10 @@ func GetEnv(key, fallback string) string {
 // If a name is explicitly set in the related DanmNet API object, the NIC will be named accordingly.
 // If a name is not explicitly set, then DANM will name the interface ethX where X=sequence number of the interface
 func CalculateIfaceName(chosenName, defaultName string, sequenceId int) string {
+  //Kubelet expects the first interface to be literally named "eth0", so...
+  if sequenceId == 0 {
+    return "eth0"
+  }
   if chosenName != "" {
     return chosenName + strconv.Itoa(sequenceId)
   }

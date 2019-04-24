@@ -124,7 +124,7 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
   if ip != "" {
     err = arping.GratuitousArpOverIfaceByName(addr4, dstPrefix)
     if err != nil {
-      return errors.New("cannot send gARP because:" + err.Error())
+      log.Println("WARNING: sending gARP failed with error:" + err.Error(), ", but we will ignore that for now!")
     }
   }
   err = addIpRoutes(ep, dnet)

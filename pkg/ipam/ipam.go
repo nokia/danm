@@ -7,6 +7,7 @@ import (
   "strconv"
   "strings"
   "time"
+  "encoding/binary"
   "math/big"
   "math/rand"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,13 +88,13 @@ func updateDanmNetAllocation (netClient client.DanmNetInterface, netInfo danmtyp
 func resetIP(netInfo *danmtypes.DanmNet, rip string) {
   ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
   _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-  ipnetNum := netcontrol.Ip2int(ipnet.IP)
+  ipnetNum := Ip2int(ipnet.IP)
   ip, _, err := net.ParseCIDR(rip)
   if err != nil {
     //Invalid IP, nothing to do here. Next call would crash if we wouldn't return
     return
   }
-  reserved := netcontrol.Ip2int(ip)
+  reserved := Ip2int(ip)
   if !ipnet.Contains(ip) {
     //IP is outside of CIDR, nothing to do here. Next call would crash if we wouldn't return
     return
@@ -132,13 +133,13 @@ func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string) (error) 
     }
     ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
     _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-    ipnetNum := netcontrol.Ip2int(ipnet.IP)
-    begin := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start)) - ipnetNum
-    end := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End)) - ipnetNum
+    ipnetNum := Ip2int(ipnet.IP)
+    begin := Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start)) - ipnetNum
+    end := Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End)) - ipnetNum
     for i:=begin; i<=end; i++ {
       if !ba.Get(uint32(i)) {
         ones, _ := ipnet.Mask.Size()
-        *ip4 = (netcontrol.Int2ip(ipnetNum + i)).String() + "/" + strconv.Itoa(ones)
+        *ip4 = (Int2ip(ipnetNum + i)).String() + "/" + strconv.Itoa(ones)
         ba.Set(uint32(i))
         netInfo.Spec.Options.Alloc = ba.Encode()
         break
@@ -160,8 +161,8 @@ func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string) (error) 
       return errors.New("static ip is not part of network CIDR/allocation pool")
     }
     ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
-    ipnetNum := netcontrol.Ip2int(ipnetFromNet.IP)
-    requested := netcontrol.Ip2int(ip)
+    ipnetNum := Ip2int(ipnetFromNet.IP)
+    requested := Ip2int(ip)
     if ba.Get(requested - ipnetNum) {
       return errors.New("requested fix ip address is already in use")
     }
@@ -189,12 +190,12 @@ func allocIPv6(reqType string, netInfo *danmtypes.DanmNet, ip6 *string, macAddr 
     bigeui.SetString(eui, 16)
     ip6addr, ip6net, _ := net.ParseCIDR(net6)
     ss := big.NewInt(0)
-    ss.Add(netcontrol.Ip62int(ip6addr), bigeui)
+    ss.Add(Ip62int(ip6addr), bigeui)
     maskLen, _ := ip6net.Mask.Size()
     if maskLen>64 {
       return errors.New("IPv6 subnets smaller than /64 are not supported at the moment!")
     }
-    *ip6 = (netcontrol.Int2ip6(ss)).String() + "/" + strconv.Itoa(maskLen)
+    *ip6 = (Int2ip6(ss)).String() + "/" + strconv.Itoa(maskLen)
   } else {
     net6 := netInfo.Spec.Options.Net6
     if net6 == "" {
@@ -222,4 +223,34 @@ func generateMac()(string) {
 func GarbageCollectIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) {
   Free(danmClient, *netInfo, ip4)
   Free(danmClient, *netInfo, ip6)
+}
+
+// Ip2int converts an IP address stored according to the Golang net package to a native Golang big endian, 32-bit integer
+func Ip2int(ip net.IP) uint32 {
+  if len(ip) == 16 {
+    return binary.BigEndian.Uint32(ip[12:16])
+  }
+  return binary.BigEndian.Uint32(ip)
+}
+
+// Ip62int converts an IPv6 address stored according to the Golang net package to a native Golang big endian, 64-bit integer
+func Ip62int(ip6 net.IP) *big.Int {
+  Ip6Int := big.NewInt(0)
+  Ip6Int.SetBytes(ip6.To16())
+  return Ip6Int
+}
+
+// Int2ip converts an IP address stored as a native Golang big endian, 32-bit integer to an IP
+// represented according to the Golang net package
+func Int2ip(nn uint32) net.IP {
+  ip := make(net.IP, 4)
+  binary.BigEndian.PutUint32(ip, nn)
+  return ip
+}
+
+// Int2ip6 converts an IP address stored as a native Golang big endian, 64-bit integer to an IP
+// represented according to the Golang net package
+func Int2ip6(nn *big.Int) net.IP {
+  ip := nn.Bytes()
+  return ip
 }

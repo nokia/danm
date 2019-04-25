@@ -1,8 +1,14 @@
 package bitarray
 
 import (
-  b64 "encoding/base64"
   "errors"
+  "math"
+  "net"
+  b64 "encoding/base64"
+)
+
+const (
+  MaxSupportedNetmask = 32
 )
 
 // BitArray is type to represent an arbitrary long array of bits
@@ -30,6 +36,19 @@ func NewBitArrayFromBase64(text string) *BitArray {
   arr.len = len(tmp)*8
   arr.data = tmp
   return arr
+}
+
+func CreateBitArrayFromIpnet(ipnet *net.IPNet) (*BitArray,error) {
+  ones, _ := ipnet.Mask.Size()
+  if ones > MaxSupportedNetmask {
+    return nil, errors.New("DANM does not support networks with more than 2^32 IP addresses")
+  }
+  bitArray,err := NewBitArray(int(math.Pow(2,float64(MaxSupportedNetmask-ones))))
+  if err != nil {
+    return nil,errors.New("BitArray allocation failed because:" + err.Error())
+  }
+  bitArray.Set(uint32(math.Pow(2,float64(MaxSupportedNetmask-ones))-1))
+  return bitArray,nil
 }
 
 // Set sets the bit at the input position of the BitArray

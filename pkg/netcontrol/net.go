@@ -1,23 +1,18 @@
 package netcontrol
 
 import (
-  "encoding/binary"
   "errors"
-  "math"
-  "math/big"
   "net"
   "strconv"
   "syscall"
   "github.com/apparentlymart/go-cidr/cidr"
   "github.com/vishvananda/netlink"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
-  "github.com/nokia/danm/pkg/bitarray"
 )
 
 const (
   ip4MulticastCidr = "239.0.0.0/8"
   ip6MulticastCidr = "ff02::0/16"
-  maxSupportedNetmask = 32
   maxVlanId = 4094
   maxVxlanId = 16777214
 )
@@ -27,176 +22,6 @@ const (
 type LinkInfo struct {
   interfaceId int
   link netlink.Link
-}
-
-// Ip2int converts an IP address stored according to the Golang net package to a native Golang big endian, 32-bit integer
-func Ip2int(ip net.IP) uint32 {
-  if len(ip) == 16 {
-    return binary.BigEndian.Uint32(ip[12:16])
-  }
-  return binary.BigEndian.Uint32(ip)
-}
-
-// Ip62int converts an IPv6 address stored according to the Golang net package to a native Golang big endian, 64-bit integer
-func Ip62int(ip6 net.IP) *big.Int {
-  Ip6Int := big.NewInt(0)
-  Ip6Int.SetBytes(ip6.To16())
-  return Ip6Int
-}
-
-// Int2ip converts an IP address stored as a native Golang big endian, 32-bit integer to an IP
-// represented according to the Golang net package
-func Int2ip(nn uint32) net.IP {
-  ip := make(net.IP, 4)
-  binary.BigEndian.PutUint32(ip, nn)
-  return ip
-}
-
-// Int2ip6 converts an IP address stored as a native Golang big endian, 64-bit integer to an IP
-// represented according to the Golang net package
-func Int2ip6(nn *big.Int) net.IP {
-  ip := nn.Bytes()
-  return ip
-}
-
-func getBroadcastAddress(subnet *net.IPNet) (net.IP) {
-  ip := make(net.IP, len(subnet.IP.To4()))
-  binary.BigEndian.PutUint32(ip, binary.BigEndian.Uint32(subnet.IP.To4())|^binary.BigEndian.Uint32(net.IP(subnet.Mask).To4()))
-  return ip
-}
-
-func validateNetwork(dnet *danmtypes.DanmNet) error {
-  err := validateDanmNet(dnet)
-  if err != nil {
-    return err
-  }
-  validate(dnet)
-  return nil
-}
-
-func validateDanmNet(dnet *danmtypes.DanmNet) error {
-  err := validateIpv4Fields(dnet)
-  if err != nil {
-    return err
-  }
-  err = validateIpv6Fields(dnet)
-  if err != nil {
-    return err
-  }
-  err = validateVids(dnet)
-  if err != nil {
-    return err
-  }
-  return nil
-}
-
-func validateIpv4Fields(dnet *danmtypes.DanmNet) error {
-  cidr := dnet.Spec.Options.Cidr
-  apStart := dnet.Spec.Options.Pool.Start
-  apEnd := dnet.Spec.Options.Pool.End
-  if cidr == "" {
-    if apStart != "" || apEnd != "" {
-      return errors.New("Allocation pool cannot be defined without CIDR!")
-    }
-    return nil
-  }
-  err := ValidateAllocationPool(dnet)
-  if err != nil {
-    return err
-  }
-  bitArray, err := CreateAllocationArray(dnet)
-  if err != nil {
-    return err
-  }
-  dnet.Spec.Options.Alloc = bitArray.Encode()
-  return nil
-}
-
-func CreateAllocationArray(dnet *danmtypes.DanmNet) (*bitarray.BitArray,error) {
-  _, ipnet, err := net.ParseCIDR(dnet.Spec.Options.Cidr)
-  if err != nil {
-    return nil, errors.New("Invalid CIDR parameter: " + dnet.Spec.Options.Cidr)
-  }
-  bitArray, err := createBitArray(ipnet)
-  if err != nil {
-    return nil, err
-  }
-  err = reserveGatewayIps(dnet.Spec.Options.Routes, bitArray, ipnet)
-  if err != nil {
-    return nil, err
-  }
-  return bitArray, nil
-}
-
-func createBitArray(ipnet *net.IPNet) (*bitarray.BitArray,error) {
-  ones, _ := ipnet.Mask.Size()
-  if ones > maxSupportedNetmask {
-    return nil, errors.New("DANM does not support networks with more than 2^32 IP addresses")
-  }
-  bitArray,err := bitarray.NewBitArray(int(math.Pow(2,float64(maxSupportedNetmask-ones))))
-  if err != nil {
-    return nil,errors.New("BitArray allocation failed because:" + err.Error())
-  }
-  bitArray.Set(uint32(math.Pow(2,float64(maxSupportedNetmask-ones))-1))
-  return bitArray,nil
-}
-
-func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ipnet *net.IPNet) error {
-  for _, gw := range routes {
-    if !ipnet.Contains(net.ParseIP(gw)) {
-      return errors.New("Gateway:" + gw + " is not part of cidr")
-    }
-    gatewayPosition := Ip2int(net.ParseIP(gw)) - Ip2int(ipnet.IP)
-    bitArray.Set(gatewayPosition)
-  }
-  return nil
-}
-
-func ValidateAllocationPool(dnet *danmtypes.DanmNet) error {
-  _, ipnet, err := net.ParseCIDR(dnet.Spec.Options.Cidr)
-  if err != nil {
-    return errors.New("Invalid CIDR parameter: " + dnet.Spec.Options.Cidr)
-  }
-  if dnet.Spec.Options.Pool.Start == "" {
-    dnet.Spec.Options.Pool.Start = (Int2ip(Ip2int(ipnet.IP) + 1)).String()
-  }
-  if dnet.Spec.Options.Pool.End == "" {
-    dnet.Spec.Options.Pool.End = (Int2ip(Ip2int(getBroadcastAddress(ipnet)) - 1)).String()
-  }
-  if !ipnet.Contains(net.ParseIP(dnet.Spec.Options.Pool.Start)) || !ipnet.Contains(net.ParseIP(dnet.Spec.Options.Pool.End)) {
-    return errors.New("Allocation pool is outside of defined CIDR")
-  }
-  if Ip2int(net.ParseIP(dnet.Spec.Options.Pool.End)) - Ip2int(net.ParseIP(dnet.Spec.Options.Pool.Start)) <= 0 {
-    return errors.New("Allocation pool start:" + dnet.Spec.Options.Pool.Start + " is bigger than end:" + dnet.Spec.Options.Pool.End)
-  }
-  return nil
-}
-
-func validateIpv6Fields(dnet *danmtypes.DanmNet) error {
-  if dnet.Spec.Options.Net6 == "" {
-    return nil
-  }
-  net6 := dnet.Spec.Options.Net6
-  _, ipnet6, err := net.ParseCIDR(net6)
-  if err != nil {
-    return errors.New("Invalid IPv6 CIDR: " + net6)
-  }
-  routes6 := dnet.Spec.Options.Routes6
-  for _, gw6 := range routes6 {
-    if !ipnet6.Contains(net.ParseIP(gw6)) {
-      return errors.New("IPv6 GW address:" + gw6 + " is not part of IPv6 CIDR")
-    }
-  }
-  return nil
-}
-
-func validateVids(dnet *danmtypes.DanmNet) error {
-  isVlanDefined := (dnet.Spec.Options.Vlan!=0)
-  isVxlanDefined := (dnet.Spec.Options.Vxlan!=0)
-  if isVlanDefined && isVxlanDefined {
-    return errors.New("VLAN ID and VxLAN ID parameters are mutually exclusive")
-  }
-  return nil
 }
 
 func deleteNetworks(dnet *danmtypes.DanmNet) error {
@@ -231,14 +56,6 @@ func deleteHostInterface(ifId int, ifName string) error {
     return errors.New("Deletion of interface:" + ifName + " failed with error:"+err.Error())
   }
   return nil
-}
-
-func invalidate(dnet *danmtypes.DanmNet) {
-  dnet.Spec.Validation = false
-}
-
-func validate(dnet *danmtypes.DanmNet) {
-  dnet.Spec.Validation = true
 }
 
 func setupHost(dnet *danmtypes.DanmNet) error {

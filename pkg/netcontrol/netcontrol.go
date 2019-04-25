@@ -73,30 +73,11 @@ func addDanmNet(client danmclientset.Interface, dn danmtypes.DanmNet) {
     }
     return
   }
-  invalidate(&dn)
-  defer updateValidity(client, &dn)
-  err := validateNetwork(&dn)
-  if err != nil {
-    log.Println("ERROR: Validation of DanmNet:" + dn.ObjectMeta.Name + " failed with error:" + err.Error())
-    return
-  }
-  err = setupHost(&dn)
+  err := setupHost(&dn)
   if err != nil {
     log.Println("ERROR: Creating host interfaces for DanmNet:" + dn.ObjectMeta.Name + " failed with error:" + err.Error())
   }
   return
-}
-
-func updateValidity(client danmclientset.Interface, dn *danmtypes.DanmNet) {
-  netClient := client.DanmV1().DanmNets(dn.ObjectMeta.Namespace)
-  updateConflicted, err := PutDanmNet(netClient, dn)
-  if err != nil {
-    log.Println("ERROR: Cannot update network:" + dn.ObjectMeta.Name + ",err:" + err.Error())
-  }
-  if updateConflicted {
-    //Special case: resource was already updated, so this error code can be ignored
-    log.Println("INFO: Network: " + dn.ObjectMeta.Name + " is already updated")
-  } 
 }
 
 // delete host_specific network stuff: rt_tables, vlan, and vxlan interfaces

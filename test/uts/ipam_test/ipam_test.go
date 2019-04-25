@@ -8,21 +8,22 @@ import (
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/test/stubs"
   "github.com/nokia/danm/test/utils"
+  meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var testNets = []danmtypes.DanmNet {
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "emptyVal", }},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "falseVal", Validation: false}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "trueVal", Validation: true}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "cidr", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "fullIpv4", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.0/30"}}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "net6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Cidr: "192.168.1.64/26",}}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "smallNet6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/69"}}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "conflict", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64"}}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "conflicterror", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64"}}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "conflictFree", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "conflicterrorFree", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
-  danmtypes.DanmNet {Spec: danmtypes.DanmNetSpec{NetworkID: "error", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "emptyVal"},Spec: danmtypes.DanmNetSpec{NetworkID: "emptyVal", }},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "falseVal"},Spec: danmtypes.DanmNetSpec{NetworkID: "falseVal", Validation: false}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "trueVal"},Spec: danmtypes.DanmNetSpec{NetworkID: "trueVal", Validation: true}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "cidr"},Spec: danmtypes.DanmNetSpec{NetworkID: "cidr", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "fullIpv4"},Spec: danmtypes.DanmNetSpec{NetworkID: "fullIpv4", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.0/30"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "net6"},Spec: danmtypes.DanmNetSpec{NetworkID: "net6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Cidr: "192.168.1.64/26",}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "smallNet6"},Spec: danmtypes.DanmNetSpec{NetworkID: "smallNet6", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/69"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "conflict"},Spec: danmtypes.DanmNetSpec{NetworkID: "conflict", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "conflicterror"},Spec: danmtypes.DanmNetSpec{NetworkID: "conflicterror", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "conflictFree"},Spec: danmtypes.DanmNetSpec{NetworkID: "conflictFree", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "conflicterrorFree"},Spec: danmtypes.DanmNetSpec{NetworkID: "conflicterrorFree", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "error"},Spec: danmtypes.DanmNetSpec{NetworkID: "error", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
 }
 
 var reserveTcs = []struct {

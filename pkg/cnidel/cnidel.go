@@ -53,7 +53,7 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
   if isIpamNeeded(netInfo.Spec.NetworkType) {
    ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6, _, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
-      return nil, errors.New("IP address reservation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
+      return nil, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }
    //TODO: as netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
    //Therefore, anyone wishing to further update the same DanmNet later on will use an outdated representation as the input.
@@ -62,7 +62,7 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
    //log.Println("inside cnidel testnet alloc after:" + netInfo.Spec.Options.Alloc)
     ipamOptions, err = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
-      return nil, errors.New("IPAM config creation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
+      return nil, errors.New("IPAM config creation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }
   }
   rawConfig, err := getCniPluginConfig(netInfo, ipamOptions, ep)
@@ -223,7 +223,7 @@ func freeDelegatedIp(danmClient danmclientset.Interface, netInfo *danmtypes.Danm
   if isIpamNeeded(netInfo.Spec.NetworkType) && ip != "" {
     err := ipam.Free(danmClient, *netInfo, ip)
     if err != nil {
-      return errors.New("cannot give back ip address for NID:" + netInfo.Spec.NetworkID + " addr:" + ip)
+      return errors.New("cannot give back ip address for DanmNet:" + netInfo.ObjectMeta.Name + " addr:" + ip)
     }
   }
   return nil

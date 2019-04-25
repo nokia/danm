@@ -19,7 +19,7 @@ metadata:
     # MANDATORY - JSON FORMATTED LIST OF STRING:STRING ASSOCIATIONS (e.g. '{"app":"loadbalancer"},{"type":"sctp"}')
     danm.k8s.io/selector: ## POD_SELECTORS ##
     # When DANM creates an Endpoint for a selected Pod, it will populate it with the selected interface's IP.
-    # The selected interface will be the one which is connected to the DanmNet object named in this attribute.
+    # The selected interface will be the one which is connected to the DanmNet object identified (i.e. matching ObjectMeta.Name) in this attribute.
     # Pods, DanmNets, and Services are all namespaced resources, so an Endpoint is created only if all three are within the same K8s namespace.
     # MANDATORY - STRING
     danm.k8s.io/network: ## NETWORK_SELECTOR ##

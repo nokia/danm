@@ -68,7 +68,7 @@ func SelectDesMatchLabels(des []*danmv1.DanmEp, selectorMap map[string]string, s
 		} else {
 			deMap := de.GetLabels()
 			deFit = IsContain(deMap, selectorMap)
-			if deFit && de.Spec.NetworkID != svcNet {
+			if deFit && de.Spec.NetworkName != svcNet {
 				deFit = false
 			}
 		}
@@ -124,7 +124,7 @@ func MatchExistingSvc(de *danmv1.DanmEp, servicesList []*corev1.Service) []*core
 		if err != nil {
 			return svcList
 		}
-		if len(selectorMap) == 0 || svcNet != de.Spec.NetworkID || svc.GetNamespace() != deNs {
+		if len(selectorMap) == 0 || svcNet != de.Spec.NetworkName || svc.GetNamespace() != deNs {
 			continue
 		}
 		deMap := de.GetLabels()

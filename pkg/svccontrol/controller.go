@@ -415,7 +415,7 @@ func (c *Controller) delDanmep(obj interface{}) {
 			glog.Errorf("delDanmEp: selector %s", err)
 			return
 		}
-		if len(selectorMap) == 0 || svcNet != de.Spec.NetworkID || epNew.Namespace != deNs {
+		if len(selectorMap) == 0 || svcNet != de.Spec.NetworkName || epNew.Namespace != deNs {
 			continue
 		}
 		deMap := de.GetLabels()

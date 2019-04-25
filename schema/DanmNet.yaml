@@ -12,9 +12,10 @@ metadata:
   # MANDATORY - STRING
   namespace: ## NS_NAME  ##
 spec:
-  # This parameter will be used in application description templates for referring to a desired connection point
-  # Currently this parameter shall exactly match with the name of DanmNet object itself
-  # The parameter also configures which CNI configuration file is to be used if NetworkType points to a static-level CNI backend
+  # This parameter provides a second identifier for DanmNets, and can be used to control a number of API features.
+  # For static delegates, the parameter configures which CNI configuration file is to be used if NetworkType points to a static-level CNI backend.
+  # For dynamic delegates, VxLAN host interfaces are suffixed, while VLAN host interfaces are prefixed with the NetworkID.
+  # This allows deployment administrators to separate their own interfaces from others' in a multi-tenant environment, e.g. by setting NetworkID to "name_namespace" value.
   # MANDATORY - STRING
   NetworkID: ## NETWORK_NAME  ##
   # This parameter, if present, denotes which backend willl be used to provision the container interfaces connected to this network.

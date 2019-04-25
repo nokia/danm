@@ -78,7 +78,6 @@ type DanmEp struct {
 }
 
 type DanmEpSpec struct {
-  NetworkID   string      `json:"NetworkID"`
   NetworkName string      `json:"NetworkName"`
   NetworkType string      `json:"NetworkType"`
   EndpointID  string      `json:"EndpointID"`

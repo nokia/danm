@@ -23,14 +23,14 @@ import (
 // The refreshed DanmNet object is modified in the K8s API server at the end
 func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4, req6 string) (string, string, string, error) {
   if netInfo.Spec.Validation != true {
-    return "", "", "", errors.New("Invalid network: " + netInfo.Spec.NetworkID)
+    return "", "", "", errors.New("Invalid network: " + netInfo.ObjectMeta.Name)
   }
   tempNetSpec := netInfo
   netClient := danmClient.DanmV1().DanmNets(netInfo.ObjectMeta.Namespace)
   for {
     ip4, ip6, macAddr, err := allocateIP(&tempNetSpec, req4, req6)
     if err != nil {
-      return "", "", "", errors.New("failed to allocate IP address for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
+      return "", "", "", errors.New("failed to allocate IP address for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }
     retryNeeded, err, newNetSpec := updateDanmNetAllocation(netClient, tempNetSpec)
     if err != nil {
@@ -74,7 +74,7 @@ func updateDanmNetAllocation (netClient client.DanmNetInterface, netInfo danmtyp
     return false, errors.New("DanmNet update failed with error:" + err.Error()), danmtypes.DanmNet{}
   }
   if resourceConflicted {
-    newNetSpec, err := netClient.Get(netInfo.Spec.NetworkID, meta_v1.GetOptions{})
+    newNetSpec, err := netClient.Get(netInfo.ObjectMeta.Name, meta_v1.GetOptions{})
     if err != nil {
       return false, errors.New("After IP address reservation conflict, network cannot be read again!"), danmtypes.DanmNet{}
     }

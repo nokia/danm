@@ -68,7 +68,7 @@ func addDanmNet(client danmclientset.Interface, dn danmtypes.DanmNet) {
   if dn.Spec.Validation == true {
     err := setupHost(&dn)
     if err != nil {
-      log.Println("ERROR: Failed to setup host interfaces for already validated Danmnet:" + dn.Spec.NetworkID +
+      log.Println("ERROR: Failed to setup host interfaces for already validated Danmnet:" + dn.ObjectMeta.Name +
       " because:" + err.Error())
     }
     return
@@ -91,11 +91,11 @@ func updateValidity(client danmclientset.Interface, dn *danmtypes.DanmNet) {
   netClient := client.DanmV1().DanmNets(dn.ObjectMeta.Namespace)
   updateConflicted, err := PutDanmNet(netClient, dn)
   if err != nil {
-    log.Println("ERROR: Cannot update network:" + dn.Spec.NetworkID + ",err:" + err.Error())
+    log.Println("ERROR: Cannot update network:" + dn.ObjectMeta.Name + ",err:" + err.Error())
   }
   if updateConflicted {
     //Special case: resource was already updated, so this error code can be ignored
-    log.Println("INFO: Network: " + dn.Spec.NetworkID + " is already updated")
+    log.Println("INFO: Network: " + dn.ObjectMeta.Name + " is already updated")
   } 
 }
 

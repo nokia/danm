@@ -33,7 +33,7 @@ func (epClient EpClientStub) DeleteCollection(options *meta_v1.DeleteOptions, li
 
 func (epClient EpClientStub) Get(epName string, options meta_v1.GetOptions) (*danmtypes.DanmEp, error) {
   for _, testNet := range epClient.testEps {
-    if testNet.Spec.NetworkID == epName {
+    if testNet.Spec.NetworkName == epName {
       return &testNet, nil
     }
   }

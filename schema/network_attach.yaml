@@ -27,7 +27,7 @@ spec:
       # For CNIs with only static integration level, Pod-level overwrite options are ignored even if present.
       # MANDATORY - LIST OF REQUIRED NETWORK INTERFACES
       #   One network connection can have the following attributes:
-      #   "network": NetworkID of the DanmNet to which the interface should be connected to. MANDATORY PARAMETER
+      #   "network": Name of the DanmNet (i.e. ObjectMeta.Name) to which the interface should be connected to. MANDATORY PARAMETER
       #   "ip": desired IPv4 address assigment scheme.
       #     Ignored for non-dynamic NetworkTypes.
       #     OPTIONAL PARAMETER - but either "ip" or "ip6" needs to be present. Presence of either "ip" or "ip6" is MANDATORY

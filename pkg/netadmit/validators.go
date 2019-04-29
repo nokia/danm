@@ -70,21 +70,21 @@ func validateAllocationPool(dnet *danmtypes.DanmNet) error {
     }
     return nil
   }
-  _, ipnet, err := net.ParseCIDR(dnet.Spec.Options.Cidr)
+  _, ipnet, err := net.ParseCIDR(cidr)
   if err != nil {
-    return errors.New("Invalid CIDR parameter: " + dnet.Spec.Options.Cidr)
+    return errors.New("Invalid CIDR parameter: " + cidr)
   }
-  if dnet.Spec.Options.Pool.Start == "" {
+  if apStart == "" {
     dnet.Spec.Options.Pool.Start = (ipam.Int2ip(ipam.Ip2int(ipnet.IP) + 1)).String()
   }
-  if dnet.Spec.Options.Pool.End == "" {
+  if apEnd == "" {
     dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(getBroadcastAddress(ipnet)) - 1)).String()
   }
-  if !ipnet.Contains(net.ParseIP(dnet.Spec.Options.Pool.Start)) || !ipnet.Contains(net.ParseIP(dnet.Spec.Options.Pool.End)) {
+  if !ipnet.Contains(net.ParseIP(apStart)) || !ipnet.Contains(net.ParseIP(apEnd)) {
     return errors.New("Allocation pool is outside of defined CIDR")
   }
-  if ipam.Ip2int(net.ParseIP(dnet.Spec.Options.Pool.End)) - ipam.Ip2int(net.ParseIP(dnet.Spec.Options.Pool.Start)) <= 0 {
-    return errors.New("Allocation pool start:" + dnet.Spec.Options.Pool.Start + " is bigger than end:" + dnet.Spec.Options.Pool.End)
+  if ipam.Ip2int(net.ParseIP(apEnd)) - ipam.Ip2int(net.ParseIP(apStart)) <= 0 {
+    return errors.New("Allocation pool start:" + apStart + " is bigger than end:" + apEnd)
   }
   return nil
 }
@@ -110,6 +110,6 @@ func validateNetworkId(dnet *danmtypes.DanmNet) error {
   }
   if len(dnet.Spec.NetworkID) > MaxNidLength {
     return errors.New("Spec.NetworkID cannot be longer than 12 characters (otherwise VLAN and VxLAN host interface creation might fail)!")
-  } 
+  }
   return nil
 }

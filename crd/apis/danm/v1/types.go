@@ -23,8 +23,7 @@ type DanmNet struct {
 type DanmNetSpec struct {
   NetworkID   string        `json:"NetworkID"`
   NetworkType string        `json:"NetworkType,omitempty"`
-  Options     DanmNetOption `json:"Options"`
-  Validation  bool          `json:"Validation,omitempty"`
+  Options     DanmNetOption `json:"Options,omitempty"`
 }
 
 type DanmNetOption struct {

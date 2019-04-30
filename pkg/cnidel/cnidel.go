@@ -12,17 +12,21 @@ import (
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/version"
   "github.com/nokia/danm/pkg/danmep"
+  "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/ipam"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+  LegacyNamingScheme = "legacy"
+)
+
 var (
   ipamType = "fakeipam"
   defaultDataDir = "/var/lib/cni/networks"
   flannelBridge = GetEnv("FLANNEL_BRIDGE", "cbr0")
-  cniConfigDir = GetEnv("CNI_CONF_DIR", "/etc/cni/net.d")
 )
 
 // IsDelegationRequired decides if the interface creation operations should be delegated to a 3rd party CNI, or can be handled by DANM
@@ -45,7 +49,7 @@ func IsDelegationRequired(danmClient danmclientset.Interface, nid, namespace str
 
 // DelegateInterfaceSetup delegates K8s Pod network interface setup task to the input 3rd party CNI plugin
 // Returns the CNI compatible result object, or an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
-func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (*current.Result,error) {
+func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (*current.Result,error) {
   var (
     err error
     ipamOptions danmtypes.IpamConfig
@@ -65,7 +69,7 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
       return nil, errors.New("IPAM config creation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }
   }
-  rawConfig, err := getCniPluginConfig(netInfo, ipamOptions, ep)
+  rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamOptions, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, err
@@ -128,14 +132,14 @@ func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (danmtypes.Ip
           }, nil
 }
 
-func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
+func getCniPluginConfig(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
   cniType := strings.ToLower(netInfo.Spec.NetworkType)
   for _, cni := range supportedNativeCnis {
     if cni.BackendName == cniType {
       return cni.readConfig(netInfo, ipamOptions, ep)
     }
   }
-  return readCniConfigFile(netInfo)
+  return readCniConfigFile(netConf.CniConfigDir, netInfo)
 }
 
 func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep *danmtypes.DanmEp) (*current.Result,error) {
@@ -192,8 +196,8 @@ func setEpIfaceAddress(cniResult *current.Result, epIface *danmtypes.DanmEpIface
 
 // DelegateInterfaceDelete delegates Ks8 Pod network interface delete task to the input 3rd party CNI plugin
 // Returns an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
-func DelegateInterfaceDelete(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
-  rawConfig, err := getCniPluginConfig(netInfo, danmtypes.IpamConfig{Type: ipamType}, ep)
+func DelegateInterfaceDelete(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
+  rawConfig, err := getCniPluginConfig(netConf, netInfo, danmtypes.IpamConfig{Type: ipamType}, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return err
@@ -260,13 +264,17 @@ func GetEnv(key, fallback string) string {
 // CalculateIfaceName decides what should be the name of a container's interface.
 // If a name is explicitly set in the related DanmNet API object, the NIC will be named accordingly.
 // If a name is not explicitly set, then DANM will name the interface ethX where X=sequence number of the interface
-func CalculateIfaceName(chosenName, defaultName string, sequenceId int) string {
+// When legacy naming scheme is configured container_prefix behaves as the exact name of an interface, rather than its name suggest
+func CalculateIfaceName(namingScheme, chosenName, defaultName string, sequenceId int) string {
   //Kubelet expects the first interface to be literally named "eth0", so...
   if sequenceId == 0 {
     return "eth0"
   }
   if chosenName != "" {
-    return chosenName + strconv.Itoa(sequenceId)
+    if namingScheme != LegacyNamingScheme {
+      chosenName += strconv.Itoa(sequenceId)
+    }
+    return chosenName
   }
   return defaultName + strconv.Itoa(sequenceId)
 }

@@ -10,6 +10,7 @@ import (
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/cnidel"
+  "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/test/stubs"
   "github.com/nokia/danm/test/utils"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,7 @@ var (
   cniTesterDir = cniTestConfigDir
   defaultDataDir = "/var/lib/cni/networks"
   flannelBridge = "cbr0"
+  cniConf = datastructs.NetConf{CniConfigDir: "/etc/cni/net.d"}
 )
 
 type CniConf struct {
@@ -257,19 +259,24 @@ func TestCalculateIfaceName(t *testing.T) {
   testDefaultName := "notthechosenone"
   testSequenceId := 4
   expChosenName := testChosenName+strconv.Itoa(testSequenceId)
-  ifaceName := cnidel.CalculateIfaceName(testChosenName, testDefaultName, testSequenceId)
+  ifaceName := cnidel.CalculateIfaceName("", testChosenName, testDefaultName, testSequenceId)
   if ifaceName != expChosenName {
-    t.Errorf("Received value for explicitly set interface name: %s does not match with expected: %s", ifaceName, testChosenName)
+    t.Errorf("Received value for explicitly set interface name: %s does not match with expected: %s", ifaceName, expChosenName)
   }
   expDefName := testDefaultName+strconv.Itoa(testSequenceId)
-  defIfaceName := cnidel.CalculateIfaceName("", testDefaultName, testSequenceId)
+  defIfaceName := cnidel.CalculateIfaceName("", "", testDefaultName, testSequenceId)
   if defIfaceName != expDefName {
-    t.Errorf("Received value for default interface name: %s does not match with expected: %s", defIfaceName, testChosenName)
+    t.Errorf("Received value for default interface name: %s does not match with expected: %s", defIfaceName, expDefName)
   }
   expFirstNicName := "eth0"
-  firstIfaceName := cnidel.CalculateIfaceName(testChosenName, testDefaultName, 0)
+  firstIfaceName := cnidel.CalculateIfaceName("", testChosenName, testDefaultName, 0)
   if firstIfaceName != expFirstNicName {
     t.Errorf("The first interface shall always be named eth0, regardless what the user wants")
+  }
+  expChosenNameLegacy := testChosenName
+  legacyIfaceName := cnidel.CalculateIfaceName(cnidel.LegacyNamingScheme, testChosenName, testDefaultName, testSequenceId)
+  if legacyIfaceName != expChosenNameLegacy {
+    t.Errorf("Received value for explicitly set interface name: %s does not match with expected: %s when using legacy interface naming scheme", ifaceName, expChosenNameLegacy)
   }
 }
 
@@ -287,7 +294,7 @@ func TestDelegateInterfaceSetup(t *testing.T) {
       }
       testNet := getTestNet(tc.netName)
       testEp := getTestEp(tc.epName)
-      cniRes, err := cnidel.DelegateInterfaceSetup(netClientStub,testNet,testEp)
+      cniRes, err := cnidel.DelegateInterfaceSetup(&cniConf,netClientStub,testNet,testEp)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         var detailedErrorMessage string
         if err != nil {
@@ -344,7 +351,7 @@ func TestDelegateInterfaceDelete(t *testing.T) {
           t.Errorf("Delete TC Flannel prereq could not be set-up because:%s", err.Error())
         }
       }
-      err := cnidel.DelegateInterfaceDelete(netClientStub,testNet,testEp)
+      err := cnidel.DelegateInterfaceDelete(&cniConf,netClientStub,testNet,testEp)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         var detailedErrorMessage string
         if err != nil {

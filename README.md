@@ -16,6 +16,7 @@
 * [Deployment](#deployment)
 * [User guide](#user-guide)
   * [Usage of DANM's CNI](#usage-of-danms-cni)
+    * [Configuring DANM](#configuring-danm)
     * [Network management](#network-management)
     * [Generally supported DANM API features](#generally-supported-danm-api-features)
       * [Naming container interfaces](#naming-container-interfaces)
@@ -90,7 +91,7 @@ CNI configurations are always transparent for Multus.
 
 Whereas **DANM** is an E2E suite implementing one, big solution to a whole array of specific networking related features TelCo applications usually demand.
 While Multus always delegates, DANM implements a lot of these functionalities on its own (but still being capable of delegating sub-tasks whenever it is configured to).
-All components of DANM are mainly driven by and tightly coupled with a CRD-based proprietary Kubernetes API schema called DanmNet.
+All components of DANM are mainly driven by and tightly coupled with a CRD-based Kubernetes network management API called DanmNet.
 DANM actively interprets and mutates CNI configurations, even when it delegates network provisioning operations to other CNIs.
 
 So, basically it is up to you to decide which solution is better suited to your needs. If you would like to remain close to the original networking ideals of Kubernetes, and only want to provision multiple network interfaces to your Pod, you might go with Multus.
@@ -100,7 +101,7 @@ If you are not afraid of going against the grain, and looking for a coupled E2E 
 ### Prerequisites
 
 As all the features of DANM are based on Kubernetes, you will need a Kubernetes cluster up-and running before you can use any components of the DANM suite. We suggest to use any of the automated Kubernetes installing solutions (kubeadm, minikube etc.) for a painless experience.
-We currently test DANM with Kubernetes 1.11.X.
+We currently test DANM with Kubernetes 1.14.X.
 Compatibility with earlier than 1.9.X versions of Kubernetes is not officially supported.
 Compatibility with newer versions of Kubernetes is not tested (theoretically it should work though, considering our project uses the official REST client generator created by the K8s community).
 
@@ -155,17 +156,11 @@ The method of deploying the whole DANM suite into a Kubernetes cluster is the fo
 ```
 kubectl create -f integration/crds/
 ```
-**2. Put the following CNI config file into the CNI configuration directory of all your kubelet nodes' (by default it is /etc/cni/net.d/):**
-```
-/ # cat /etc/cni/net.d/00-danm.conf
-{
-  "name": "meta_cni",
-  "type": "danm",
-  "kubeconfig": "<PATH_TO_VALID_KUBECONFIG_FILE>"
-}
-```
+**2. Put a valid CNI config file into the CNI configuration directory of all your kubelet nodes' (by default it is /etc/cni/net.d/) based on:**
+[cniconfig](https://github.com/nokia/danm/tree/master/integration/cni_config/00-danm.conf)
 The parameter "kubeconfig" is mandatory, and shall point to a valid kubeconfig file.
 As kubelet considers the first .conf file in the configured directory as the valid CNI config of the cluster, it is generally a good idea to prefix the .conf file of any CNI metaplugin with "00".
+Make sure to configure the optional DANM configuration parameters to match your environment! 
 
 **3. Copy the "danm" binary into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/):**
 ```
@@ -204,6 +199,12 @@ We use Flannel for this purpose in our product. We also assume here the RBAC as 
 This section describes what features the DANM networking suite adds to a vanilla Kubernetes environment, and how can users utilize them.
 
 ### Usage of DANM's CNI
+#### Configuring DANM
+As DANM becomes more and more complex, we offer some level of control over the internal behaviour of how network provisioning is done.
+Unless stated otherwise, DANM behaviour can be configured purely through its CNI configuration file.
+The following configuration options are currently supported:
+ - cniDir: Users can define where should DANM search for the CNI config files for static delegates. Default value is /etc/cni/net.d
+ - namingScheme: if it is set to legacy container network interface names are set exactly to DanmNet.Spec.Options.container_prefix. Otherwise refer to [Naming container interfaces](#naming-container-interfaces) for details"
 #### Network management
 The DANM CNI is a full-fledged CNI metaplugin, capable of provisioning multiple network interfaces to a Pod, on-demand!
 DANM can utilize any of the existing and already integrated CNI plugins to do so.

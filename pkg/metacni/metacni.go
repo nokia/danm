@@ -37,6 +37,7 @@ const (
   cniVersion = "0.3.1"
   defaultNetworkName = "default"
   defaultIfName = "eth"
+  DefaultCniDir = "/etc/cni/net.d"
 )
 
 var (
@@ -123,8 +124,8 @@ func loadNetConf(bytes []byte) error {
     return errors.New("Failed to parse DANM's CNI config file:" + err.Error())
   }
   DanmConfig = netconf
-  if DanmConfig.CniConfigDir != "" {
-    DanmConfig.CniConfigDir = "/etc/cni/net.d"
+  if DanmConfig.CniConfigDir == "" {
+    DanmConfig.CniConfigDir = DefaultCniDir
   }
   return nil
 }

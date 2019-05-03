@@ -236,8 +236,8 @@ Spec:
   Network Type:  ipvlan
   Options:
     Allocation _ Pool:
-      End: 192.168.1.10
-      Start: 192.168.1.100
+      Start: 192.168.1.10
+      End: 192.168.1.100
     Container _ Prefix:  eth0
     Host _ Device:       ens4
     Rt _ Tables:         201

@@ -16,8 +16,14 @@ spec:
   NetworkID: sriov-a
   NetworkType: sriov
   Options:
-    host_device: ens1f0
     device_pool: "nokia.k8s.io/sriov_ens1f0"
+    container_prefix: first_path
+    rt_tables: 250
+    vlan: 300
+    cidr: 10.100.20.0/24
+    allocation_pool:
+      start: 10.100.20.10
+      end: 10.100.20.30
 ---
 apiVersion: danm.k8s.io/v1
 kind: DanmNet
@@ -28,7 +34,13 @@ spec:
   NetworkID: sriov-b
   NetworkType: sriov
   Options:
-    host_device: ens1f1
     device_pool: "nokia.k8s.io/sriov_ens1f1"
+    container_prefix: second_path
+    rt_tables: 300
+    vlan: 300
+    cidr: 10.200.20.0/24
+    allocation_pool:
+      start: 10.200.20.10
+      end: 10.200.20.30
 
 

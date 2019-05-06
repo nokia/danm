@@ -1,10 +1,11 @@
 package cnidel
 
 import (
+  "github.com/containernetworking/cni/pkg/types"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
 )
 
-type cniConfigReader func(netInfo *danmtypes.DanmNet, ipam danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error)
+type cniConfigReader func(netInfo *danmtypes.DanmNet, ipam danmtypes.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error)
 
 type cniBackendConfig struct {
   danmtypes.CniBackend
@@ -13,12 +14,9 @@ type cniBackendConfig struct {
   deviceNeeded bool
 }
 
-// sriovNet represent the configuration of sriov plugin v1.0.0
+// sriovNet represent the configuration of sriov cni v1.0.0
 type SriovNet struct {
-  // the name of the network
-  Name   string     `json:"name"`
-  // currently constant "sriov"
-  Type   string     `json:"type"`
+  types.NetConf
   // name of the PF since sriov cni v1.0.0
   PfName string     `json:"master"`
   // if true then add VF as L2 mode only, IPAM will not be executed
@@ -31,7 +29,7 @@ type SriovNet struct {
   DeviceID string `json:"deviceID"`
 }
 
-// VfInformation is a DeviceInfo desctiprtor expected by sriov plugin v1.0.0
+// VfInformation is a DeviceInfo descriptor expected by sriov cni v1.0.0
 type VfInformation struct {
   PCIaddr string `json:"pci_addr"`
   Pfname  string `json:"pfname"`
@@ -39,6 +37,7 @@ type VfInformation struct {
 }
 
 type MacvlanNet struct {
+  types.NetConf
   //Name of the master NIC the MACVLAN slave needs to be connected to
   Master string `json:"master"`
   //The mode in which the MACVLAN slave is configured (default bridge)

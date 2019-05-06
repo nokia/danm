@@ -10,24 +10,22 @@ import (
 )
 
 var (
-  supportedNativeCnis = []*cniBackendConfig {
-    &cniBackendConfig {
-      danmtypes.CniBackend {
-        BackendName: "sriov",
-        CniVersion: "0.3.1",
+  supportedNativeCnis = map[string]*cniBackendConfig {
+    "sriov": &cniBackendConfig {
+      CniBackend: danmtypes.CniBackend {
+        CNIVersion: "0.3.1",
       },
-      cniConfigReader(getSriovCniConfig),
-      true,
-      true,
+      readConfig: cniConfigReader(getSriovCniConfig),
+      ipamNeeded: true,
+      deviceNeeded: true,
     },
-    &cniBackendConfig {
-      danmtypes.CniBackend {
-        BackendName: "macvlan",
-        CniVersion: "0.3.1",
+    "macvlan": &cniBackendConfig {
+      CniBackend: danmtypes.CniBackend {
+        CNIVersion: "0.3.1",
       },
-      cniConfigReader(getMacvlanCniConfig),
-      true,
-      false,
+      readConfig: cniConfigReader(getMacvlanCniConfig),
+      ipamNeeded: true,
+      deviceNeeded: false,
     },
   }
 )
@@ -44,21 +42,22 @@ func readCniConfigFile(cniconfDir string, netInfo *danmtypes.DanmNet) ([]byte, e
 }
 
 //This function creates CNI configuration for the dynamic-level SR-IOV backend
-func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
+func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error) {
+  var sriovConfig SriovNet
+  // initialize common fields of "github.com/containernetworking/cni/pkg/types".NetConf
+  sriovConfig.CNIVersion = cniVersion
+  sriovConfig.Name       = netInfo.Spec.NetworkID
+  sriovConfig.Type       = "sriov"
+  // initialize SriovNet specific fields:
   pfname, err := sriov_utils.GetPfName(ep.Spec.Iface.DeviceID)
   if err != nil {
     return nil, errors.New("failed to get the name of the sriov PF for device "+ ep.Spec.Iface.DeviceID +" due to:" + err.Error())
   }
-  vlanid := netInfo.Spec.Options.Vlan
-  sriovConfig := SriovNet {
-    Name:      netInfo.Spec.NetworkID,
-    Type:      "sriov",
-    PfName:    pfname,
-    L2Mode:    true,
-    Vlan:      vlanid,
-    Ipam:      ipamOptions,
-    DeviceID:  ep.Spec.Iface.DeviceID,
-  }
+  sriovConfig.PfName   = pfname
+  sriovConfig.L2Mode   = true
+  sriovConfig.Vlan     = netInfo.Spec.Options.Vlan
+  sriovConfig.Ipam     = ipamOptions
+  sriovConfig.DeviceID = ep.Spec.Iface.DeviceID
   if len(ipamOptions.Ips) > 0 {
     sriovConfig.L2Mode = false
   }
@@ -70,15 +69,15 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
 }
 
 //This function creates CNI configuration for the dynamic-level MACVLAN backend
-func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
-  hDev := danmep.DetermineHostDeviceName(netInfo)
-  macvlanConfig := MacvlanNet {
-    Master: hDev,
-   //TODO: make these params configurable if required
-    Mode:   "bridge",
-    MTU:    1500,
-    Ipam:   ipamOptions,
-  }
+func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error) {
+  var macvlanConfig MacvlanNet
+  // initialize common fields of "github.com/containernetworking/cni/pkg/types".NetConf
+  macvlanConfig.CNIVersion = cniVersion
+  // initialize MacvlanNet specific fields:
+  macvlanConfig.Master = danmep.DetermineHostDeviceName(netInfo)
+  macvlanConfig.Mode   = "bridge" //TODO: make these params configurable if required
+  macvlanConfig.MTU    = 1500
+  macvlanConfig.Ipam   = ipamOptions
   rawConfig, err := json.Marshal(macvlanConfig)
   if err != nil {
     return nil, errors.New("Error putting together CNI config for MACVLAN plugin: " + err.Error())

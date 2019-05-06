@@ -92,21 +92,19 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
 }
 
 func isIpamNeeded(cniType string) bool {
-  for _, cni := range supportedNativeCnis {
-    if cni.BackendName == cniType {
-      return cni.ipamNeeded
-    }
+  if cni, ok := supportedNativeCnis[strings.ToLower(cniType)]; ok {
+    return cni.ipamNeeded
+  } else {
+    return false
   }
-  return false
 }
 
 func IsDeviceNeeded(cniType string) bool {
-  for _, cni := range supportedNativeCnis {
-    if cni.BackendName == cniType {
-      return cni.deviceNeeded
-    }
+  if cni, ok := supportedNativeCnis[strings.ToLower(cniType)]; ok {
+    return cni.deviceNeeded
+  } else {
+    return false
   }
-  return false
 }
 
 func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (danmtypes.IpamConfig, error) {
@@ -133,13 +131,11 @@ func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (danmtypes.Ip
 }
 
 func getCniPluginConfig(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
-  cniType := strings.ToLower(netInfo.Spec.NetworkType)
-  for _, cni := range supportedNativeCnis {
-    if cni.BackendName == cniType {
-      return cni.readConfig(netInfo, ipamOptions, ep)
-    }
+  if cni, ok := supportedNativeCnis[strings.ToLower(netInfo.Spec.NetworkType)]; ok {
+    return cni.readConfig(netInfo, ipamOptions, ep, cni.CNIVersion)
+  } else {
+    return readCniConfigFile(netConf.CniConfigDir, netInfo)
   }
-  return readCniConfigFile(netConf.CniConfigDir, netInfo)
 }
 
 func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep *danmtypes.DanmEp) (*current.Result,error) {

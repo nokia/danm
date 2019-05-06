@@ -9,8 +9,7 @@ const (
 )
 
 type CniBackend struct {
-  BackendName string
-  CniVersion string
+  CNIVersion string
 }
 
 // +genclient

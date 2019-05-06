@@ -4,8 +4,9 @@ import (
   "errors"
   "net"
   "encoding/json"
+  "strconv"
   "github.com/containernetworking/cni/pkg/skel"
-  types "github.com/containernetworking/cni/pkg/types/020"
+  "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/version"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
 )
@@ -44,27 +45,17 @@ func loadIpamConfig(rawConfig []byte) (danmtypes.IpamConfig,error) {
   return cniConf.Ipam, nil
 }
 
-//TODO: CNI 0.2.0 style of result is used because SRIOV plugin can't handle newer format
-//This should be generalized though, and return result should be current.Result in most cases
-func createCniResult(ipamConf danmtypes.IpamConfig) (*types.Result,error) {
-  var ip4 = new(types.IPConfig)
-  var ip6 = new(types.IPConfig)
+func createCniResult(ipamConf danmtypes.IpamConfig) (*current.Result,error) {
+  var resultIPs = []*current.IPConfig{}
   for _, ipamIp := range ipamConf.Ips {
     ip, ipNet, err := net.ParseCIDR(ipamIp.IpCidr)
     if err != nil {
-      return &types.Result{}, errors.New("Unable to parse the given IpamConfig.IpCidr: " + ipamIp.IpCidr)
+      return &current.Result{}, errors.New("Unable to parse the given IpamConfig.IpCidr: " + ipamIp.IpCidr)
     }
     ipNet.IP = ip
-    // CNI Result can have only one IP for each Version.
-    // In case multiple IPs are set with the same Version, the last one is used.
-    switch ipamIp.Version {
-    case 4:
-      ip4 = &types.IPConfig{IP: *ipNet}
-    case 6:
-      ip6 = &types.IPConfig{IP: *ipNet}
-    }
+    resultIPs = append(resultIPs, &current.IPConfig{Version: strconv.Itoa(ipamIp.Version), Address: *ipNet})
   }
-  cniRes := &types.Result{IP4: ip4, IP6: ip6}
+  cniRes := &current.Result{CNIVersion: "0.3.1", IPs: resultIPs}
   return cniRes, nil
 }
 

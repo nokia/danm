@@ -3,8 +3,8 @@ package main
 import (
   "errors"
   "net"
-  "encoding/json"
   "strconv"
+  "encoding/json"
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/version"

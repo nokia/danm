@@ -341,7 +341,7 @@ Network administrators can simply put the CIDR, and the allocation pool into the
 The flexible IPAM module also allows Pods to define the IP allocation scheme best suited for them. Pods can ask dynamically allocated IPs from the defined allocation pool, or can ask for one, specific, static address.
 The application can even ask DANM to forego the allocation of any IPs to their interface in case a L2 network interface is required.
 ##### IPv6 and dual-stack support
-DANM's IPAM module supports both IPv6, and dual-stack (one IPv4, and one IPv6 address provisioned to the same interface) addresses!
+DANM's IPAM module, and its integration to dynamic backends -IPVLAN, MACVLAN, and SR-IOV CNIs- support both IPv6, and dual-stack (one IPv4, and one IPv6 address provisioned to the same interface) addresses!
 To configure an IPv6 CIDR for a DanmNet, network amdinistrator shall configure the "net6" attribute. Additionally, IP routes for IPv6 subnets can be configured via "routes6".
 If both "cidr", and "net6" are configured for a DanmNet, then Pods connecting to that network can ask either one IPv4 or IPv6 address, or even both at the same time!
 
@@ -351,7 +351,7 @@ That being said, network administrators using IPv6, or dual-stack features need 
   * MAC address is randomly generated for the EUI64
 * the smallest supported IPv6 subnet is /64
 * allocation pools cannot be defined for IPv6 subnets
-* DANM does not change kernel level config parameters -such as "disable_ipv6", "auto_ra", or "autoconf"- of host devices, or container interfaces
+
 #### DANM IPVLAN CNI
 DANM's IPVLAN CNI uses the Linux kernel's IPVLAN module to provision high-speed, low-latency network interfaces for applications which need better performance than a bridge (or any other overlay technology) can provide.
 

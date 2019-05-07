@@ -1,6 +1,12 @@
 #!/bin/sh -e
+if [ -f /target/netd/00-danm.conf ] && [ -f /target/cni-bin/danm ];then
+  echo "Danm already installed..."
+  exit 0
+fi
+
 DANMKUBECONFIG=/etc/kubernetes/danm.kubeconfig
-cp /opt/bin/* /target/cni-bin/
+cp /opt/bin/danm /target/cni-bin/
+cp /opt/bin/fakeipam /target/cni-bin/
 cat >/target/netd/00-danm.conf <<-EOF
 {
   "name": "meta_cni",

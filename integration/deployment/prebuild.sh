@@ -1,11 +1,4 @@
 #!/bin/bash
-mkdir -p .cache
-if [ ! -f .cache/kubectl ];then
-	pushd .cache
-	curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
-	chmod +x kubectl
-	popd
-fi
 COMBINED=danm-install.yaml
 cp -r ../../bin .
 rm -f $COMBINED

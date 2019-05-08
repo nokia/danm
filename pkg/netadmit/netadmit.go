@@ -128,6 +128,9 @@ func mutateManifest(dnet *danmtypes.DanmNet) error {
     return err
   }
   dnet.Spec.Options.Alloc = allocationArray.Encode()
+  if dnet.Spec.NetworkType == "" {
+    dnet.Spec.NetworkType = "ipvlan"
+  }
   return nil
 }
 

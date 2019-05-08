@@ -78,7 +78,7 @@ func validateAllocationPool(dnet *danmtypes.DanmNet) error {
     dnet.Spec.Options.Pool.Start = (ipam.Int2ip(ipam.Ip2int(ipnet.IP) + 1)).String()
   }
   if apEnd == "" {
-    dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(getBroadcastAddress(ipnet)) - 1)).String()
+    dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(GetBroadcastAddress(ipnet)) - 1)).String()
   }
   if !ipnet.Contains(net.ParseIP(apStart)) || !ipnet.Contains(net.ParseIP(apEnd)) {
     return errors.New("Allocation pool is outside of defined CIDR")
@@ -89,8 +89,9 @@ func validateAllocationPool(dnet *danmtypes.DanmNet) error {
   return nil
 }
 
-func getBroadcastAddress(subnet *net.IPNet) (net.IP) {
+func GetBroadcastAddress(subnet *net.IPNet) (net.IP) {
   ip := make(net.IP, len(subnet.IP.To4()))
+  //Don't ask
   binary.BigEndian.PutUint32(ip, binary.BigEndian.Uint32(subnet.IP.To4())|^binary.BigEndian.Uint32(net.IP(subnet.Mask).To4()))
   return ip
 }

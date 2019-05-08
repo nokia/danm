@@ -20,3 +20,4 @@ go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/cmd/netwatc
 go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/cmd/fakeipam
 go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/cmd/svcwatcher
 go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/cmd/cnitest
+go install -a -ldflags '-extldflags "-static"' github.com/nokia/danm/cmd/webhook

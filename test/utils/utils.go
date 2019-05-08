@@ -5,25 +5,32 @@ import (
   "strings"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
-  "github.com/nokia/danm/pkg/netcontrol"
+  "github.com/nokia/danm/pkg/ipam"
+  "github.com/nokia/danm/pkg/netadmit"
 )
 
 func SetupAllocationPools(nets []danmtypes.DanmNet) error {
-  for index, net := range nets {
-    if net.Spec.Options.Cidr != "" {
-      bitArray, err := netcontrol.CreateAllocationArray(&net)
+  for index, dnet := range nets {
+    if dnet.Spec.Options.Cidr != "" {
+      bitArray, err := netadmit.CreateAllocationArray(&dnet)
       if err != nil {
         return err
       }
-      net.Spec.Options.Alloc = bitArray.Encode()
-      err = netcontrol.ValidateAllocationPool(&net)
+      dnet.Spec.Options.Alloc = bitArray.Encode()
+      _, ipnet, err := net.ParseCIDR(dnet.Spec.Options.Cidr)
       if err != nil {
         return err
       }
-      if strings.HasPrefix(net.Spec.NetworkID, "full") {
-        exhaustNetwork(&net)
+      if dnet.Spec.Options.Pool.Start == "" {
+        dnet.Spec.Options.Pool.Start = (ipam.Int2ip(ipam.Ip2int(ipnet.IP) + 1)).String()
       }
-      nets[index].Spec = net.Spec
+      if dnet.Spec.Options.Pool.End == "" {
+        dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(netadmit.GetBroadcastAddress(ipnet)) - 1)).String()
+      }
+      if strings.HasPrefix(dnet.Spec.NetworkID, "full") {
+        exhaustNetwork(&dnet)
+      }
+      nets[index].Spec = dnet.Spec
     }
   }
   return nil
@@ -32,9 +39,9 @@ func SetupAllocationPools(nets []danmtypes.DanmNet) error {
 func exhaustNetwork(netInfo *danmtypes.DanmNet) {
     ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
     _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-    ipnetNum := netcontrol.Ip2int(ipnet.IP)
-    begin := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start)) - ipnetNum
-    end := netcontrol.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End)) - ipnetNum
+    ipnetNum := ipam.Ip2int(ipnet.IP)
+    begin := ipam.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start)) - ipnetNum
+    end := ipam.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End)) - ipnetNum
     for i:=begin;i<=end;i++ {
         ba.Set(uint32(i))
     }

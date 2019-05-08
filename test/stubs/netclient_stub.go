@@ -9,7 +9,7 @@ import (
   watch "k8s.io/apimachinery/pkg/watch"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
-  "github.com/nokia/danm/pkg/netcontrol"
+  "github.com/nokia/danm/pkg/ipam"
 )
 const (
   magicVersion = "42"
@@ -33,13 +33,13 @@ func (netClient *NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmN
     if obj.Spec.NetworkID == netReservation.NetworkId {
       ba := bitarray.NewBitArrayFromBase64(obj.Spec.Options.Alloc)
       _, ipnet, _ := net.ParseCIDR(obj.Spec.Options.Cidr)
-      ipnetNum := netcontrol.Ip2int(ipnet.IP)
+      ipnetNum := ipam.Ip2int(ipnet.IP)
       for _, reservation := range netReservation.Reservations {
         ip,_,err := net.ParseCIDR(reservation.Ip)
         if err != nil {
           continue
         }
-        ipInInt := netcontrol.Ip2int(ip) - ipnetNum
+        ipInInt := ipam.Ip2int(ip) - ipnetNum
         if !ipnet.Contains(ip) {
           continue
         }

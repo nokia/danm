@@ -63,39 +63,39 @@ var testNets = []danmtypes.DanmNet {
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "ipamNeeded"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "cidr", Validation: true,},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "cidr",},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "flannel-test"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "flannel_conf", Validation: true,},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "flannel_conf",},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "no-conf"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "hulululu", Validation: true,},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "hulululu",},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "no-binary"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "flanel", NetworkID: "flannel_conf", Validation: true,},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "flanel", NetworkID: "flannel_conf",},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-v4"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "ens1f0"}},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "ens1f0"}},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-v6"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Validation: true, Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-ds"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "sriov-test"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "sriov-test", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Vlan: 500}},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "sriov-test", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Vlan: 500}},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "full-macvlan"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "full", Validation: true, Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "ens1f0"}},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "full", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "ens1f0"}},
   },
 }
 

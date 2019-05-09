@@ -1,9 +1,12 @@
 package netadmit
 
 import (
+  "bytes"
   "errors"
+  "fmt"
   "log"
   "net"
+  "reflect"
   "encoding/json"
   "io/ioutil"
   "net/http"
@@ -19,9 +22,9 @@ import (
 
 var (
   NetworkPatchPaths = map[string]string {
-    "Alloc": "/spec/options/alloc",
-    "Start": "/spec/options/allocation_pool/start",
-    "End":   "/spec/options/allocation_pool/end",
+    "NetworkType": "/spec/NetworkType",
+    "Alloc": "/spec/Options/alloc",
+    "Pool": "/spec/Options/allocation_pool",
   }
 )
 
@@ -32,32 +35,39 @@ type Patch struct {
 }
 
 func ValidateNetwork(responseWriter http.ResponseWriter, request *http.Request) {
+  log.Println("INFO: got a request")
   admissionReview, err := DecodeAdmissionReview(request)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
+  log.Println("INFO: after decode")
   manifest, err := getNetworkManifest(admissionReview.Request.Object.Raw)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
+  log.Println("INFO: after get manifest")
   origManifest := *manifest
-  isManifestValid, err := validateNetworkByType(manifest)
+  isManifestValid, err := validateNetworkByType(manifest, request.Method)
   if !isManifestValid {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
+  log.Println("INFO: after validate")
   err = mutateManifest(manifest)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
+  log.Println("INFO: after mutate")
   responseAdmissionReview := v1beta1.AdmissionReview {
     Response: CreateReviewResponseFromPatches(createPatchListFromChanges(origManifest,manifest)),
   }
   responseAdmissionReview.Response.UID = admissionReview.Request.UID
+  fmt.Printf("This is the response we gonna send: %+v\n", responseAdmissionReview)
   SendAdmissionResponse(responseWriter, responseAdmissionReview)
+  log.Println("INFO: we have sent a successful answer!")
 }
 
 func DecodeAdmissionReview(httpRequest *http.Request) (*v1beta1.AdmissionReview,error) {
@@ -77,6 +87,7 @@ func DecodeAdmissionReview(httpRequest *http.Request) (*v1beta1.AdmissionReview,
 }
 
 func SendErroneousAdmissionResponse(responseWriter http.ResponseWriter, uid types.UID, err error) {
+  log.Println("ERROR: Admitting resource failed with error:" + err.Error())
   failedResponse := &v1beta1.AdmissionResponse {
     Result: &metav1.Status{
       Message: err.Error(),
@@ -104,15 +115,21 @@ func SendAdmissionResponse(responseWriter http.ResponseWriter, reviewResponse v1
 
 func getNetworkManifest(objectToReview []byte) (*danmtypes.DanmNet,error) {
   networkManifest := danmtypes.DanmNet{}
-  err := json.Unmarshal(objectToReview, &networkManifest)
-  return &networkManifest, err
+  decoder := json.NewDecoder(bytes.NewReader(objectToReview))
+  //We are using Decoder interface, because it can notify us if any unknown fields were put into the object
+  decoder.DisallowUnknownFields()
+  err := decoder.Decode(&networkManifest)
+  if err != nil {
+    return nil, errors.New("ERROR: unknown fields are not allowed:" + err.Error())
+  }
+  return &networkManifest, nil
 }
 
-func validateNetworkByType(manifest *danmtypes.DanmNet) (bool,error) {
+func validateNetworkByType(manifest *danmtypes.DanmNet, httpMethod string) (bool,error) {
   for _, validatorMapping := range danmValidationConfig.ValidatorMappings {
     if validatorMapping.ApiType == manifest.TypeMeta.Kind {
       for _, validator := range validatorMapping.Validators {
-        err := validator(manifest)
+        err := validator(manifest,httpMethod)
         if err != nil {
           return false, err
         }
@@ -123,25 +140,26 @@ func validateNetworkByType(manifest *danmtypes.DanmNet) (bool,error) {
 }
 
 func mutateManifest(dnet *danmtypes.DanmNet) error {
-  allocationArray, err := CreateAllocationArray(dnet)
-  if err != nil {
-    return err
-  }
-  dnet.Spec.Options.Alloc = allocationArray.Encode()
   if dnet.Spec.NetworkType == "" {
     dnet.Spec.NetworkType = "ipvlan"
   }
-  return nil
+  var err error
+  //L3, freshly added network
+  if dnet.Spec.Options.Cidr != "" && dnet.Spec.Options.Alloc == "" {
+    err = CreateAllocationArray(dnet)
+  }
+  return err
 }
 
-func CreateAllocationArray(dnet *danmtypes.DanmNet) (*bitarray.BitArray,error) {
+func CreateAllocationArray(dnet *danmtypes.DanmNet) error {
   _,ipnet,_ := net.ParseCIDR(dnet.Spec.Options.Cidr)
   bitArray, err := bitarray.CreateBitArrayFromIpnet(ipnet)
   if err != nil {
-    return nil, err
+    return err
   }
   reserveGatewayIps(dnet.Spec.Options.Routes, bitArray, ipnet)
-  return bitArray, nil
+  dnet.Spec.Options.Alloc = bitArray.Encode()
+  return nil
 }
 
 func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ipnet *net.IPNet) {
@@ -159,6 +177,7 @@ func CreateReviewResponseFromPatches(patchList []Patch) *v1beta1.AdmissionRespon
     patches, err = json.Marshal(patchList)
     if err != nil {
       reviewResponse.Allowed = false
+      reviewResponse.Result  = &metav1.Status{ Message: "List of patches could not be encoded, because:" + err.Error(),}
       return &reviewResponse
     }
   }
@@ -172,24 +191,28 @@ func CreateReviewResponseFromPatches(patchList []Patch) *v1beta1.AdmissionRespon
 
 func createPatchListFromChanges(origNetwork danmtypes.DanmNet, changedNetwork *danmtypes.DanmNet) []Patch {
   patchList := make([]Patch, 0)
-  if origNetwork.Spec.Options.Alloc == changedNetwork.Spec.Options.Alloc {
+  if origNetwork.Spec.Options.Alloc != changedNetwork.Spec.Options.Alloc {
     //TODO: Use some reflecting here to determine name of the struct field
-    patchList = append(patchList, CreatePatchFromChange(NetworkPatchPaths, "Alloc", changedNetwork.Spec.Options.Alloc))
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths, "Alloc",
+                json.RawMessage(`"` + changedNetwork.Spec.Options.Alloc + `"`)))
   }
-  if origNetwork.Spec.Options.Pool.Start == changedNetwork.Spec.Options.Pool.Start {
-    patchList = append(patchList, CreatePatchFromChange(NetworkPatchPaths, "Start", changedNetwork.Spec.Options.Pool.Start))
+  if origNetwork.Spec.NetworkType != changedNetwork.Spec.NetworkType {
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths, "NetworkType",
+                json.RawMessage(`"` +  changedNetwork.Spec.NetworkType + `"`)))
   }
-  if origNetwork.Spec.Options.Pool.End == changedNetwork.Spec.Options.Pool.End {
-    patchList = append(patchList, CreatePatchFromChange(NetworkPatchPaths, "End", changedNetwork.Spec.Options.Pool.End))
+  if !reflect.DeepEqual(origNetwork.Spec.Options.Pool, changedNetwork.Spec.Options.Pool) {
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths, "Pool",
+                json.RawMessage(`{"Start":"` + changedNetwork.Spec.Options.Pool.Start + `","End":"` + changedNetwork.Spec.Options.Pool.End + `"}`)))
   }
   return patchList
 }
 
-func CreatePatchFromChange(attributePaths map[string]string, attribute, value string ) Patch {
+func CreateGenericPatchFromChange(attributePaths map[string]string, attribute string, value []byte ) Patch {
   patch := Patch {
-    Op:    "add",
+    Op:    "replace",
     Path:  attributePaths[attribute],
-    Value: json.RawMessage(value),
+    Value: value,
   }
+  fmt.Printf("This is a patch we want to send: %+v\n", patch)
   return patch
 }

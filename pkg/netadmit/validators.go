@@ -2,13 +2,17 @@ package netadmit
 
 import (
   "errors"
+  "log"
   "net"
+  "strconv"
+  "strings"
   "encoding/binary"
+  "net/http"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/ipam"
 )
 
-type Validator func(netInfo *danmtypes.DanmNet) error
+type Validator func(netInfo *danmtypes.DanmNet, httpMethod string) error
 
 type ValidatorConfig struct {
   ValidatorMappings []ValidatorMapping
@@ -33,11 +37,11 @@ var (
   }
 )
 
-func validateIpv4Fields(dnet *danmtypes.DanmNet) error {
+func validateIpv4Fields(dnet *danmtypes.DanmNet, httpMethod string) error {
   return validateIpFields(dnet.Spec.Options.Cidr, dnet.Spec.Options.Routes)
 }
 
-func validateIpv6Fields(dnet *danmtypes.DanmNet) error {
+func validateIpv6Fields(dnet *danmtypes.DanmNet, httpMethod string) error {
   return validateIpFields(dnet.Spec.Options.Net6, dnet.Spec.Options.Routes6)
 }
 
@@ -60,12 +64,15 @@ func validateIpFields(cidr string, routes map[string]string) error {
   return nil
 }
 
-func validateAllocationPool(dnet *danmtypes.DanmNet) error {
+func validateAllocationPool(dnet *danmtypes.DanmNet, httpMethod string) error {
+  log.Println("HTTP method was:" + httpMethod)
+  log.Println("HTTP method constant is:" + http.MethodPost)
+  log.Println("Alloc was:" + dnet.Spec.Options.Alloc)
+  log.Println("Strings compare res:" + strconv.Itoa(strings.Compare(httpMethod,http.MethodPost)))
+  log.Println("Empty string check:" + strconv.Itoa(len(dnet.Spec.Options.Alloc)))
   cidr := dnet.Spec.Options.Cidr
-  apStart := dnet.Spec.Options.Pool.Start
-  apEnd := dnet.Spec.Options.Pool.End
   if cidr == "" {
-    if apStart != "" || apEnd != "" {
+    if dnet.Spec.Options.Pool.Start != "" || dnet.Spec.Options.Pool.End != "" {
       return errors.New("Allocation pool cannot be defined without CIDR!")
     }
     return nil
@@ -74,17 +81,18 @@ func validateAllocationPool(dnet *danmtypes.DanmNet) error {
   if err != nil {
     return errors.New("Invalid CIDR parameter: " + cidr)
   }
-  if apStart == "" {
+  if dnet.Spec.Options.Pool.Start == "" {
     dnet.Spec.Options.Pool.Start = (ipam.Int2ip(ipam.Ip2int(ipnet.IP) + 1)).String()
   }
-  if apEnd == "" {
+  if dnet.Spec.Options.Pool.End == "" {
     dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(GetBroadcastAddress(ipnet)) - 1)).String()
   }
-  if !ipnet.Contains(net.ParseIP(apStart)) || !ipnet.Contains(net.ParseIP(apEnd)) {
+  if !ipnet.Contains(net.ParseIP(dnet.Spec.Options.Pool.Start)) || !ipnet.Contains(net.ParseIP(dnet.Spec.Options.Pool.End)) {
     return errors.New("Allocation pool is outside of defined CIDR")
   }
-  if ipam.Ip2int(net.ParseIP(apEnd)) - ipam.Ip2int(net.ParseIP(apStart)) <= 0 {
-    return errors.New("Allocation pool start:" + apStart + " is bigger than end:" + apEnd)
+  log.Println("End IP:" + strconv.FormatUint(uint64(ipam.Ip2int(net.ParseIP(dnet.Spec.Options.Pool.End))),10) + " Start IP:" + strconv.FormatUint(uint64(ipam.Ip2int(net.ParseIP(dnet.Spec.Options.Pool.Start))),10))
+  if ipam.Ip2int(net.ParseIP(dnet.Spec.Options.Pool.End)) <= ipam.Ip2int(net.ParseIP(dnet.Spec.Options.Pool.Start)) {
+    return errors.New("Allocation pool start:" + dnet.Spec.Options.Pool.Start + " is bigger than or equal to allocation pool end:" + dnet.Spec.Options.Pool.End)
   }
   return nil
 }
@@ -96,7 +104,7 @@ func GetBroadcastAddress(subnet *net.IPNet) (net.IP) {
   return ip
 }
 
-func validateVids(dnet *danmtypes.DanmNet) error {
+func validateVids(dnet *danmtypes.DanmNet, httpMethod string) error {
   isVlanDefined := (dnet.Spec.Options.Vlan!=0)
   isVxlanDefined := (dnet.Spec.Options.Vxlan!=0)
   if isVlanDefined && isVxlanDefined {
@@ -105,7 +113,7 @@ func validateVids(dnet *danmtypes.DanmNet) error {
   return nil
 }
 
-func validateNetworkId(dnet *danmtypes.DanmNet) error {
+func validateNetworkId(dnet *danmtypes.DanmNet, httpMethod string) error {
   if dnet.Spec.NetworkID == "" {
     return errors.New("Spec.NetworkID mandatory parameter is missing!")
   }

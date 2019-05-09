@@ -27,7 +27,7 @@ spec:
       # For CNIs with only static integration level, Pod-level overwrite options are ignored even if present.
       # MANDATORY - LIST OF REQUIRED NETWORK INTERFACES
       #   One network connection can have the following attributes:
-      #   "network": NetworkID of the DanmNet to which the interface should be connected to. MANDATORY PARAMETER
+      #   "network": Name of the DanmNet (i.e. ObjectMeta.Name) to which the interface should be connected to. MANDATORY PARAMETER
       #   "ip": desired IPv4 address assigment scheme.
       #     Ignored for non-dynamic NetworkTypes.
       #     OPTIONAL PARAMETER - but either "ip" or "ip6" needs to be present. Presence of either "ip" or "ip6" is MANDATORY
@@ -39,8 +39,8 @@ spec:
       #     Ignored for non-dynamic NetworkTypes.
       #     OPTIONAL PARAMETER - but either "ip" or "ip6" needs to be present. Presence of either "ip" or "ip6" is MANDATORY
       #     Possible values:
-      #     - "dynamic": the first free IPv6 address is dynamically allocated from the DanmNet's allocation pool
-      #     - "## DESIRED_STATIC_IPV6_ADDR_FROM_ALLOCATION_POOL ##"
+      #     - "dynamic": a random, free IPv6 address is dynamically allocated from the DanmNet's net6 CIDR
+      #     - "## DESIRED_STATIC_IPV6_ADDR_FROM_NET6 ##"
       #     - "none": no IPv6 address is allocated to the interface
       #   "proutes": list of policy-based IPv4 routes to be added to the configured routing table of this interface.
       #     Generally supported parameter, works with all NetworkTypes.
@@ -65,6 +65,21 @@ spec:
               ...
             }
           ]
-
   ...
-
+  spec:
+    containers:
+    - name:
+    ...
+      resources:
+        # Network Device Plugin managed resources (e.g. devices/interfaces) to be requested for DanmNets.
+        # OPTIONAL PARAMETER - but MANDATORY if a network Device Plugin is being used
+        requests:
+          "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_A>": "<NUM_OF_RESOURCES>"
+          "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_B>": "<NUM_OF_RESOURCES>"
+          ...
+        # OPTIONAL PARAMETER - but MANDATORY if a network Device Plugin is being used
+        limits:
+          "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_A>": "<NUM_OF_RESOURCES>"
+          "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_B>": "<NUM_OF_RESOURCES>"
+          ...
+  ...

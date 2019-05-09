@@ -1,0 +1,29 @@
+package: github.com/nokia/danm
+ignore:
+- github.com/vishvananda/netlink
+- github.com/nokia/danm/pkg/bitarray
+- github.com/nokia/danm/pkg/bitarray_test
+- github.com/nokia/danm/pkg/cnidel
+- github.com/nokia/danm/pkg/cnidel_test
+- github.com/nokia/danm/pkg/crd
+- github.com/nokia/danm/pkg/danm
+- github.com/nokia/danm/pkg/danmep
+- github.com/nokia/danm/pkg/danmnet
+- github.com/nokia/danm/pkg/ipam
+- github.com/nokia/danm/pkg/ipam_test
+- github.com/nokia/danm/pkg/stubs
+- github.com/nokia/danm/pkg/syncher
+- github.com/nokia/danm/pkg/netwatcher
+- github.com/nokia/danm/pkg/svcwatcher
+import:
+- package: k8s.io/client-go
+  version: kubernetes-1.11.1
+- package: github.com/containernetworking/cni
+  version: v0.6.0
+- package: github.com/containernetworking/plugins
+  version: v0.7.5
+- package: github.com/intel/multus-cni
+  version: 8bf358071ab54b8f38d10027ccf81a29dfb78b3d
+- package: github.com/intel/sriov-cni
+  version: a87cb21e2f4aadedec7021eefa45523af51071ac
+

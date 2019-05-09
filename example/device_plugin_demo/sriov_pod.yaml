@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sriov-pod
+  namespace: example-sriov
+  labels:
+    env: test
+  annotations:
+    danm.k8s.io/interfaces: |
+      [
+        {"network":"management", "ip":"dynamic"},
+        {"network":"sriov-a", "ip":"none"},
+        {"network":"sriov-b", "ip":"none"}
+      ]
+spec:
+  containers:
+  - name: sriov-pod
+    image: busybox:latest
+    args:
+      - sleep
+      - "1000"
+    resources:
+      requests:
+        nokia.k8s.io/sriov_ens1f0: '1'
+        nokia.k8s.io/sriov_ens1f1: '1'
+      limits:
+        nokia.k8s.io/sriov_ens1f0: '1'
+        nokia.k8s.io/sriov_ens1f1: '1'
+  nodeSelector:
+    sriov: enabled

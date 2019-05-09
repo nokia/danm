@@ -1,29 +1,32 @@
 package cnidel
 
-import (  
+import (
   "errors"
   "log"
   "os"
-  "path/filepath"
+  "strconv"
   "strings"
+  "path/filepath"
   "github.com/containernetworking/cni/pkg/invoke"
   "github.com/containernetworking/cni/pkg/types"
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/version"
   "github.com/nokia/danm/pkg/danmep"
+  "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/ipam"
-  danmtypes "github.com/nokia/danm/pkg/crd/apis/danm/v1"
-  danmclientset "github.com/nokia/danm/pkg/crd/client/clientset/versioned"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+  LegacyNamingScheme = "legacy"
 )
 
 var (
   ipamType = "fakeipam"
   defaultDataDir = "/var/lib/cni/networks"
-  flannelBridge = getEnv("FLANNEL_BRIDGE", "cbr0")
-  dpdkNicDriver = os.Getenv("DPDK_NIC_DRIVER")
-  dpdkDriver = os.Getenv("DPDK_DRIVER")
-  dpdkTool = os.Getenv("DPDK_TOOL")
+  flannelBridge = GetEnv("FLANNEL_BRIDGE", "cbr0")
 )
 
 // IsDelegationRequired decides if the interface creation operations should be delegated to a 3rd party CNI, or can be handled by DANM
@@ -31,9 +34,13 @@ var (
 func IsDelegationRequired(danmClient danmclientset.Interface, nid, namespace string) (bool,*danmtypes.DanmNet,error) {
   netInfo, err := danmClient.DanmV1().DanmNets(namespace).Get(nid, meta_v1.GetOptions{})
   if err != nil || netInfo.ObjectMeta.Name == ""{
-    return false, nil, errors.New("NID:" + nid + " in namespace:" + namespace + " cannot be GET from K8s API server!")
+    var detailedErrorMessage string
+    if err != nil {
+      detailedErrorMessage = err.Error()
+    }
+    return false, nil, errors.New("NID:" + nid + " in namespace:" + namespace + " cannot be GET from K8s API server, because of error:" + detailedErrorMessage)
   }
-  neType := netInfo.Spec.NetworkType
+  neType := strings.ToLower(netInfo.Spec.NetworkType)
   if neType == "ipvlan" || neType == "" {
     return false, netInfo, nil
   }
@@ -42,7 +49,7 @@ func IsDelegationRequired(danmClient danmclientset.Interface, nid, namespace str
 
 // DelegateInterfaceSetup delegates K8s Pod network interface setup task to the input 3rd party CNI plugin
 // Returns the CNI compatible result object, or an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
-func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (*current.Result,error) {
+func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (*current.Result,error) {
   var (
     err error
     ipamOptions danmtypes.IpamConfig
@@ -50,11 +57,19 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
   if isIpamNeeded(netInfo.Spec.NetworkType) {
    ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6, _, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
-      return nil, errors.New("IP address reservation failed for network:" + netInfo.Spec.NetworkID + " with error:" + err.Error())
+      return nil, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }
-    ipamOptions = getCniIpamConfig(netInfo.Spec.Options, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+   //TODO: as netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
+   //Therefore, anyone wishing to further update the same DanmNet later on will use an outdated representation as the input.
+   //IPAM should be refactored to always pass back the up-to-date DanmNet object.
+   //I guess it is okay now because we only want to free IPs, and RV differences are resolved by the generated client code.
+   //log.Println("inside cnidel testnet alloc after:" + netInfo.Spec.Options.Alloc)
+    ipamOptions, err = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    if err != nil {
+      return nil, errors.New("IPAM config creation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
+    }
   }
-  rawConfig, err := getCniPluginConfig(netInfo, ipamOptions, ep)
+  rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamOptions, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, err
@@ -65,72 +80,85 @@ func DelegateInterfaceSetup(danmClient danmclientset.Interface, netInfo *danmtyp
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, errors.New("Error delegating ADD to CNI plugin:" + cniType + " because:" + err.Error())
   }
-  delegatedResult := ConvertCniResult(cniResult)
-  if delegatedResult != nil {
-    setEpIfaceAddress(delegatedResult, &ep.Spec.Iface)
+  if cniResult != nil {
+    setEpIfaceAddress(cniResult, &ep.Spec.Iface)
   }
   err = danmep.CreateRoutesInNetNs(*ep, netInfo)
   if err != nil {
     // We don't consider this serious error, so we only log a warning about the issue.
     log.Println("WARNING: Could not create IP routes for CNI:" + cniType + " because:" + err.Error())
   }
-  return delegatedResult, nil
+  return cniResult, nil
 }
 
 func isIpamNeeded(cniType string) bool {
-  for _, cni := range supportedNativeCnis {
-    if cni.BackendName == cniType {
-      return cni.ipamNeeded
-    }
-  }
-  return false
-}
-
-func getCniIpamConfig(options danmtypes.DanmNetOption, ip4, ip6 string) danmtypes.IpamConfig {
-  var (
-    subnet string
-    ip string
-  )
-  if options.Cidr != "" {
-    ip = ip4
-    subnet = options.Cidr
+  if cni, ok := supportedNativeCnis[strings.ToLower(cniType)]; ok {
+    return cni.ipamNeeded
   } else {
-    ip = ip6
-    subnet = options.Net6
-  }
-  return danmtypes.IpamConfig {
-    Type: ipamType,
-    Subnet: subnet,
-    Ip: strings.Split(ip, "/")[0],
+    return false
   }
 }
 
-func getCniPluginConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
-  cniType := netInfo.Spec.NetworkType
-  for _, cni := range supportedNativeCnis {
-    if cni.BackendName == cniType {
-      return cni.readConfig(netInfo, ipamOptions, ep)
-    }
+func IsDeviceNeeded(cniType string) bool {
+  if cni, ok := supportedNativeCnis[strings.ToLower(cniType)]; ok {
+    return cni.deviceNeeded
+  } else {
+    return false
   }
-  return readCniConfigFile(netInfo)
 }
 
-func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep *danmtypes.DanmEp) (types.Result,error) {
+func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (danmtypes.IpamConfig, error) {
+  var ipSlice = []danmtypes.IpamIp{}
+  if ip4 == "" && ip6 == "" && netinfo.Spec.NetworkType != "sriov" {
+    return danmtypes.IpamConfig{}, errors.New("unfortunetaly 3rd party CNI plugins usually don't support foregoing putting any IPs on an interface, so with heavy hearts but we need to fail this network delegation operation")
+  }
+  if ip4 != "" {
+    ipSlice = append(ipSlice, danmtypes.IpamIp{
+                                IpCidr: ip4,
+                                Version: 4,
+                              })
+  }
+  if ip6 != "" {
+    ipSlice = append(ipSlice, danmtypes.IpamIp{
+                                IpCidr: ip6,
+                                Version: 6,
+                              })
+  }
+  return  danmtypes.IpamConfig{
+            Type: ipamType,
+            Ips: ipSlice,
+          }, nil
+}
+
+func getCniPluginConfig(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
+  if cni, ok := supportedNativeCnis[strings.ToLower(netInfo.Spec.NetworkType)]; ok {
+    return cni.readConfig(netInfo, ipamOptions, ep, cni.CNIVersion)
+  } else {
+    return readCniConfigFile(netConf.CniConfigDir, netInfo)
+  }
+}
+
+func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep *danmtypes.DanmEp) (*current.Result,error) {
   cniPath, cniArgs, err := getExecCniParams(cniType, netInfo, ep)
   if err != nil {
-    return nil, err
+    return nil, errors.New("exec CNI params couldn't be gathered:" + err.Error())
   }
   exec := invoke.RawExec{Stderr: os.Stderr}
   rawResult, err := exec.ExecPlugin(cniPath, rawConfig, cniArgs)
   if err != nil {
-    return nil, err
+    return nil, errors.New("OS exec call failed:" + err.Error())
   }
   versionDecoder := &version.ConfigDecoder{}
-  confVersion, err := versionDecoder.Decode(rawConfig)
-  if err != nil {
-    return nil, err
+  confVersion, err := versionDecoder.Decode(rawResult)
+  if err != nil || rawResult == nil {
+    return &current.Result{}, nil
   }
-  return version.NewResult(confVersion, rawResult)
+  convertedResult, err := version.NewResult(confVersion, rawResult)
+  if err != nil || convertedResult == nil {
+    return &current.Result{}, nil
+  }
+  finalResult := convertCniResult(convertedResult)
+  return finalResult, nil
 }
 
 func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (string,[]string,error) {
@@ -139,13 +167,14 @@ func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, ep *danmtypes.
   if err != nil {
     return "", nil, err
   }
-  cniArgs := []string{
+  cniArgs := []string {
     "CNI_COMMAND="     + os.Getenv("CNI_COMMAND"),
     "CNI_CONTAINERID=" + os.Getenv("CNI_CONTAINERID"),
     "CNI_NETNS="       + os.Getenv("CNI_NETNS"),
     "CNI_IFNAME="      + ep.Spec.Iface.Name,
     "CNI_ARGS="        + os.Getenv("CNI_ARGS"),
     "CNI_PATH="        + os.Getenv("CNI_PATH"),
+    "PATH="            + os.Getenv("PATH"),
   }
   return cniPath, cniArgs, nil
 }
@@ -163,14 +192,14 @@ func setEpIfaceAddress(cniResult *current.Result, epIface *danmtypes.DanmEpIface
 
 // DelegateInterfaceDelete delegates Ks8 Pod network interface delete task to the input 3rd party CNI plugin
 // Returns an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
-func DelegateInterfaceDelete(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
-  rawConfig, err := getCniPluginConfig(netInfo, danmtypes.IpamConfig{Type: ipamType}, ep)
+func DelegateInterfaceDelete(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
+  rawConfig, err := getCniPluginConfig(netConf, netInfo, danmtypes.IpamConfig{Type: ipamType}, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return err
   }
   cniType := netInfo.Spec.NetworkType
-  err = invoke.DelegateDel(cniType, rawConfig)
+  _, err = execCniPlugin(cniType, netInfo, rawConfig, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return errors.New("Error delegating DEL to CNI plugin:" + cniType + " because:" + err.Error())
@@ -194,7 +223,7 @@ func freeDelegatedIp(danmClient danmclientset.Interface, netInfo *danmtypes.Danm
   if isIpamNeeded(netInfo.Spec.NetworkType) && ip != "" {
     err := ipam.Free(danmClient, *netInfo, ip)
     if err != nil {
-      return errors.New("cannot give back ip address for NID:" + netInfo.Spec.NetworkID + " addr:" + ip)
+      return errors.New("cannot give back ip address for DanmNet:" + netInfo.ObjectMeta.Name + " addr:" + ip)
     }
   }
   return nil
@@ -212,7 +241,7 @@ func flannelIpExhaustionWorkaround(ip string) {
 
 // ConvertCniResult converts a CNI result from an older API version to the latest format
 // Returns nil if conversion is unsuccessful
-func ConvertCniResult(rawCniResult types.Result) *current.Result {
+func convertCniResult(rawCniResult types.Result) *current.Result {
   convertedResult, err := current.NewResultFromResult(rawCniResult)
   if err != nil {
     log.Println("Delegated CNI result could not be converted:" + err.Error())
@@ -221,7 +250,7 @@ func ConvertCniResult(rawCniResult types.Result) *current.Result {
   return convertedResult
 }
 
-func getEnv(key, fallback string) string {
+func GetEnv(key, fallback string) string {
   if value, doesExist := os.LookupEnv(key); doesExist {
     return value
   }
@@ -231,9 +260,17 @@ func getEnv(key, fallback string) string {
 // CalculateIfaceName decides what should be the name of a container's interface.
 // If a name is explicitly set in the related DanmNet API object, the NIC will be named accordingly.
 // If a name is not explicitly set, then DANM will name the interface ethX where X=sequence number of the interface
-func CalculateIfaceName(chosenName, defaultName string) string {
+// When legacy naming scheme is configured container_prefix behaves as the exact name of an interface, rather than its name suggest
+func CalculateIfaceName(namingScheme, chosenName, defaultName string, sequenceId int) string {
+  //Kubelet expects the first interface to be literally named "eth0", so...
+  if sequenceId == 0 {
+    return "eth0"
+  }
   if chosenName != "" {
+    if namingScheme != LegacyNamingScheme {
+      chosenName += strconv.Itoa(sequenceId)
+    }
     return chosenName
   }
-  return defaultName 
+  return defaultName + strconv.Itoa(sequenceId)
 }

@@ -1,4 +1,4 @@
-FROM alpine:3.8
+FROM alpine:latest
 MAINTAINER Levente Kale <levente.kale@nokia.com>
 
 COPY svcwatcher /usr/local/bin/svcwatcher

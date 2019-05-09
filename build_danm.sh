@@ -30,9 +30,9 @@ error_handler()
   exit $1
 }
 
-if [ -x "$(command -v buildah)" ]; then
+if [[ ( "$TRAVIS_PIPELINE" = "buildah" ) || ( "$TRAVIS_PIPELINE" = ""  && -x "$(command -v buildah)" ) ]]; then
   source ./build_buildah.sh
-elif [ -x "$(command -v docker)" ]; then
+elif [[ ( "$TRAVIS_PIPELINE" = "docker" ) || ( "$TRAVIS_PIPELINE" = ""  && -x "$(command -v docker)" ) ]]; then
   source ./build_docker.sh
 else
  echo 'The build process requires docker or buildah/podman installed. Please install any of these and make sure these are executable'

@@ -1,9 +1,8 @@
 # DANM
 [![Build Status](https://travis-ci.org/nokia/danm.svg?branch=master)](https://travis-ci.org/Nokia/danm)
-<img src="https://github.com/nokia/danm/raw/master/logo.png" width="100">
+[![Unit Test Coverage](https://coveralls.io/repos/github/nokia/danm/badge.svg?branch=master)](https://coveralls.io/github/nokia/danm?branch=master)
 
-## Don't like reading? Then start by watching our demo video!
-[Demo](example/danm_demo.mp4)
+<img src="https://github.com/nokia/danm/raw/master/logo.png" width="100">
 
 ## Table of Contents
 * [Table of Contents](#table-of-contents)
@@ -17,6 +16,7 @@
 * [Deployment](#deployment)
 * [User guide](#user-guide)
   * [Usage of DANM's CNI](#usage-of-danms-cni)
+    * [Configuring DANM](#configuring-danm)
     * [Network management](#network-management)
     * [Generally supported DANM API features](#generally-supported-danm-api-features)
       * [Naming container interfaces](#naming-container-interfaces)
@@ -27,7 +27,10 @@
       * [Connecting Pods to DanmNets](#connecting-pods-to-danmnets)
       * [Internal workings of the metaplugin](#internal-workings-of-the-metaplugin)
     * [DANM IPAM](#danm-ipam)
+      * [IPv6 and dual-stack support](#ipv6-and-dual-stack-support)
     * [DANM IPVLAN CNI](#danm-ipvlan-cni)
+    * [Device Plugin Support](#device-plugin-support)
+      * [Using Intel SR-IOV CNI](#using-intel-sriov-cni)
   * [Usage of DANM's Netwatcher component](#usage-of-danms-netwatcher-component)
   * [Usage of DANM's Svcwatcher component](#usage-of-danms-svcwatcher-component)
     * [Feature description](#feature-description)
@@ -88,7 +91,7 @@ CNI configurations are always transparent for Multus.
 
 Whereas **DANM** is an E2E suite implementing one, big solution to a whole array of specific networking related features TelCo applications usually demand.
 While Multus always delegates, DANM implements a lot of these functionalities on its own (but still being capable of delegating sub-tasks whenever it is configured to).
-All components of DANM are mainly driven by and tightly coupled with a CRD-based proprietary Kubernetes API schema called DanmNet.
+All components of DANM are mainly driven by and tightly coupled with a CRD-based Kubernetes network management API called DanmNet.
 DANM actively interprets and mutates CNI configurations, even when it delegates network provisioning operations to other CNIs.
 
 So, basically it is up to you to decide which solution is better suited to your needs. If you would like to remain close to the original networking ideals of Kubernetes, and only want to provision multiple network interfaces to your Pod, you might go with Multus.
@@ -98,7 +101,7 @@ If you are not afraid of going against the grain, and looking for a coupled E2E 
 ### Prerequisites
 
 As all the features of DANM are based on Kubernetes, you will need a Kubernetes cluster up-and running before you can use any components of the DANM suite. We suggest to use any of the automated Kubernetes installing solutions (kubeadm, minikube etc.) for a painless experience.
-We currently test DANM with Kubernetes 1.11.X.
+We currently test DANM with Kubernetes 1.14.X.
 Compatibility with earlier than 1.9.X versions of Kubernetes is not officially supported.
 Compatibility with newer versions of Kubernetes is not tested (theoretically it should work though, considering our project uses the official REST client generator created by the K8s community).
 
@@ -110,11 +113,11 @@ Note, that the project itself depends on Golang 1.10+ and glide being available,
 
 It is actually as easy as go get-ting the repository from GitHub, and executing the build_danm.sh script from the root of the project!
 ```
-go get https://github.com/nokia/danm
+go get -d github.com/nokia/danm
 cd $GOPATH/src/github.com/nokia/danm
 ./build_danm.sh
 ```
-This will first build the Alpine 3.8 based builder container, mount the $GOPATH/src and the $GOPATH/bin directory into it, and invoke the necessary script to build all binaries inside the container.
+This will first build the Alpine based builder container, mount the $GOPATH/src and the $GOPATH/bin directory into it, and invoke the necessary script to build all binaries inside the container.
 The builder container destroys itself once its purpose has been fulfilled.
 
 The result will be 4, statically linked binaries put into your $GOPATH/bin directory.
@@ -153,17 +156,11 @@ The method of deploying the whole DANM suite into a Kubernetes cluster is the fo
 ```
 kubectl create -f integration/crds/
 ```
-**2. Put the following CNI config file into the CNI configuration directory of all your kubelet nodes' (by default it is /etc/cni/net.d/):**
-```
-/ # cat /etc/cni/net.d/00-danm.conf
-{
-  "name": "meta_cni",
-  "type": "danm",
-  "kubeconfig": "<PATH_TO_VALID_KUBECONFIG_FILE>"
-}
-```
+**2. Put a valid CNI config file into the CNI configuration directory of all your kubelet nodes' (by default it is /etc/cni/net.d/) based on:**
+[cniconfig](https://github.com/nokia/danm/tree/master/integration/cni_config/00-danm.conf)
 The parameter "kubeconfig" is mandatory, and shall point to a valid kubeconfig file.
 As kubelet considers the first .conf file in the configured directory as the valid CNI config of the cluster, it is generally a good idea to prefix the .conf file of any CNI metaplugin with "00".
+Make sure to configure the optional DANM configuration parameters to match your environment! 
 
 **3. Copy the "danm" binary into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/):**
 ```
@@ -202,6 +199,12 @@ We use Flannel for this purpose in our product. We also assume here the RBAC as 
 This section describes what features the DANM networking suite adds to a vanilla Kubernetes environment, and how can users utilize them.
 
 ### Usage of DANM's CNI
+#### Configuring DANM
+As DANM becomes more and more complex, we offer some level of control over the internal behaviour of how network provisioning is done.
+Unless stated otherwise, DANM behaviour can be configured purely through its CNI configuration file.
+The following configuration options are currently supported:
+ - cniDir: Users can define where should DANM search for the CNI config files for static delegates. Default value is /etc/cni/net.d
+ - namingScheme: if it is set to legacy container network interface names are set exactly to DanmNet.Spec.Options.container_prefix. Otherwise refer to [Naming container interfaces](#naming-container-interfaces) for details"
 #### Network management
 The DANM CNI is a full-fledged CNI metaplugin, capable of provisioning multiple network interfaces to a Pod, on-demand!
 DANM can utilize any of the existing and already integrated CNI plugins to do so.
@@ -233,27 +236,32 @@ Spec:
   Network Type:  ipvlan
   Options:
     Allocation _ Pool:
-      End: 192.168.1.10
-      Start: 192.168.1.100
+      Start: 192.168.1.10
+      End: 192.168.1.100
     Container _ Prefix:  eth0
     Host _ Device:       ens4
     Rt _ Tables:         201
   Validation:            True
 Events:                  <none>
 ```
+
+__BE WARNED: DANM stores pretty important information in DanmNet objects. Under no circumstances shall a DanmNet be deleted, if there are any runnning Pods referencing it!__
+__Such action will undoubtedly lead to ruin and DANMation!__
 #### Generally supported DANM API features
 ##### Naming container interfaces
 Generally speaking, you need to care about how the network interfaces of your Pods are named inside their respective network namespaces.
 The hard reality to keep in mind is that you shall always have an interface literally called "eth0" created within all your Kubernetes Pods, because Kubelet will always search for the existence of such an interface at the end of Pod instantiation.
-If such an interface does not exist after CNI is invoked, the state of the Pod will be considered "faulty", and it will be re-created in a loop.
-To be able to comply with this Kubernetes limitation, DANM supports both explicit, and implicit interface naming schemes for all NetworkTypes!
+If such an interface does not exist after CNI is invoked (also having an IPv4 address), the state of the Pod will be considered "faulty", and it will be re-created in a loop.
+To be able to comply with this Kubernetes limitation, DANM always names the first container interface "eth0", regardless of your intention.
+Sorry, but they made us do it :)
 
-An interface connected to a DanmNet containing the container_prefix attribute will be always named accordingly. You can use this API to explicitly set descriptive, unique names to NICs connecting to this network.
-In case container_prefix is not set in an interface's network descriptor, DANM will automatically name the interface "ethX", where X is a unique integer number corresponding to the sequence number of the network connection (e.g. the first interface defined in the annotation is called "eth0", second interface "eth1" etc.)
+However, DANM also supports both explicit, and implicit interface naming schemes for all NetworkTypes to help you flexibly name the other interfaces!
+An interface connected to a DanmNet containing the container_prefix attribute is always named accordingly. You can use this API to explicitly set descriptive, unique names to NICs connecting to this network.
+In case container_prefix is not set in an interface's network descriptor, DANM automatically uses the "eth" as the prefix when naming the interface.
+Regardless which prefix is used, the interface name is also suffixed with an integer number corresponding to the sequence number of the network connection (e.g. the first interface defined in the annotation is called "eth0", second interface "eth1" etc.)
 DANM even supports the mixing of the networking schemes within the same Pod, and it supports the whole naming scheme for all network backends.
-While the feature provides complete control over the name of interfaces, ultimately it is the network administrators' responsibility to:
- - make sure exactly one interface is named eth0 in every Pod
- - don't configure multiple NICs into the same Pod with clashing names (e.g. provisioning two implicitly named interfaces, and then a third one explicitly named "eth0", or "eth1" etc.)
+This enables network administrators to even connect Pods to the same network more than once!
+
 ##### Provisioning static IP routes
 We recognize that not all networking involves an overlay technology, so provisioning IP routes directly into the Pod's network namespace needs to be generally supported.
 Network administrators can define routing rules for both IPv4, and IPv6 destination subnets under the "routes", and "routes6" attributes respectively.
@@ -271,7 +279,7 @@ Pay special attention to the DanmNet attribute called "NetworkType". This parame
 In case this parameter is set to "ipvlan", or is missing; then DANM's in-built IPVLAN CNI plugin creates the network (see next chapter for details).
 In case this attribute is provided and set to another value than "ipvlan", then network management is delegated to the CNI plugin with the same name.
 The binary will be searched in the configured CNI binary directory.
-Example: when a Pod is created and requests a network connection to a DanmNet with "NetworkType" set to "flannel", then DANM will delegate the creation of this network interface to the /opt/cni/bin/flannel binary.
+Example: when a Pod is created and requests a network connection to a DanmNet with "NetworkType" set to "flannel", then DANM will delegate the creation of this network interface to the <CONFIGURED_CNI_PATH_IN_KUBELET>/flannel binary.
 ##### Creating the configuration for delegated CNI operations
 We strongly believe that network management in general should be driven by one, generic API. Therefore, DANM is capable to "translate" the generic options coming from a DanmNet object into the specific "language" the delegated CNI plugin understands.
 This way users can dynamically configure various networking solutions via the same, abstract interface without caring about how a specific option is called exactly in the terminology of the delegated solution.
@@ -280,13 +288,13 @@ A generic framework supporting this method is built into DANM's code, but still 
 As a result, DANM currently supports two integration levels:
 
  - **Dynamic integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be controlled on a per network level, taken directly from a DanmNet object
- - **Static integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be only configured on a per node level, via a static CNI configuration files (Note: this is the default CNI configuration method)
+ - **Static integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be only configured via static CNI configuration files (Note: this is the default CNI configuration method)
 
 Our aim is to integrate all the popular CNIs into the DANM eco-system over time, but currently the following CNI's achieved dynamic integration level:
 
  - DANM's own, in-built IPVLAN CNI plugin
 	 - Set the "NetworkType" parameter to value "ipvlan" to use this backend
-- Intel's DPDK-capable [SR-IOV CNI plugin](https://github.com/intel/sriov-cni )
+- Intel's [SR-IOV CNI plugin](https://github.com/intel/sriov-cni )
 	- Set the "NetworkType" parameter to value "sriov" to use this backend
 - Generic MACVLAN CNI from the CNI plugins example repository [MACVLAN CNI plugin](https://github.com/containernetworking/plugins/blob/master/plugins/main/macvlan/macvlan.go )
 	- Set the "NetworkType" parameter to value "macvlan" to use this backend
@@ -294,9 +302,12 @@ Our aim is to integrate all the popular CNIs into the DANM eco-system over time,
 No separate configuration needs to be provided to DANM when it connects Pods to DanmNets, if the network is backed by a CNI plugin with dynamic integration level.
 Everything happens automatically based on the DanmNet API itself!
 
-When network management is delegated to CNI plugins with static integration level; DANM will read their configuration from the configured CNI config directory.
-For example, when a Pod is connected to a DanmNet with "NetworkType" set to "flannel", DANM will pass the content of /etc/cni/net.d/flannel.conf file to the /opt/cni/bin/flannel binary by invoking a standard CNI operation.
-Generally supported DANM API-based features are configured even in this case.
+When network management is delegated to CNI plugins with static integration level; DANM reads their configuration from the configured CNI config directory.
+The directory can be configured via setting the "CNI_CONF_DIR" environment variable in DANM CNI's context (be it in the host namespace, or inside a Kubelet container). Default value is "/etc/cni/net.d".
+In case there are multiple configuration files present for the same backend, users can control which one is used in a specific network provisioning operation via the NetworkID DanmNet parameter.
+
+So, all in all: a Pod connecting to a DanmNet with "NetworkType" set to "bridge", and "NetworkID" set to "example_network" gets an interface provisioned by the <CONFIGURED_CNI_PATH_IN_KUBELET>/bridge binary based on the <CNI_CONF_DIR>/example_network.conf file!
+In addition to simply delegating the interface creation operation, generally supported DANM API-based features -such as static and dynamic IP route provisioning, flexible interface naming- are also configured by DANM.
 ##### Connecting Pods to DanmNets
 Pods can request network connections to DanmNets by defining one or more network connections in the annotation of their (template) spec field, according to the schema described in the **schema/network_attach.yaml** file.
 
@@ -329,11 +340,23 @@ Network administrators can simply put the CIDR, and the allocation pool into the
 
 The flexible IPAM module also allows Pods to define the IP allocation scheme best suited for them. Pods can ask dynamically allocated IPs from the defined allocation pool, or can ask for one, specific, static address.
 The application can even ask DANM to forego the allocation of any IPs to their interface in case a L2 network interface is required.
+##### IPv6 and dual-stack support
+DANM's IPAM module, and its integration to dynamic backends -IPVLAN, MACVLAN, and SR-IOV CNIs- support both IPv6, and dual-stack (one IPv4, and one IPv6 address provisioned to the same interface) addresses!
+To configure an IPv6 CIDR for a DanmNet, network amdinistrator shall configure the "net6" attribute. Additionally, IP routes for IPv6 subnets can be configured via "routes6".
+If both "cidr", and "net6" are configured for a DanmNet, then Pods connecting to that network can ask either one IPv4 or IPv6 address, or even both at the same time!
+
+That being said, network administrators using IPv6, or dual-stack features need to be aware of the current restrictions of the solution:
+* dynamic IPs are randomly allocated from the defined IPv6 subnet according to the following algorithm:
+  * the IP is prefixed with the net6 parameter of the network
+  * MAC address is randomly generated for the EUI64
+* the smallest supported IPv6 subnet is /64
+* allocation pools cannot be defined for IPv6 subnets
+
 #### DANM IPVLAN CNI
 DANM's IPVLAN CNI uses the Linux kernel's IPVLAN module to provision high-speed, low-latency network interfaces for applications which need better performance than a bridge (or any other overlay technology) can provide.
 
 *Keep in mind that the IPVLAN module is a fairly recent addition to the Linux kernel, so the feature cannot be used on systems whose kernel is older than 4.4!
-4.9, 4.11, or 4.14 would be even better (lotta bug fixes)*
+4.14+ would be even better (lotta bug fixes)*
 
 The CNI provisions IPVLAN interfaces in L2 mode, and supports the following extra features:
 * attaching IPVLAN sub-interfaces to any host interface
@@ -342,6 +365,78 @@ The CNI provisions IPVLAN interfaces in L2 mode, and supports the following extr
 * allocating IP addresses by using DANM's flexible, in-built IPAM module
 * provisioning generic IP routes into a configured routing table inside the Pod's network namespace
 * Pod-level controlled provisioning of policy-based IP routes into Pod's network namespace
+#### Device Plugin support
+DANM provides general support to CNIs which interwork with Kubernetes' Device Plugin mechanism such as SR-IOV CNI.
+When a properly configured Network Device Plugin runs, the allocatable resource list for the node should be updated with resource discovered by the plugin.
+##### Using Intel SR-IOV CNI
+SR-IOV Network Device Plugin allows to create a list of *netdevice* type resource definitions with *sriovMode*, where each resource definition can have one or more assigned *rootDevice* (Physical Function). The plugin looks for Virtual Funtions (VF) for each configured Physical Function (PF) and adds all discovered VF to the allocatable resource's list of the given Kubernetes Node. The Device Plugin resource name will be the device pool name on the Node. These device pools can be referred in Pod definition's resource request part on the usual way.
+
+In the following example, the "nokia.k8s.io/sriov_ens1f0" device pool name consists of the "nokia.k8s.io" prefix and "sriov_ens1f0" resourceName.
+
+For more information consult the plugin's users guide.
+```
+kubectl get nodes 172.30.101.104 -o json | jq '.status.allocatable'
+{
+  "cpu": "48",
+  "ephemeral-storage": "48308001098",
+  "hugepages-1Gi": "16Gi",
+  "memory": "246963760Ki",
+  "nokia.k8s.io/default": "0",
+  "nokia.k8s.io/sriov_ens1f0": "8",
+  "nokia.k8s.io/sriov_ens1f1": "8",
+  "pods": "110"
+}
+```
+DanmNet's schema definition contains an optional device_pool field where a specific device pool can be assigned to the given DanmNet.
+Before DANM invokes a CNI which expects a given resource to be attached to the Pod, it gathers all available device IDs from the DanmNet's device pool and passes one ID from the list to the CNI.
+
+The following DanmNet definition shows how to configure device_pool parameter for sriov network type.
+```
+apiVersion: danm.k8s.io/v1
+kind: DanmNet
+metadata:
+  name: sriov-a
+  namespace: example-sriov
+spec:
+  NetworkID: sriov-a
+  NetworkType: sriov
+  Options:
+    host_device: ens1f0
+    device_pool: "nokia.k8s.io/sriov_ens1f0"
+```
+The following Pod definition shows how to create resource request for each sriov type DanmNet.
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sriov-pod
+  namespace: example-sriov
+  labels:
+    env: test
+  annotations:
+    danm.k8s.io/interfaces: |
+      [
+        {"network":"management", "ip":"dynamic"},
+        {"network":"sriov-a", "ip":"none"},
+        {"network":"sriov-b", "ip":"none"}
+      ]
+spec:
+  containers:
+  - name: sriov-pod
+    image: busybox:latest
+    args:
+      - sleep
+      - "1000"
+    resources:
+      requests:
+        nokia.k8s.io/sriov_ens1f0: '1'
+        nokia.k8s.io/sriov_ens1f1: '1'
+      limits:
+        nokia.k8s.io/sriov_ens1f0: '1'
+        nokia.k8s.io/sriov_ens1f1: '1'
+  nodeSelector:
+    sriov: enabled
+```
 
 ### Usage of DANM's Netwatcher component
 Netwatcher is a mandatory component of the DANM networking suite.

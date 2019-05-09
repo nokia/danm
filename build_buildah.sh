@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo 'Building DANM builder container'
-buildah bud --no-cache -t danm_builder:1.0 build/
+buildah bud --no-cache -t danm_builder:1.0 scm/build
 
 echo 'Running DANM build'
 build_container=$(buildah from danm_builder:1.0)

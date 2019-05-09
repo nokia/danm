@@ -12,67 +12,93 @@ metadata:
   # MANDATORY - STRING
   namespace: ## NS_NAME  ##
 spec:
-  # This parameter will be used in application description templates for referring to a desired connection point
-  # Currently this parameter shall exactly match with the name of DanmNet object itself
+  # This parameter provides a second identifier for DanmNets, and can be used to control a number of API features.
+  # For static delegates, the parameter configures which CNI configuration file is to be used if NetworkType points to a static-level CNI backend.
+  # For dynamic delegates, VxLAN host interfaces are suffixed, while VLAN host interfaces are prefixed with the NetworkID.
+  # This allows deployment administrators to separate their own interfaces from others' in a multi-tenant environment, e.g. by setting NetworkID to "name_namespace" value.
   # MANDATORY - STRING
   NetworkID: ## NETWORK_NAME  ##
   # This parameter, if present, denotes which backend willl be used to provision the container interfaces connected to this network.
   # Currently supported values with dynamic integration level are IPVLAN (default), SRIOV, or MACVLAN.
   # - IPVLAN option results in an IPVLAN sub-interface provisioned in L2 mode, and connected to the designated host device
-  # - SRIOV option pushes an already existing Virtual Function of the configured host device to the container's netns
+  # - SRIOV option pushes a pre-allocated Virtual Function of the configured host device to the container's netns
   # - MACVLAN option results in a MACVLAN sub-interface provisioned in bridge mode, and connected to the designated host device
-  # For any other CNI backend DANM will read their configuration from the configured CNI config directory.
-  # E.g. when a Pod is connected to a DanmNet with "NetworkType" set to "flannel", DANM will pass the content of /etc/cni/net.d/flannel.conf file to the /opt/cni/bin/flannel binary by invoking a standard CNI operation.
-  # The default IPVLAN backend will be used if this parameter is not specified.
-  # OPTIONAL - ONE OF {ipvlan,sriov,<NAME_OF_STATIC_LEVEL_CNI_BINARY>}
+  # For any other CNI backend DANM reads their configuration from the configured CNI config directory (value of "CNI_CONF_DIR" environment variable, default is "/etc/cni/net.d")
+  # E.g. a Pod connecting to a DanmNet with "NetworkType" set to "bridge", and "NetworkID" set to "example_network" gets an interface provisioned by the <CONFIGURED_CNI_PATH_IN_KUBELET>/bridge binary based on the <CNI_CONF_DIR>/example_network.conf file
+  # The default IPVLAN backend is used when this parameter is not specified.
+  # OPTIONAL - ONE OF {ipvlan,sriov,macvlan,<NAME_OF_ANY_STATIC_LEVEL_CNI_COMPLIANT_BINARY>}
   # DEFAULT VALUE: ipvlan
   NetworkType: ## BACKEND_TYPE ##
-  # Specific dynamic configuration options can be passed to the network provisioning backends.
-  # Dynamic configuration is supported only for IPVLAN, and SRIOV backends.
-  # Other networks are always provisioned from static configuration. Options are silently ignored if NetworkType is set to a non-dynamically integrated backend.
+  # Specific extra configuration options can be passed to the network provisioning backends.
+  # Most of the parameters are only supported for level dynamic level backends, such as IPVLAN, MACVLAN, and SRIOV.
+  # Other network interfaces are always provisioned based on static CNI configuration files.
+  # The exceptional attributes are "rt_tables", "container_prefix", and "routes". DANM generally supports the features related to these parameters for all CNI backends.
   Options:
     # Name of the parent host device (i.e. physical host NIC).
     # Sub-interfaces are connected to this NIC in case NetworkType is set to IPVLAN, or MACVLAN.
-    # A Virtual Function belonging to this Physical Function is taken-up in case NetworkType is set to SRIOV.
+    # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
+    # Also ignored for SR-IOV, as the pre-allocated VF belonging to the configured Kubernetes Device pool is pushed into the connecting Pod's network namespace, regardless which Physical Funtion it belongs to.
     # OPTIONAL - STRING
     host_device: ## PARENT_DEVICE_NAME ##
+    # Name of a network Device Plugin resource pool
+    # The device_pool parameter generally represents the base resource name of the Kubernetes Devices connected to this network.
+    # Specifically for DanmNets with "NetworkType: sriov" this option is mandatory, and it represents the K8s Virtual Function Device pool connecting Pods are getting their VFs from.
+    # OPTIONAL - STRING
+    device_pool: ## DEVICE_PLUGIN_RESOURCE_POOL_MAME ##
     # The IPv4 CIDR notation of the subnet associated with the network.
-    # Pods connecting to this network will get their IPs from this subnet, if defined.
+    # Pods connecting to this network will get their IPv4 IP from this subnet, if defined.
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
-    # OPTIONAL - CIDR FORMAT (e.g. "10.0.0.0/24")
+    # OPTIONAL - IPv4 CIDR FORMAT (e.g. "10.0.0.0/24")
     cidr: ## SUBNET_CIDR ##
-    # IP allocation will be done according to the narrowed down allocation pool parameter, if defined.
-    # Allocation pool must be provided together with CIDR, and shall be aligned with the CIDR subnet range.
+    # IPv4 allocation will be done according to the narrowed down allocation pool parameter, if defined.
+    # Allocation pool must be provided together with "cidr", and shall be included in the subnet range.
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
-    # OPTIONAL - IPV4 FORMAT (e.g. "10.0.0.10")
+    # If CIDR is provided without defining an allocation pool, it is automatically calculated for the whole netmask (minus the first, and the last IP).
+    # When the network administrator sets the allocation pool, DANM assumes the non-usable IPs (e.g. broadcast IP etc.) were already discounted.
     allocation_pool:
       start: ## FIRST_ASSIGNABLE_IP ##
       end: ## LAST_ASSIGNABLE_IP ##
-    # Interfaces connected to this network will be renamed to "container_prefix" inside the container.
-    # If not provided, DANM will dynamically allocate a name for each container interface belonging to this network in Pod instantiation time.
-    # Generally supported parameter, works with all NetworkTypes.
+    # The IPv6 CIDR notation of the subnet associated with the network.
+    # Pods connecting to this network will get their IPv6s from this subnet, if defined.
+    # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
+    # OPTIONAL - IPv6 CIDR FORMAT (e.g. "2001:db8::/45"). Netmask of the subnet cannot be higher than /64 (i.e. /65 and upwards).
+    net6: ## SUBNET_CIDR ##
+    # Interfaces connected to this network are renamed inside the Pod's network namespace to a string starting with "container_prefix".
+    # If not provided, DANM uses "eth" as the prefix.
+    # In both cases DANM dynamically suffixes the interface names in Pod instantiation time with a unique integer number, corresponding to the sequence number of the interface during the specific network creation operation.
+    # Thus it becomes guaranteed no network interfaces will ever receive the same name, even if more than one belongs to the same DanmNet.
+    # Generally supported parameter, works with all NetworkTypes (except where the CNI backend itself is not following the CNI standard, such is the case with Flannel).
     # OPTIONAL - STRING
     container_prefix: ## INTERNAL_IF_NAME ##
-    # Policy-based IP routes belonging to this network will be installed in this routing table, if a Pod asks for them.
+    # Policy-based IP routes belonging to this network are installed into this routing table, when a user defines them in her Pod's network allocation annotation.
     # Generally supported parameter, works with all NetworkTypes.
     # OPTIONAL - INTEGER (e.g. 201)
     rt_tables: ## HOST_UNIQUE_ROUTING_TABLE_NUMBER ##
-    # IPv4 routes to be installed by default for all containers connected to this network
+    # IPv4 routes to be installed into the default routing table of all Pods connected to this network.
     # Generally supported parameter, works with all NetworkTypes.
+    # Note: some CNI backends, like Flannel might provision IP routes into the default routing table of a Pod on their own.
+    # Beware of clashes.
     # OPTIONAL - LIST OF DESTINATION_IPV4_CIDR:IPV4_GW ENTRIES (e.g. "10.20.0.0/24: 10.0.0.1")
     routes:
       ## IP_ROUTE_1 ##
       ## IP_ROUTE_2 ##
-    # If this parameter is present then traffic going through this network will be VxLAN tagged with the provided identifier
+    # IPv6 routes to be installed into the default routing table of all Pods connected to this network.
+    # Generally supported parameter, works with all NetworkTypes.
+    # OPTIONAL - LIST OF DESTINATION_IPV6_CIDR:IPV6_GW ENTRIES
+    routes6:
+      ## IP_ROUTE_1 ##
+      ## IP_ROUTE_2 ##
+    # When this parameter is present, traffic flowing through the connected network interfaces is VxLAN tagged with the provided virtual ID.
     # The VxLAN tag shall be unique on the level of the underlying host.
     # Management of the VxLAN interface is handled automatically by DANM. Provisioning is generally supported for all NetworkTypes.
-    # Only IPVLAN, and MACVLAN interfaces will be automatically connected to the provisioned VxLAN.
+    # Only IPVLAN, and MACVLAN interfaces are automatically connected to the provisioned VxLAN VTEP though.
+    # VLAN and VxLAN paramaters are mutually exclusive! Defining both in the same DanmNet will result in a validation error!
     # OPTIONAL - INTEGER (e.g. 50)
     vxlan: ## VXLAN_TAG ##
-    # If this parameter is present then traffic going through this network will be VLAN tagged with the provided identifier
+    # When this parameter is present, traffic flowing through the connected network interfaces is VLAN tagged with the provided identifier.
     # The VLAN ID shall be unique on the level of the underlying host.
     # Management of the VLAN interface is handled automatically by DANM. Provisioning is generally supported for all NetworkTypes.
-    # Only dynamically supported NetworkType interfaces will be automatically connected to the provisioned VLAN.
+    # Only dynamically supported NetworkType interfaces are automatically VLAN tagged though.
     # VLAN and VxLAN paramaters are mutually exclusive! Defining both in the same DanmNet will result in a validation error!
     # OPTIONAL - INTEGER (e.g. 4000)
     vlan: ## VLAN_TAG ##

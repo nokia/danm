@@ -13,8 +13,8 @@ import (
 func main() {
   cert := flag.String("tls-cert-bundle", "", "File containing the x509 Certificate for HTTPS. (CA cert, if any, concatenated after server cert).")
   key := flag.String("tls-private-key-file", "", "File containing the x509 private key matching --tls-cert-bundle.")
-  port := flag.Int("bind-port", 443, "The port on which to serve. Default is 443.")
-  address := flag.String("bind-address", "0.0.0.0", "The IP address on which to listen. Default is all interfaces.")
+  port := flag.Int("bind-port", 8443, "The port on which to serve. Default is 8443.")
+  address := flag.String("bind-address", "", "The IP address on which to listen. Default is all interfaces.")
   flag.Parse()
   if cert == nil || key == nil {
     log.Println("ERROR: Configuring TLS is mandatory, --tls-cert-bundle and --tls-private-key-file cannot be empty!")
@@ -32,5 +32,7 @@ func main() {
     ReadTimeout:  5 * time.Second,
     WriteTimeout: 5 * time.Second,
   }
-  server.ListenAndServeTLS("", "")
+  log.Println("INFO:DANM webhook is about to start listening on " + *address + ":" + strconv.Itoa(*port))
+  err = server.ListenAndServeTLS("", "")
+  log.Fatal(err)
 }

@@ -10,6 +10,7 @@ spec:
   template:
     metadata:
       annotations:
+        # Adapt to your own network environment!
         danm.k8s.io/interfaces: |
           [
             {
@@ -25,7 +26,7 @@ spec:
         "node-role.kubernetes.io/master": ""
       containers:
         - name: svcwatcher
-          image: svcwatcher:3.0.0
+          image: svcwatcher
           args:
             - "--logtostderr"
       tolerations:

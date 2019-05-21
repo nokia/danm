@@ -1,0 +1,76 @@
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: danm-webhook-config
+  namespace: kube-system
+webhooks:
+  - name: danm-webhook.nokia.k8s.io
+    clientConfig:
+      service:
+        name: danm-webhook-svc
+        namespace: kube-system
+        path: "/webhook"
+      # Configure your pre-generated certificate matching the details of your environment
+      caBundle: <CA_BUNDLE>
+    rules:
+      - operations: ["CREATE","UPDATE"]
+        apiGroups: ["danm.k8s.io"]
+        apiVersions: ["v1"]
+        resources: ["danmnets"]
+    failurePolicy: Fail
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: danm-webhook-svc
+  namespace: kube-system
+  labels:
+    danm: webhook
+spec:
+  ports:
+  - name: webhook
+    port: 443
+    targetPort: 8443
+  selector:
+    danm: webhook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: danm-webhook-deployment
+  namespace: kube-system
+  labels:
+    danm: webhook
+spec:
+  selector:
+    matchLabels:
+     danm: webhook
+  template:
+    metadata:
+      annotations:
+        # Adapt to your own network environment!
+        danm.k8s.io/interfaces: |
+          [
+            {
+              "network":"flannel"
+            }
+          ]
+      name: danm-webhook
+      labels:
+        danm: webhook
+    spec:
+      containers:
+        - name: danm-webhook
+          image: danm_webhook
+          command: [ "/usr/local/bin/webhook", "-tls-cert-bundle=/etc/webhook/certs/danm_webhook.crt", "-tls-private-key-file=/etc/webhook/certs/danm_webhook.key", "bind-port=8443" ]
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+     # Configure the directory holding the Webhook's server certificates
+      volumes:
+        - name: webhook-certs
+          hostPath:
+            path: /etc/kubernetes/ssl/

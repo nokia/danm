@@ -5,9 +5,7 @@ import (
   "log"
   "net"
   "strconv"
-  "strings"
   "encoding/binary"
-  "net/http"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/ipam"
 )
@@ -65,11 +63,6 @@ func validateIpFields(cidr string, routes map[string]string) error {
 }
 
 func validateAllocationPool(dnet *danmtypes.DanmNet, httpMethod string) error {
-  log.Println("HTTP method was:" + httpMethod)
-  log.Println("HTTP method constant is:" + http.MethodPost)
-  log.Println("Alloc was:" + dnet.Spec.Options.Alloc)
-  log.Println("Strings compare res:" + strconv.Itoa(strings.Compare(httpMethod,http.MethodPost)))
-  log.Println("Empty string check:" + strconv.Itoa(len(dnet.Spec.Options.Alloc)))
   cidr := dnet.Spec.Options.Cidr
   if cidr == "" {
     if dnet.Spec.Options.Pool.Start != "" || dnet.Spec.Options.Pool.End != "" {

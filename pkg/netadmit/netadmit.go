@@ -3,7 +3,6 @@ package netadmit
 import (
   "bytes"
   "errors"
-  "fmt"
   "log"
   "net"
   "reflect"
@@ -35,39 +34,32 @@ type Patch struct {
 }
 
 func ValidateNetwork(responseWriter http.ResponseWriter, request *http.Request) {
-  log.Println("INFO: got a request")
   admissionReview, err := DecodeAdmissionReview(request)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
-  log.Println("INFO: after decode")
   manifest, err := getNetworkManifest(admissionReview.Request.Object.Raw)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
-  log.Println("INFO: after get manifest")
   origManifest := *manifest
   isManifestValid, err := validateNetworkByType(manifest, request.Method)
   if !isManifestValid {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
-  log.Println("INFO: after validate")
   err = mutateManifest(manifest)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
-  log.Println("INFO: after mutate")
   responseAdmissionReview := v1beta1.AdmissionReview {
     Response: CreateReviewResponseFromPatches(createPatchListFromChanges(origManifest,manifest)),
   }
   responseAdmissionReview.Response.UID = admissionReview.Request.UID
-  fmt.Printf("This is the response we gonna send: %+v\n", responseAdmissionReview)
   SendAdmissionResponse(responseWriter, responseAdmissionReview)
-  log.Println("INFO: we have sent a successful answer!")
 }
 
 func DecodeAdmissionReview(httpRequest *http.Request) (*v1beta1.AdmissionReview,error) {
@@ -104,7 +96,7 @@ func SendErroneousAdmissionResponse(responseWriter http.ResponseWriter, uid type
 func SendAdmissionResponse(responseWriter http.ResponseWriter, reviewResponse v1beta1.AdmissionReview) {
   respBytes, err := json.Marshal(reviewResponse)
   if err != nil {
-    log.Println("ERROR: Failed to send AdmissionRespons for request:" + string(reviewResponse.Response.UID) + " because JSON marshalling failed with error:" + err.Error())
+    log.Println("ERROR: Failed to send AdmissionResponse for request:" + string(reviewResponse.Response.UID) + " because JSON marshalling failed with error:" + err.Error())
   }
   responseWriter.Header().Set("Content-Type", "application/json")
   _, err = responseWriter.Write(respBytes)
@@ -213,6 +205,5 @@ func CreateGenericPatchFromChange(attributePaths map[string]string, attribute st
     Path:  attributePaths[attribute],
     Value: value,
   }
-  fmt.Printf("This is a patch we want to send: %+v\n", patch)
   return patch
 }

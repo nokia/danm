@@ -12,11 +12,10 @@ import (
 func SetupAllocationPools(nets []danmtypes.DanmNet) error {
   for index, dnet := range nets {
     if dnet.Spec.Options.Cidr != "" {
-      bitArray, err := netadmit.CreateAllocationArray(&dnet)
+      err := netadmit.CreateAllocationArray(&dnet)
       if err != nil {
         return err
       }
-      dnet.Spec.Options.Alloc = bitArray.Encode()
       _, ipnet, err := net.ParseCIDR(dnet.Spec.Options.Cidr)
       if err != nil {
         return err

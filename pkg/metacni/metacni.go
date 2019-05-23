@@ -15,8 +15,9 @@ import (
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/plugins/pkg/ns"
   "github.com/containernetworking/plugins/pkg/utils/sysctl"
+  core_v1 "k8s.io/api/core/v1"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-  k8s "k8s.io/apimachinery/pkg/types"
+//  k8s "k8s.io/apimachinery/pkg/types"
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/clientcmd"
   "k8s.io/client-go/kubernetes"
@@ -28,6 +29,7 @@ import (
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/syncher"
   checkpoint_utils "github.com/intel/multus-cni/checkpoint"
+  multus_types "github.com/intel/multus-cni/types"
 )
 
 const (
@@ -59,11 +61,9 @@ type cniArgs struct {
   netns string
   podId string
   containerId string
-  annotation map[string]string
-  labels map[string]string
   stdIn []byte
   interfaces []danmtypes.Interface
-  podUid k8s.UID
+  pod *core_v1.Pod
 }
 
 func CreateInterfaces(args *skel.CmdArgs) error {
@@ -77,7 +77,7 @@ func CreateInterfaces(args *skel.CmdArgs) error {
   if err != nil {
     return errors.New("ERROR: ADD: cannot load DANM CNI config due to error:" + err.Error())
   }
-  err = getPodAttributes(cniArgs)
+  err = getPod(cniArgs)
   if err != nil {
     log.Println("ERROR: ADD: Pod manifest could not be parsed with error:" + err.Error())
     return fmt.Errorf("Pod manifest could not be parsed with error: %v", err)
@@ -140,16 +140,14 @@ func extractCniArgs(args *skel.CmdArgs) (*cniArgs,error) {
                      args.Netns,
                      string(kubeArgs.K8S_POD_NAME),
                      string(kubeArgs.K8S_POD_INFRA_CONTAINER_ID),
-                     nil,
-                     nil,
                      args.StdinData,
                      nil,
-                     "",
+                     nil,
                     }
   return &cmdArgs, nil
 }
 
-func getPodAttributes(args *cniArgs) error {
+func getPod(args *cniArgs) error {
   k8sClient, err := createK8sClient(DanmConfig.Kubeconfig)
   if err != nil {
     return errors.New("cannot create K8s REST client due to error:" + err.Error())
@@ -158,9 +156,7 @@ func getPodAttributes(args *cniArgs) error {
   if err != nil {
     return errors.New("failed to get Pod info from K8s API server due to:" + err.Error())
   }
-  args.annotation = pod.Annotations
-  args.labels = pod.Labels
-  args.podUid = pod.UID
+  args.pod = pod
   return nil
 }
 
@@ -174,11 +170,11 @@ func createK8sClient(kubeconfig string) (kubernetes.Interface, error) {
 
 func extractConnections(args *cniArgs) error {
   var ifaces []danmtypes.Interface
-  for key, val := range args.annotation {
+  for key, val := range args.pod.Annotations {
     if strings.Contains(key, danmIfDefinitionSyntax) {
       err := json.Unmarshal([]byte(val), &ifaces)
       if err != nil {
-        return errors.New("Can't create network interfaces for Pod: " + args.podId + " due to badly formatted " + danmIfDefinitionSyntax + " definition in Pod annotation")
+        return errors.New("Can't create network interfaces for Pod: " + args.pod.ObjectMeta.Name + " due to badly formatted " + danmIfDefinitionSyntax + " definition in Pod annotation")
       }
       break
     }
@@ -190,8 +186,8 @@ func extractConnections(args *cniArgs) error {
   return nil
 }
 
-func getAllocatedDevices(args *cniArgs, checkpoint checkpoint_utils.Checkpoint, devicePool string)(*[]string, error){
-  resourceMap, err := checkpoint.GetComputeDeviceMap(string(args.podUid))
+func getAllocatedDevices(args *cniArgs, checkpoint multus_types.ResourceClient, devicePool string)(*[]string, error){
+  resourceMap, err := checkpoint.GetPodResourceMap(args.pod)
   if err != nil || len(resourceMap) == 0 {
     return nil, errors.New("failed to retrieve Pod info from checkpoint object due to:" + err.Error())
   }
@@ -394,7 +390,7 @@ func createDanmEp(epInput danmtypes.DanmEpIface, netInfo *danmtypes.DanmNet, arg
     Name: epid,
     Namespace: args.nameSpace,
     ResourceVersion: "",
-    Labels: args.labels,
+    Labels: args.pod.Labels,
   }
   typeMeta := meta_v1.TypeMeta {
       APIVersion: danmtypes.SchemeGroupVersion.String(),

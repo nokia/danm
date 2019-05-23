@@ -1,5 +1,5 @@
-hash: 51ed68e34f4094e85e86be61e548211603a7e4d02c1591697029130768c5f305
-updated: 2019-04-25T12:41:14.02648742+02:00
+hash: 7944d7fcb1c247ee8568840a7669f2f6c32db3753bff819f508868cf09cddbcc
+updated: 2019-05-23T17:30:38.180823311+02:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
@@ -16,7 +16,7 @@ imports:
   - pkg/types/current
   - pkg/version
 - name: github.com/containernetworking/plugins
-  version: a62711a5da7a2dc2eb93eac47e103738ad923fd6
+  version: 0950a3607bf5e8a57c6a655c7e573e6aab0dc650
   subpackages:
   - pkg/ns
   - pkg/utils/sysctl
@@ -66,13 +66,13 @@ imports:
 - name: github.com/imdario/mergo
   version: 6633656539c1639d9d78127b7d47c622b5d7b6dc
 - name: github.com/intel/multus-cni
-  version: 8bf358071ab54b8f38d10027ccf81a29dfb78b3d
+  version: e723aabca8792ddd181167660e252a127a81b073
   subpackages:
   - checkpoint
   - logging
   - types
 - name: github.com/intel/sriov-cni
-  version: a87cb21e2f4aadedec7021eefa45523af51071ac
+  version: 9e4c973b2ac517c64867e33d61aee152d70dc330
   subpackages:
   - pkg/utils
 - name: github.com/j-keck/arping
@@ -96,7 +96,7 @@ imports:
   subpackages:
   - ssh/terminal
 - name: golang.org/x/net
-  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  version: 0ed95abb35c445290478a5348a7b38bb154135fd
   subpackages:
   - context
   - context/ctxhttp
@@ -125,8 +125,9 @@ imports:
 - name: gopkg.in/yaml.v2
   version: 670d4cfef0544295bc27a114dbac37980d83185a
 - name: k8s.io/api
-  version: 2d6f90ab1293a1fb871cf149423ebb72aa7423aa
+  version: f1b257a4ce9632d2f06a58c3417d1523149bc94d
   subpackages:
+  - admission/v1beta1
   - admissionregistration/v1alpha1
   - admissionregistration/v1beta1
   - apps/v1
@@ -158,7 +159,7 @@ imports:
   - storage/v1alpha1
   - storage/v1beta1
 - name: k8s.io/apimachinery
-  version: 103fd098999dc9c0c88536f5c9ad2e5da39373ae
+  version: c182ff3b98419e7305cc361fd1811988591656cf
   subpackages:
   - pkg/api/equality
   - pkg/api/errors
@@ -211,7 +212,7 @@ imports:
   - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/client-go
-  version: 59698c7d9724b0f95f9dc9e7f7dfdcc3dfeceb82
+  version: 3ec0d5188431b312d6b3d5b6e46e022d5c0843a4
   subpackages:
   - discovery
   - discovery/fake

@@ -194,7 +194,7 @@ func (c *Controller) UpdateEndpoints(eps *corev1.Endpoints) {
 	if len(eps.Subsets[0].Addresses) == 0 && len(eps.Subsets[0].NotReadyAddresses) == 0 {
 		eps.Subsets = nil
 	}
-	_, err := c.kubeclient.Core().Endpoints(eps.Namespace).Update(eps)
+	_, err := c.kubeclient.CoreV1().Endpoints(eps.Namespace).Update(eps)
 	if err != nil {
 		glog.Errorf("danmep: updateEndpoints: %s\n%s", err, eps)
 	}
@@ -209,9 +209,9 @@ func (c *Controller) UpdateEndpointsList(epList []*corev1.Endpoints) {
 func (c *Controller) CreateModifyEndpoints(svc *corev1.Service, ep bool, des []*danmv1.DanmEp) {
 	epNew := c.MakeNewEps(svc, des)
     	if ep {
-		c.kubeclient.Core().Endpoints(svc.Namespace).Update(&epNew)
+		c.kubeclient.CoreV1().Endpoints(svc.Namespace).Update(&epNew)
 	} else {
-		c.kubeclient.Core().Endpoints(svc.Namespace).Create(&epNew)
+		c.kubeclient.CoreV1().Endpoints(svc.Namespace).Create(&epNew)
 	}
 }
 

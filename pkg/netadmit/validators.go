@@ -6,40 +6,36 @@ import (
   "net"
   "strconv"
   "encoding/binary"
+  admissionv1 "k8s.io/api/admission/v1beta1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/ipam"
 )
 
-type Validator func(netInfo *danmtypes.DanmNet, httpMethod string) error
+type Validator func(netInfo *danmtypes.DanmNet, opType admissionv1.Operation) error
 
-type ValidatorConfig struct {
-  ValidatorMappings []ValidatorMapping
-}
+type ValidatorMapping []Validator
 
-type ValidatorMapping struct {
-  ApiType string
-  Validators []Validator
-}
 
 const (
   MaxNidLength = 12
 )
 
 var (
-  DanmNetMapping = ValidatorMapping {
-    ApiType: "DanmNet",
-    Validators: []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId},
-  }
-  danmValidationConfig = ValidatorConfig {
-    ValidatorMappings: []ValidatorMapping{DanmNetMapping},
+  DanmNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateAbsenceOfAllowedTenants}
+  ClusterNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId}
+  TenantNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateNetworkId,validateAbsenceOfAllowedTenants,validateTenantNetRules}
+  danmValidationConfig = map[string]ValidatorMapping {
+    "DanmNet": DanmNetMapping,
+    "ClusterNetwork": ClusterNetMapping,
+    "TenantNetwork": TenantNetMapping,
   }
 )
 
-func validateIpv4Fields(dnet *danmtypes.DanmNet, httpMethod string) error {
+func validateIpv4Fields(dnet *danmtypes.DanmNet, opType admissionv1.Operation) error {
   return validateIpFields(dnet.Spec.Options.Cidr, dnet.Spec.Options.Routes)
 }
 
-func validateIpv6Fields(dnet *danmtypes.DanmNet, httpMethod string) error {
+func validateIpv6Fields(dnet *danmtypes.DanmNet, opType admissionv1.Operation) error {
   return validateIpFields(dnet.Spec.Options.Net6, dnet.Spec.Options.Routes6)
 }
 
@@ -62,7 +58,10 @@ func validateIpFields(cidr string, routes map[string]string) error {
   return nil
 }
 
-func validateAllocationPool(dnet *danmtypes.DanmNet, httpMethod string) error {
+func validateAllocationPool(dnet *danmtypes.DanmNet, opType admissionv1.Operation) error {
+  if opType == admissionv1.Create && dnet.Spec.Options.Alloc != "" {
+    return errors.New("Allocation bitmask shall not be manually defined upon creation!")  
+  }
   cidr := dnet.Spec.Options.Cidr
   if cidr == "" {
     if dnet.Spec.Options.Pool.Start != "" || dnet.Spec.Options.Pool.End != "" {
@@ -97,7 +96,7 @@ func GetBroadcastAddress(subnet *net.IPNet) (net.IP) {
   return ip
 }
 
-func validateVids(dnet *danmtypes.DanmNet, httpMethod string) error {
+func validateVids(dnet *danmtypes.DanmNet, opType admissionv1.Operation) error {
   isVlanDefined := (dnet.Spec.Options.Vlan!=0)
   isVxlanDefined := (dnet.Spec.Options.Vxlan!=0)
   if isVlanDefined && isVxlanDefined {
@@ -106,12 +105,26 @@ func validateVids(dnet *danmtypes.DanmNet, httpMethod string) error {
   return nil
 }
 
-func validateNetworkId(dnet *danmtypes.DanmNet, httpMethod string) error {
+func validateNetworkId(dnet *danmtypes.DanmNet, opType admissionv1.Operation) error {
   if dnet.Spec.NetworkID == "" {
     return errors.New("Spec.NetworkID mandatory parameter is missing!")
   }
   if len(dnet.Spec.NetworkID) > MaxNidLength {
     return errors.New("Spec.NetworkID cannot be longer than 12 characters (otherwise VLAN and VxLAN host interface creation might fail)!")
+  }
+  return nil
+}
+
+func validateAbsenceOfAllowedTenants(dnet *danmtypes.DanmNet, opType admissionv1.Operation) error {
+  if dnet.Spec.AllowedTenants != nil {
+    return errors.New("AllowedTenants attribute is only valid for the ClusterNetwork API!")
+  }
+  return nil
+}
+
+func validateTenantNetRules(dnet *danmtypes.DanmNet, opType admissionv1.Operation) error {
+  if dnet.Spec.Options.Device != "" || dnet.Spec.Options.Vxlan != 0 || dnet.Spec.Options.Vlan != 0 {
+    return errors.New("Manually configuring host_device, vlan, or attributes is not allowed for TenantNetworks!")  
   }
   return nil
 }

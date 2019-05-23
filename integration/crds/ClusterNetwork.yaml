@@ -1,18 +1,18 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: danmnets.danm.k8s.io
+  name: clusternetworks.danm.k8s.io
 spec:
-  scope: Namespaced
+  scope: Cluster
   group: danm.k8s.io
   version: v1
   names:
-    kind: DanmNet
-    plural: danmnets
-    singular: danmnet
+    kind: ClusterNetwork
+    plural: clusternetworks
+    singular: clusternetwork
     shortNames:
-    - dn
-    - dnet
+    - cn
+    - cnet
   validation:
     openAPIV3Schema:
       properties:
@@ -24,6 +24,10 @@ spec:
               type: string
             NetworkType:
               type: string
+            AllowedTenants:
+              type: array
+              items:
+                type: string
             Options:
               properties:
                 cidr:

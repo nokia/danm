@@ -3,14 +3,14 @@
 apiVersion: ## API_VERSION ##
 # The type of the K8s object wished to be created.
 # MANDATORY - STRING
-kind: ## DaemonSet, Deployment, ... ##
+kind: ## DaemonSet, Deployment, StatefulSet ... ##
 metadata:
   # Name of the K8s object this file represents
   # MANDATORY - STRING
   name: ## OBJECT_NAME  ##
 
   # The K8 namespace the object belongs to.
-  # DanmNets are namespaces resources, so a Pod can only connect to a DanmNet if it resides in the same namespace.
+  # DanmNets and TenantNetworks are namespaced resources, so a Pod can only connect to a DanmNet/TenantNetwork if it resides in the same namespace.
   # MANDATORY - STRING
   namespace: ## NS_NAME  ##
 
@@ -21,25 +21,28 @@ spec:
     metadata:
       annotations:
       # DANM shall be driven with networking related requirements stated in this JSON formatted field.
-      # Each entry listed in danm.k8s.io/interfaces annotation results in a network interface provisioned into the Pod's network namespace created by this K8s object.
-      # The interface is provisioned via the backend specified in the referenced DanmNet (or with DANM's in-built IPVLAN CNI by default).
+      # Each entry listed in danm.k8s.io/interfaces annotation results in a network interface provisioned into every Pod's network namespace created based on this template.
+      # The interface is provisioned via the backend specified in the referenced network object (or with DANM's in-built IPVLAN CNI by default).
       # Please note, that some provisioning options are only relevant for specific dynamic level backends.
       # For CNIs with only static integration level, Pod-level overwrite options are ignored even if present.
       # MANDATORY - LIST OF REQUIRED NETWORK INTERFACES
       #   One network connection can have the following attributes:
-      #   "network": Name of the DanmNet (i.e. ObjectMeta.Name) to which the interface should be connected to. MANDATORY PARAMETER
+      #   EXACTLY ONE OF THE FOLLOWING NETWORK IDENTIFIER OPTIONS:
+      #   OPTION1: "network": Name of the DanmNet (i.e. ObjectMeta.Name) to which the interface should be connected to.
+      #   OPTION2: "tenantNetwork": Name of the TenantNetwork (i.e. ObjectMeta.Name) to which the interface should be connected to.
+      #   OPTION3: "clusterNetwork": Name of the ClusterNetwork (i.e. ObjectMeta.Name) to which the interface should be connected to.
       #   "ip": desired IPv4 address assigment scheme.
       #     Ignored for non-dynamic NetworkTypes.
       #     OPTIONAL PARAMETER - but either "ip" or "ip6" needs to be present. Presence of either "ip" or "ip6" is MANDATORY
       #     Possible values:
-      #     - "dynamic": the first free IPv4 address is dynamically allocated from the DanmNet's allocation pool
+      #     - "dynamic": the first free IPv4 address is dynamically allocated from the referenced network's allocation pool
       #     - "## DESIRED_STATIC_IPV4_ADDR_FROM_ALLOCATION_POOL (e.g. "10.10.0.101/24") ##"
       #     - "none": no IPv4 is allocated to the interface
       #   "ip6": desired IPv6 address assigment scheme.
       #     Ignored for non-dynamic NetworkTypes.
       #     OPTIONAL PARAMETER - but either "ip" or "ip6" needs to be present. Presence of either "ip" or "ip6" is MANDATORY
       #     Possible values:
-      #     - "dynamic": a random, free IPv6 address is dynamically allocated from the DanmNet's net6 CIDR
+      #     - "dynamic": a random, free IPv6 address is dynamically allocated from the referenced network's net6 CIDR
       #     - "## DESIRED_STATIC_IPV6_ADDR_FROM_NET6 ##"
       #     - "none": no IPv6 address is allocated to the interface
       #   "proutes": list of policy-based IPv4 routes to be added to the configured routing table of this interface.
@@ -59,7 +62,13 @@ spec:
               ...
             },
             {
-              "network":"<NETWORK2_NAME>",
+              "tenantNetwork":"<NETWORK2_NAME>",
+              "ip": "<ALLOCATION_SCHEME>",
+              "<OTHER_OPTION>": "<OPTION_VALUE>",
+              ...
+            },
+            {
+              "clusterNetwork":"<NETWORK3_NAME>",
               "ip": "<ALLOCATION_SCHEME>",
               "<OTHER_OPTION>": "<OPTION_VALUE>",
               ...
@@ -72,12 +81,12 @@ spec:
     ...
       resources:
         # Network Device Plugin managed resources (e.g. devices/interfaces) to be requested for DanmNets.
-        # OPTIONAL PARAMETER - but MANDATORY if a network Device Plugin is being used
+        # OPTIONAL PARAMETER - but MANDATORY if a network Device Plugin is being used for provisioning the network, e.g. for SR-IOV backend
         requests:
           "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_A>": "<NUM_OF_RESOURCES>"
           "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_B>": "<NUM_OF_RESOURCES>"
           ...
-        # OPTIONAL PARAMETER - but MANDATORY if a network Device Plugin is being used
+        # OPTIONAL PARAMETER - but MANDATORY if a network Device Plugin is being used for provisioning the network, e.g. for SR-IOV backend
         limits:
           "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_A>": "<NUM_OF_RESOURCES>"
           "<DEVICE_PLUGIN_RESOURCE_POOL_NAME_B>": "<NUM_OF_RESOURCES>"

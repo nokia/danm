@@ -17,7 +17,6 @@ import (
   "github.com/containernetworking/plugins/pkg/utils/sysctl"
   core_v1 "k8s.io/api/core/v1"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-//  k8s "k8s.io/apimachinery/pkg/types"
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/clientcmd"
   "k8s.io/client-go/kubernetes"

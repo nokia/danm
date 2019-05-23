@@ -39,13 +39,18 @@ func ValidateNetwork(responseWriter http.ResponseWriter, request *http.Request) 
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
+  oldManifest, err := getNetworkManifest(admissionReview.Request.OldObject.Raw)
+  if err != nil {
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    return
+  }
   newManifest, err := getNetworkManifest(admissionReview.Request.Object.Raw)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
   origNewManifest := *newManifest
-  isManifestValid, err := validateNetworkByType(newManifest, admissionReview.Request.Operation)
+  isManifestValid, err := validateNetworkByType(oldManifest, newManifest, admissionReview.Request.Operation)
   if !isManifestValid {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
@@ -107,6 +112,9 @@ func SendAdmissionResponse(responseWriter http.ResponseWriter, reviewResponse v1
 
 func getNetworkManifest(objectToReview []byte) (*danmtypes.DanmNet,error) {
   networkManifest := danmtypes.DanmNet{}
+  if objectToReview == nil {
+    return &networkManifest, nil
+  }
   decoder := json.NewDecoder(bytes.NewReader(objectToReview))
   //We are using Decoder interface, because it can notify us if any unknown fields were put into the object
   decoder.DisallowUnknownFields()
@@ -117,13 +125,13 @@ func getNetworkManifest(objectToReview []byte) (*danmtypes.DanmNet,error) {
   return &networkManifest, nil
 }
 
-func validateNetworkByType(manifest *danmtypes.DanmNet, opType v1beta1.Operation) (bool,error) {
-  validatorMapping, isTypeHandled := danmValidationConfig[manifest.TypeMeta.Kind]
+func validateNetworkByType(oldManifest, newManifest *danmtypes.DanmNet, opType v1beta1.Operation) (bool,error) {
+  validatorMapping, isTypeHandled := danmValidationConfig[newManifest.TypeMeta.Kind]
   if !isTypeHandled {
-    return false, errors.New("K8s API type:" + manifest.TypeMeta.Kind + " is not handled by DANM webhook")
+    return false, errors.New("K8s API type:" + newManifest.TypeMeta.Kind + " is not handled by DANM webhook")
   }
   for _, validator := range validatorMapping {
-    err := validator(manifest,opType)
+    err := validator(oldManifest,newManifest,opType)
     if err != nil {
       return false, err
     }

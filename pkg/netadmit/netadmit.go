@@ -39,24 +39,24 @@ func ValidateNetwork(responseWriter http.ResponseWriter, request *http.Request) 
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
-  manifest, err := getNetworkManifest(admissionReview.Request.Object.Raw)
+  newManifest, err := getNetworkManifest(admissionReview.Request.Object.Raw)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
-  origManifest := *manifest
-  isManifestValid, err := validateNetworkByType(manifest, request.Method)
+  origNewManifest := *newManifest
+  isManifestValid, err := validateNetworkByType(newManifest, admissionReview.Request.Operation)
   if !isManifestValid {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
-  err = mutateManifest(manifest)
+  err = mutateManifest(newManifest)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
   responseAdmissionReview := v1beta1.AdmissionReview {
-    Response: CreateReviewResponseFromPatches(createPatchListFromChanges(origManifest,manifest)),
+    Response: CreateReviewResponseFromPatches(createPatchListFromChanges(origNewManifest,newManifest)),
   }
   responseAdmissionReview.Response.UID = admissionReview.Request.UID
   SendAdmissionResponse(responseWriter, responseAdmissionReview)
@@ -117,15 +117,15 @@ func getNetworkManifest(objectToReview []byte) (*danmtypes.DanmNet,error) {
   return &networkManifest, nil
 }
 
-func validateNetworkByType(manifest *danmtypes.DanmNet, httpMethod string) (bool,error) {
-  for _, validatorMapping := range danmValidationConfig.ValidatorMappings {
-    if validatorMapping.ApiType == manifest.TypeMeta.Kind {
-      for _, validator := range validatorMapping.Validators {
-        err := validator(manifest,httpMethod)
-        if err != nil {
-          return false, err
-        }
-      }
+func validateNetworkByType(manifest *danmtypes.DanmNet, opType v1beta1.Operation) (bool,error) {
+  validatorMapping, isTypeHandled := danmValidationConfig[manifest.TypeMeta.Kind]
+  if !isTypeHandled {
+    return false, errors.New("K8s API type:" + manifest.TypeMeta.Kind + " is not handled by DANM webhook")
+  }
+  for _, validator := range validatorMapping {
+    err := validator(manifest,opType)
+    if err != nil {
+      return false, err
     }
   }
   return true, nil

@@ -1,0 +1,43 @@
+### K8s CRD TenantConfig API schema description ###
+apiVersion: danm.k8s.io/v1
+# A TenantConfig object represents the environment specific physical properties of the internal networks usable by tenant users.
+# These properties are:
+# - name of the host network devices allowed to be used by tenants
+# - VLAN and VxLAN virtual identifiers assigned to tenant users
+# - name of the static CNI configuration files used within the infrastructure
+# TenantConfigs are cluster scoped resources, therefore should be configured only by the cluster's network administrators.
+# DANM uses the information stored in TenantConfigs to automatically assign cluster level network resources to TenantNetworks, created by the tenant users.
+# DANM currently expects homogenous network setup within its cluster, therefore currently only supports one TenantConfig per cluster.
+# In case the cluster administrator configured more, DANM reads the first one, and ignores the rest.
+# It is planned to support multiple TenantConfigs in the future, one per tenant.
+kind: TenantConfig
+metadata:
+  # Name of the K8s TenantNetwork object this file represents
+  # MANDATORY - STRING
+  name: ## TENANTCONFIG_NAME  ##
+spec:
+  # A list of physical network interfaces in the cluster's Node's host network namespace tenant users can connect to.
+  # Whenever a TenantNetwork is created with a NetworkType requiring direct access to a host device (e.g. ipvlan, macvlan etc.), DANM automatically selects one from this list.
+  # The selected interface is then configured in the TenantNetwork object's "host_device" attribute.
+  # MANDATORY - LIST OF INTERFACE PROFILES USABLE BY TENANTS
+  hostDevices:
+    # One host device profile can have the following attributes:
+    #   The name of the network device as seen in the Linux kernel. E.g. eno4, bond1 etc.
+    #   MANDATORY - STRING
+    # - name: ## DEVICE_NAME ##
+    #   The cluster administrator can configure if TenantNetworks should be connected to a virtual network rather than directly to the physical device.
+    #   VLANs and VxLANs are supported, but they are mutually exclusive within the same profile.
+    #   OPTIONAL STRING PARAMETER, ONE OF {vlan, vxlan}
+    #   vniType: ## TYPE_OF_VIRTUAL_NETWORK ##
+    #   The VNI range assigned to the tenants can be configured in this attribute, if container interfaces aren't directly connected to the physical device.
+    #   VLAN/VxLAN respective VNI kernel limits apply.
+    #   When a virtual network is configured for an interface, DANM automatically selects a free VNI from the provided range, and configures into the TenantNetworks respective field (spec.Options.vlan, or spec.Options.vxlan).
+    #   MANDATORY WHEN "vniType" IS DEFINED, STRING TYPE LIST NOTATION WITH RANGES E.G. "2000-2500,2601,2650-2700"
+    #   vniRange ## VNI_RANGE ##
+  # Cluster administrators can configure which CNI config files should be used by a tenant when they ask network connections to statically configured backends (i.e. not IPVLAN, MACVLAN, or SR-IOV).
+  # The name of the CNI config files used for static network provisioning operations are chosen via the TenantNetwork's NetworkID parameter.
+  # If the tenant user configures a static backend into the spec.NetworkType attribute of the TenantNetwork object, the NetworkID parameter will be overwritten with the value configured into this attribute.
+  # OPTIONAL - MAP OF NETWORTYPE:NETWORKID ENTRIES (e.g. "flannel: tenant1_config")
+  networkIds:
+    ## NETWORKTYPE1: NETWORKID1 ##
+    ## NETWORKTYPE2: NETWORKID2 ##

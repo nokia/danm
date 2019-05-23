@@ -1,0 +1,15 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: tenantconfigs.danm.k8s.io
+spec:
+  scope: Cluster
+  group: danm.k8s.io
+  version: v1
+  names:
+    kind: TenantConfig
+    plural: tenantconfigs
+    singular: tenantconfig
+    shortNames:
+    - tc
+    - tconf

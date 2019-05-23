@@ -1,17 +1,18 @@
-### K8s CRD DanmNet API schema description ###
+### K8s CRD ClusterNetwork API schema description ###
 apiVersion: danm.k8s.io/v1
-# A DamnNet object represents a physical network together with its resources and configuration applications can use.
-# DANM can connect Pods to DanmNets of the same tenant (namespace).
-kind: DanmNet
+# A ClusterNetwork object represents a physical network together with its resources and configuration.
+# ClusterNetworks are cluster-wide usable, non-namespaced objects and are an abstraction for external networks reachable by multiple tenant, or in K8s terminology, namespace users.
+# This results in the following characteristics:
+# - ClusterNetworks are expected to be provisioned purely, and strictly by the cluster's network administrators; and should not be writable by tenant users, or even tenant network administrators.
+# - Cluster specific networking attributes (VLAN ID, VxLAN ID, name of host NICs, backend associated CNI config files) can be freely configured via the ClusterNetwork API.
+# DANM can connect Pods of any tenant to a ClusterNetwork if the cluster administrator allows it.
+kind: ClusterNetwork
 metadata:
-  # Name of the K8s DanmNet object this file represents
+  # Name of the K8s ClusterNetwork object this file represents
   # MANDATORY - STRING
-  name: ## DANMNET_NAME  ##
-  # The K8s namespace the network belongs to.
-  # MANDATORY - STRING
-  namespace: ## NS_NAME  ##
+  name: ## ClusterNetwork_NAME  ##
 spec:
-  # This parameter provides a second identifier for DanmNets, and can be used to control a number of API features.
+  # This parameter provides a second identifier for ClusterNetworks, and can be used to control a number of API features.
   # For static delegates, the parameter configures which CNI configuration file is to be used if NetworkType points to a static-level CNI backend.
   # For dynamic delegates, VxLAN host interfaces are suffixed, while VLAN host interfaces are prefixed with the NetworkID.
   # This allows deployment administrators to separate their own interfaces from others' in a multi-tenant environment, i.e. by setting NetworkID to "name_namespace" value.
@@ -27,6 +28,14 @@ spec:
   # OPTIONAL - ONE OF {ipvlan,sriov,macvlan,<NAME_OF_ANY_STATIC_LEVEL_CNI_COMPLIANT_BINARY>}
   # DEFAULT VALUE: ipvlan
   NetworkType: ## BACKEND_TYPE ##
+  # Even though ClusterNetwork is a cluster scoped API, operators can still control which tenants have access to these networks via the AllowedTenants attribute.
+  # AllowedTenants is a whitelist of K8s namespaces. Pods belonging to at least one of the listed namespaces are allowed to connect to the particular ClusterNetwork.
+  # If AllowedTenants is not defined, it is interpreted as "all". This means all Pods of every K8s namespace can connect to a ClusterNetwork by default.
+  # OPTIONAL - LIST OF STRINGS
+  # DEFAULT VALUE: EMPTY - NO RESTRICTIONS TO TENANTS
+  AllowedTenants:
+  # - K8S_NAMESPACE1
+  # - K8S_NAMESPACE2
   # Specific extra configuration options can be passed to the network provisioning backends.
   # Most of the parameters are only supported for dynamic level backends, such as IPVLAN, MACVLAN, and SRIOV.
   # Other network interfaces are always provisioned based on their associated static CNI configuration files.
@@ -40,7 +49,7 @@ spec:
     host_device: ## PARENT_DEVICE_NAME ##
     # Name of a network Device Plugin resource pool
     # The device_pool parameter generally represents the base resource name of the Kubernetes Devices connected to this network.
-    # This option is mandatory for DanmNets with "NetworkType: sriov", and it represents the K8s Virtual Function Device pool connecting Pods are getting their VFs from.
+    # This option is mandatory for ClusterNetworks with "NetworkType: sriov", and it represents the K8s Virtual Function Device pool connecting Pods are getting their VFs from.
     # OPTIONAL - STRING
     device_pool: ## DEVICE_PLUGIN_RESOURCE_POOL_MAME ##
     # The IPv4 CIDR notation of the subnet associated with the network.
@@ -58,25 +67,26 @@ spec:
       start: ## FIRST_ASSIGNABLE_IP ##
       end: ## LAST_ASSIGNABLE_IP ##
     # The IPv6 CIDR notation of the subnet associated with the network.
-    # Pods connecting to this network will get their IPv6s from this subnet, if defined.
+    # Pods connecting to this network will get their IPv6 addresses from this subnet, if defined.
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
-    # OPTIONAL - IPv6 CIDR FORMAT (e.g. "2001:db8::/45"). Netmask of the subnet cannot be higher than /64 (i.e. /65 and upwards).
+    # OPTIONAL - IPv6 CIDR FORMAT (e.g. "2001:db8::/45").
+    # NOTE: Netmask of the subnet cannot be higher than /64 (i.e. /65 and upwards).
     net6: ## SUBNET_CIDR ##
     # Interfaces connected to this network are renamed inside the Pod's network namespace to a string starting with "container_prefix".
     # If not provided, DANM uses "eth" as the prefix.
     # In both cases DANM dynamically suffixes the interface names in Pod instantiation time with a unique integer number, corresponding to the sequence number of the interface during the specific network creation operation.
-    # Thus it becomes guaranteed no network interfaces will ever receive the same name, even if more than one belongs to the same DanmNet.
+    # Thus it becomes guaranteed no network interfaces will ever receive the same name, even if more than one belongs to the same ClusterNetwork.
     # Generally supported parameter, works with all NetworkTypes (except where the CNI backend itself is not following the CNI standard, such is the case with Flannel).
     # OPTIONAL - STRING
     # NOTE: DANM ignores this parameter if the respective interface is the first in the connecting Pod's network namespace. That interface will be named "eth0".
     container_prefix: ## INTERNAL_IF_NAME ##
-    # Policy-based IP routes belonging to this network are installed into this routing table, when a user defines them in her Pod's network allocation annotation.
+    # Policy-based IP routes belonging to this network are installed into this routing table, when a user defines them in her Pod's interfaces annotation.
     # Generally supported parameter, works with all NetworkTypes.
     # OPTIONAL - INTEGER (e.g. 201)
     rt_tables: ## HOST_UNIQUE_ROUTING_TABLE_NUMBER ##
     # IPv4 routes to be installed into the default routing table of all Pods connected to this network.
     # Generally supported parameter, works with all NetworkTypes.
-    # Note: some CNI backends, like Flannel might provision IP routes into the default routing table of a Pod on their own.
+    # NOTE: some CNI backends, like Flannel might provision IP routes into the default routing table of a Pod on their own.
     # Beware of clashes.
     # OPTIONAL - LIST OF DESTINATION_IPV4_CIDR:IPV4_GW ENTRIES (e.g. "10.20.0.0/24: 10.0.0.1")
     routes:
@@ -94,13 +104,13 @@ spec:
     # The VxLAN tag shall be unique on the level of the underlying host.
     # Management of the VxLAN interface is handled automatically by DANM. Provisioning is generally supported for all NetworkTypes.
     # Only IPVLAN, and MACVLAN interfaces are automatically connected to the provisioned VxLAN VTEP though.
-    # VLAN and VxLAN paramaters are mutually exclusive! Defining both in the same DanmNet will result in a validation error!
+    # VLAN and VxLAN paramaters are mutually exclusive! Defining both in the same ClusterNetwork will result in a validation error!
     # OPTIONAL - INTEGER (e.g. 50)
     vxlan: ## VXLAN_TAG ##
     # When this parameter is present, traffic flowing through the connected network interfaces is VLAN tagged with the provided identifier.
     # The VLAN ID shall be unique on the level of the underlying host.
     # Management of the VLAN interface is handled automatically by DANM. Provisioning is generally supported for all NetworkTypes.
     # Only dynamically supported NetworkType interfaces are automatically VLAN tagged though.
-    # VLAN and VxLAN paramaters are mutually exclusive! Defining both in the same DanmNet will result in a validation error!
+    # VLAN and VxLAN paramaters are mutually exclusive! Defining both in the same ClusterNetwork will result in a validation error!
     # OPTIONAL - INTEGER (e.g. 4000)
     vlan: ## VLAN_TAG ##

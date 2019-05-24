@@ -1,5 +1,5 @@
 hash: 7944d7fcb1c247ee8568840a7669f2f6c32db3753bff819f508868cf09cddbcc
-updated: 2019-05-23T17:30:38.180823311+02:00
+updated: 2019-05-24T17:43:48.928763287+02:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
@@ -342,8 +342,17 @@ imports:
   - util/integer
   - util/retry
   - util/workqueue
+- name: k8s.io/klog
+  version: 8e90cee79f823779174776412c13478955131846
 - name: k8s.io/kube-openapi
   version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
   - pkg/util/proto
+- name: k8s.io/kubernetes
+  version: ddf47ac13c1a9483ea035a79cd7c10005ff21a6d
+  subpackages:
+  - pkg/kubelet/apis/podresources
+  - pkg/kubelet/apis/podresources/v1alpha1
+  - pkg/kubelet/cm/cpuset
+  - pkg/kubelet/util
 testImports: []

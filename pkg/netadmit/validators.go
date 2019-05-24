@@ -7,12 +7,8 @@ import (
   admissionv1 "k8s.io/api/admission/v1beta1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/ipam"
+  "k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
-
-type Validator func(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error
-
-type ValidatorMapping []Validator
-
 
 const (
   MaxNidLength = 12
@@ -28,6 +24,9 @@ var (
     "TenantNetwork": TenantNetMapping,
   }
 )
+
+type Validator func(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error
+type ValidatorMapping []Validator
 
 func validateIpv4Fields(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
   return validateIpFields(newManifest.Spec.Options.Cidr, newManifest.Spec.Options.Routes)
@@ -131,6 +130,47 @@ func validateTenantNetRules(oldManifest, newManifest *danmtypes.DanmNet, opType 
      newManifest.Spec.Options.Vxlan   != oldManifest.Spec.Options.Vxlan   ||
      newManifest.Spec.Options.Vlan    != oldManifest.Spec.Options.Vlan) {
     return errors.New("Manually changing any one of host_device, vlan, or vxlan attributes is not allowed for TenantNetworks!")  
+  }
+  return nil
+}
+
+func validateTenantconfig(oldManifest, newManifest *danmtypes.TenantConfig, opType admissionv1.Operation) error {
+  if len(newManifest.HostDevices) == 0 {
+    return errors.New("hostDevices list must not be empty!")
+  }
+  var err error
+  for _, ifaceConf := range newManifest.HostDevices {
+    err = validateIfaceConfig(ifaceConf, opType)
+    if err != nil {
+      return err
+    }
+  }
+  for nId, nType := range newManifest.NetworkIds {
+    if nId == "" || nType == "" {
+      return errors.New("neither NetworkID, nor NetworkType can be empty in a NetworkID mapping!")
+    } 
+  }
+  return nil
+}
+
+func validateIfaceConfig(ifaceConf danmtypes.IfaceProfile, opType admissionv1.Operation) error {
+  if ifaceConf.Name == "" {
+    return errors.New("name attribute of a hostDevice must not be empty!")
+  }
+  if (ifaceConf.VniType == "" && ifaceConf.VniRange != "") ||
+     (ifaceConf.VniRange == "" && ifaceConf.VniType != "") {
+    return errors.New("vniRange and vniType attributes must be provided together for interface:" + ifaceConf.Name)   
+  }
+  if ifaceConf.VniType != "" && ifaceConf.VniType != "vlan" && ifaceConf.VniType != "vxlan" {
+    return errors.New(ifaceConf.VniType + "is not in allowed vniType values: {vlan,vxlan} for interface:" + ifaceConf.Name) 
+  }
+  if opType == admissionv1.Create && ifaceConf.Alloc != "" {
+    return errors.New("Allocation bitmask for interface: " + ifaceConf.Name + " shall not be manually defined upon creation!")
+  }
+  //I know this type is for CPU sets, but isn't it just perfect for handling arbitrarily defined integer ranges?
+  _, err := cpuset.Parse(ifaceConf.VniRange)
+  if err != nil {
+    return errors.New("vniRange for interface:" + ifaceConf.Name + " must be improperly formatted becuase its parsing fails with:" + err.Error())
   }
   return nil
 }

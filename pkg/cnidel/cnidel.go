@@ -52,7 +52,7 @@ func IsDelegationRequired(danmClient danmclientset.Interface, nid, namespace str
 func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (*current.Result,error) {
   var (
     err error
-    ipamOptions danmtypes.IpamConfig
+    ipamOptions datastructs.IpamConfig
   )
   if isIpamNeeded(netInfo.Spec.NetworkType) {
    ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6, _, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
@@ -107,30 +107,30 @@ func IsDeviceNeeded(cniType string) bool {
   }
 }
 
-func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (danmtypes.IpamConfig, error) {
-  var ipSlice = []danmtypes.IpamIp{}
+func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (datastructs.IpamConfig, error) {
+  var ipSlice = []datastructs.IpamIp{}
   if ip4 == "" && ip6 == "" && netinfo.Spec.NetworkType != "sriov" {
-    return danmtypes.IpamConfig{}, errors.New("unfortunetaly 3rd party CNI plugins usually don't support foregoing putting any IPs on an interface, so with heavy hearts but we need to fail this network delegation operation")
+    return datastructs.IpamConfig{}, errors.New("unfortunetaly 3rd party CNI plugins usually don't support foregoing putting any IPs on an interface, so with heavy hearts but we need to fail this network delegation operation")
   }
   if ip4 != "" {
-    ipSlice = append(ipSlice, danmtypes.IpamIp{
+    ipSlice = append(ipSlice, datastructs.IpamIp{
                                 IpCidr: ip4,
                                 Version: 4,
                               })
   }
   if ip6 != "" {
-    ipSlice = append(ipSlice, danmtypes.IpamIp{
+    ipSlice = append(ipSlice, datastructs.IpamIp{
                                 IpCidr: ip6,
                                 Version: 6,
                               })
   }
-  return  danmtypes.IpamConfig{
+  return  datastructs.IpamConfig{
             Type: ipamType,
             Ips: ipSlice,
           }, nil
 }
 
-func getCniPluginConfig(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
+func getCniPluginConfig(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet, ipamOptions datastructs.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
   if cni, ok := supportedNativeCnis[strings.ToLower(netInfo.Spec.NetworkType)]; ok {
     return cni.readConfig(netInfo, ipamOptions, ep, cni.CNIVersion)
   } else {
@@ -193,7 +193,7 @@ func setEpIfaceAddress(cniResult *current.Result, epIface *danmtypes.DanmEpIface
 // DelegateInterfaceDelete delegates Ks8 Pod network interface delete task to the input 3rd party CNI plugin
 // Returns an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
 func DelegateInterfaceDelete(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
-  rawConfig, err := getCniPluginConfig(netConf, netInfo, danmtypes.IpamConfig{Type: ipamType}, ep)
+  rawConfig, err := getCniPluginConfig(netConf, netInfo, datastructs.IpamConfig{Type: ipamType}, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return err

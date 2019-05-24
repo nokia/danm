@@ -13,8 +13,8 @@ import (
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/version"
-  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/cnidel"
+  "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/metacni"
 )
 
@@ -135,7 +135,7 @@ func validateMacvlanConfig(receivedCniConfig, expectedCniConfig []byte, tcConf T
     if recMacvlanConf.Ipam.Ips == nil {
       return errors.New("Received MACVLAN CNI config does not contain IPv6 address under ipam section, but it shall!")
     }
-    newIpamConfig := danmtypes.IpamConfig{Type: "fakeipam"}
+    newIpamConfig := datastructs.IpamConfig{Type: "fakeipam"}
     for _,ip := range recMacvlanConf.Ipam.Ips {
       if ip.Version != 6 {
         newIpamConfig.Ips = append(newIpamConfig.Ips,ip)

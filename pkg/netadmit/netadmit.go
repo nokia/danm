@@ -215,3 +215,62 @@ func CreateGenericPatchFromChange(attributePaths map[string]string, attribute st
   }
   return patch
 }
+
+func ValidateTenantConfig(responseWriter http.ResponseWriter, request *http.Request) {
+  admissionReview, err := DecodeAdmissionReview(request)
+  if err != nil {
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    return
+  }
+  oldManifest, err := getTenantConfig(admissionReview.Request.OldObject.Raw)
+  if err != nil {
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    return
+  }
+  newManifest, err := getTenantConfig(admissionReview.Request.Object.Raw)
+  if err != nil {
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    return
+  }
+  isManifestValid, err := validateConfig(oldManifest, newManifest, admissionReview.Request.Operation)
+  if !isManifestValid {
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    return
+  }
+  //TODO: Mutating Alloc into the InfaceProfiles of a TenantConfig shall come here 
+  responseAdmissionReview := v1beta1.AdmissionReview {
+    Response: CreateReviewResponseFromPatches(nil),
+  }
+  responseAdmissionReview.Response.UID = admissionReview.Request.UID
+  SendAdmissionResponse(responseWriter, responseAdmissionReview)
+}
+
+//TODO: can the return type be interface{}, and somehow encoding be input based?
+//Until that, this is unfortunetaly duplicated code
+func getTenantConfig(objectToReview []byte) (*danmtypes.TenantConfig,error) {
+  configManifest := danmtypes.TenantConfig{}
+  if objectToReview == nil {
+    return &configManifest, nil
+  }
+  decoder := json.NewDecoder(bytes.NewReader(objectToReview))
+  //We are using Decoder interface, because it can notify us if any unknown fields were put into the object
+  decoder.DisallowUnknownFields()
+  err := decoder.Decode(&configManifest)
+  if err != nil {
+    return nil, errors.New("ERROR: unknown fields are not allowed:" + err.Error())
+  }
+  return &configManifest, nil
+}
+
+//TODO: as above. Until reflection is figured out, this is somewhat of a duplication
+//Maybe a struct wrapping the exact object type could also work (that would push reflection responsibility on the validators though)
+func validateConfig(oldManifest, newManifest *danmtypes.TenantConfig, opType v1beta1.Operation) (bool,error) {
+  if newManifest.TypeMeta.Kind != "TenantConfig" {
+    return false, errors.New("K8s API type:" + newManifest.TypeMeta.Kind + " is not handled by DANM webhook")
+  }
+  err := validateTenantconfig(oldManifest,newManifest,opType)
+  if err != nil {
+      return false, err
+  }
+  return true, nil
+}

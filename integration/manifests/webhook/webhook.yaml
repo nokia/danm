@@ -5,19 +5,33 @@ metadata:
   name: danm-webhook-config
   namespace: kube-system
 webhooks:
-  - name: danm-webhook.nokia.k8s.io
+  - name: danm-netvalidation.nokia.k8s.io
     clientConfig:
       service:
         name: danm-webhook-svc
         namespace: kube-system
-        path: "/webhook"
+        path: "/netvalidation"
       # Configure your pre-generated certificate matching the details of your environment
       caBundle: <CA_BUNDLE>
     rules:
       - operations: ["CREATE","UPDATE"]
         apiGroups: ["danm.k8s.io"]
         apiVersions: ["v1"]
-        resources: ["danmnets"]
+        resources: ["danmnets","clusterneworks","tenantnetworks"]
+    failurePolicy: Fail
+  - name: danm-configvalidation.nokia.k8s.io
+    clientConfig:
+      service:
+        name: danm-webhook-svc
+        namespace: kube-system
+        path: "/confvalidation"
+      # Configure your pre-generated certificate matching the details of your environment
+      caBundle: <CA_BUNDLE>
+    rules:
+      - operations: ["CREATE","UPDATE"]
+        apiGroups: ["danm.k8s.io"]
+        apiVersions: ["v1"]
+        resources: ["tenantconfigs"]
     failurePolicy: Fail
 ---
 apiVersion: v1

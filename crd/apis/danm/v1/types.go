@@ -4,14 +4,6 @@ import (
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-  OptimisticLockErrorMsg = "the object has been modified; please apply your changes to the latest version and try again"
-)
-
-type CniBackend struct {
-  CNIVersion string
-}
-
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type DanmNet struct {
@@ -29,13 +21,13 @@ type DanmNetSpec struct {
 
 type DanmNetOption struct {
   // The device to where the network is attached
-  Device string  `json:"host_device"`
+  Device string  `json:"host_device,omitempty"`
   // The resource_pool contains allocated device IDs
   DevicePool string  `json:"device_pool,omitempty"`
   // the vxlan id on the host device (creation of vxlan interface)
   Vxlan  int  `json:"vxlan,omitempty"`
   // The name of the interface in the container
-  Prefix string  `json:"container_prefix"`
+  Prefix string  `json:"container_prefix,omitempty"`
   // IPv4 specific parameters
   // IPv4 network address
   Cidr   string  `json:"cidr,omitempty"`
@@ -51,7 +43,7 @@ type DanmNetOption struct {
   // IPv6 routes for this network
   Routes6 map[string]string  `json:"routes6,omitempty"`
   // Routing table number for policy routing
-  RTables int `json:"rt_tables"`
+  RTables int `json:"rt_tables,omitempty"`
   // the VLAN id of the VLAN interface created on top of the host device
   Vlan  int  `json:"vlan,omitempty"`
 }
@@ -104,27 +96,25 @@ type DanmEpList struct {
   Items            []DanmEp `json:"items"`
 }
 
-// Interface represents a request coming from the Pod to connect it to one DanmNet during CNI_ADD operation
-// It contains the name of the DanmNet the Pod should be connected to, and other optional requests
-// Pods can influence the scheme of IP allocation (dynamic, static, none),
-// and can ask for the provisioning of policy-based IP routes
-type Interface struct {
-  Network string `json:"network"`
-  Ip string `json:"ip"`
-  Ip6 string `json:"ip6"`
-  Proutes map[string]string `json:"proutes"`
-  Proutes6 map[string]string `json:"proutes6"`
-  DefaultIfaceName string
-  Device string `json:"Device,omitempty"`
-  SequenceId int
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type TenantConfig struct {
+  meta_v1.TypeMeta              `json:",inline"`
+  meta_v1.ObjectMeta            `json:"metadata"`
+  HostDevices []IfaceProfile    `json:"hostDevices"`
+  NetworkIds  map[string]string `json:"networkIds,omitempty"`
 }
 
-type IpamConfig struct {
-  Type      string      `json:"type"`
-  Ips       []IpamIp    `json:"ips,omitempty"`
+type IfaceProfile struct {
+  Name      string `json:"name"`
+  VniType   string `json:"vniType,omitempty"`
+  VniRange  string `json:"vniRange,omitempty"`
+  Alloc     string  `json:"alloc,omitempty"`
 }
 
-type IpamIp struct {
-  IpCidr    string      `json:"ipcidr"`
-  Version   int         `json:"version"`
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type TenantConfigList struct {
+  meta_v1.TypeMeta `json:",inline"`
+  meta_v1.ListMeta `json:"metadata"`
+  Items            []TenantConfig `json:"items"`
 }

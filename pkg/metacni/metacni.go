@@ -61,7 +61,7 @@ type cniArgs struct {
   podId string
   containerId string
   stdIn []byte
-  interfaces []danmtypes.Interface
+  interfaces []datastructs.Interface
   pod *core_v1.Pod
 }
 
@@ -168,7 +168,7 @@ func createK8sClient(kubeconfig string) (kubernetes.Interface, error) {
 }
 
 func extractConnections(args *cniArgs) error {
-  var ifaces []danmtypes.Interface
+  var ifaces []datastructs.Interface
   for key, val := range args.pod.Annotations {
     if strings.Contains(key, danmIfDefinitionSyntax) {
       err := json.Unmarshal([]byte(val), &ifaces)
@@ -179,7 +179,7 @@ func extractConnections(args *cniArgs) error {
     }
   }
   if len(ifaces) == 0 {
-    ifaces = []danmtypes.Interface{{Network: defaultNetworkName}}
+    ifaces = []datastructs.Interface{{Network: defaultNetworkName}}
   }
   args.interfaces = ifaces
   return nil
@@ -279,7 +279,7 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
   return syncher.MergeCniResults(), err
 }
 
-func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) {
+func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset.Interface, iface datastructs.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) {
   epIfaceSpec := danmtypes.DanmEpIface {
     Name:        cnidel.CalculateIfaceName(DanmConfig.NamingScheme, netInfo.Spec.Options.Prefix, iface.DefaultIfaceName, iface.SequenceId),
     Address:     iface.Ip,
@@ -311,7 +311,7 @@ func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset
   syncher.PushResult(netInfo.ObjectMeta.Name, nil, delegatedResult)
 }
 
-func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Interface, iface danmtypes.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) {
+func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Interface, iface datastructs.Interface, netInfo *danmtypes.DanmNet, args *cniArgs) {
   ip4, ip6, macAddr, err := ipam.Reserve(danmClient, *netInfo, iface.Ip, iface.Ip6)
   if err != nil {
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error()), nil)

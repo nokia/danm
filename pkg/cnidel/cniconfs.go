@@ -6,13 +6,14 @@ import (
   "io/ioutil"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/danmep"
+  "github.com/nokia/danm/pkg/datastructs"
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 
 var (
   supportedNativeCnis = map[string]*cniBackendConfig {
     "sriov": &cniBackendConfig {
-      CniBackend: danmtypes.CniBackend {
+      CniBackend: datastructs.CniBackend {
         CNIVersion: "0.3.1",
       },
       readConfig: cniConfigReader(getSriovCniConfig),
@@ -20,7 +21,7 @@ var (
       deviceNeeded: true,
     },
     "macvlan": &cniBackendConfig {
-      CniBackend: danmtypes.CniBackend {
+      CniBackend: datastructs.CniBackend {
         CNIVersion: "0.3.1",
       },
       readConfig: cniConfigReader(getMacvlanCniConfig),
@@ -42,7 +43,7 @@ func readCniConfigFile(cniconfDir string, netInfo *danmtypes.DanmNet) ([]byte, e
 }
 
 //This function creates CNI configuration for the dynamic-level SR-IOV backend
-func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error) {
+func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions datastructs.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error) {
   var sriovConfig SriovNet
   // initialize common fields of "github.com/containernetworking/cni/pkg/types".NetConf
   sriovConfig.CNIVersion = cniVersion
@@ -69,7 +70,7 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamCon
 }
 
 //This function creates CNI configuration for the dynamic-level MACVLAN backend
-func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions danmtypes.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error) {
+func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions datastructs.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error) {
   var macvlanConfig MacvlanNet
   // initialize common fields of "github.com/containernetworking/cni/pkg/types".NetConf
   macvlanConfig.CNIVersion = cniVersion

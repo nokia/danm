@@ -20,6 +20,10 @@ func (client *ClientStub) DanmEps(namespace string) client.DanmEpInterface {
   return newEpClientStub(client.testEps)
 }
 
+func (client *ClientStub) TenantConfigs(namespace string) client.TenantConfigInterface {
+  return nil
+}
+
 func (c *ClientStub) RESTClient() rest.Interface {
   return nil
 }

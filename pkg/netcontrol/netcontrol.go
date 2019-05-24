@@ -11,6 +11,7 @@ import (
   client "github.com/nokia/danm/crd/client/clientset/versioned/typed/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
+  "github.com/nokia/danm/pkg/datastructs"
 )
 
 // Handler represents an object watching the K8s API for changes in the DanmNet API path
@@ -52,7 +53,7 @@ func PutDanmNet(client client.DanmNetInterface, dnet *danmtypes.DanmNet) (bool,e
   var wasResourceAlreadyUpdated bool = false
   _, err := client.Update(dnet)
   if err != nil {
-    if strings.Contains(err.Error(),danmtypes.OptimisticLockErrorMsg) {
+    if strings.Contains(err.Error(),datastructs.OptimisticLockErrorMsg) {
       wasResourceAlreadyUpdated = true
       return wasResourceAlreadyUpdated, nil
     }

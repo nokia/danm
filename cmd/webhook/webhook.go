@@ -25,7 +25,8 @@ func main() {
     log.Println("ERROR: TLS configuration could not be initialized, because:" + err.Error())
     return
   }
-  http.HandleFunc("/webhook", netadmit.ValidateNetwork)
+  http.HandleFunc("/netvalidation", netadmit.ValidateNetwork)
+  http.HandleFunc("/confvalidation", netadmit.ValidateTenantConfig)
   server := &http.Server{
     Addr:         *address + ":" + strconv.Itoa(*port),
     TLSConfig:    &tls.Config{Certificates: []tls.Certificate{tlsConf}},

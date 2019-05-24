@@ -8,7 +8,7 @@ import (
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/version"
-  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  "github.com/nokia/danm/pkg/datastructs"
 )
 
 //Fakeipam plugin is a very simple CNI-style IPAM plugin, which prints the received IP allocation information to its output.
@@ -18,7 +18,7 @@ import (
 //At the end, fakeipam will simply regurgitate the IP allocation information originally coming from DANM.
 
 type cniConfig struct {
-  Ipam   danmtypes.IpamConfig `json:"ipam"`
+  Ipam   datastructs.IpamConfig `json:"ipam"`
 }
 
 func reserveIp(args *skel.CmdArgs) error {
@@ -33,19 +33,19 @@ func reserveIp(args *skel.CmdArgs) error {
   return cniRes.Print()
 }
 
-func loadIpamConfig(rawConfig []byte) (danmtypes.IpamConfig,error) {
+func loadIpamConfig(rawConfig []byte) (datastructs.IpamConfig,error) {
   cniConf := cniConfig{}
   err := json.Unmarshal(rawConfig, &cniConf)
   if  err != nil {
-    return danmtypes.IpamConfig{}, err
+    return datastructs.IpamConfig{}, err
   }
   if len(cniConf.Ipam.Ips) == 0 {
-    return danmtypes.IpamConfig{}, errors.New("No IP was passed to fake IPAM")
+    return datastructs.IpamConfig{}, errors.New("No IP was passed to fake IPAM")
   }
   return cniConf.Ipam, nil
 }
 
-func createCniResult(ipamConf danmtypes.IpamConfig) (*current.Result,error) {
+func createCniResult(ipamConf datastructs.IpamConfig) (*current.Result,error) {
   var resultIPs = []*current.IPConfig{}
   for _, ipamIp := range ipamConf.Ips {
     ip, ipNet, err := net.ParseCIDR(ipamIp.IpCidr)

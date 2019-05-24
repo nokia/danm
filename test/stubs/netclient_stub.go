@@ -9,6 +9,7 @@ import (
   watch "k8s.io/apimachinery/pkg/watch"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
+  "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/ipam"
 )
 const (
@@ -58,7 +59,7 @@ func (netClient *NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmN
         netClient.testNets[index].ObjectMeta.ResourceVersion = magicVersion
       }
     }
-    return nil, errors.New(danmtypes.OptimisticLockErrorMsg)
+    return nil, errors.New(datastructs.OptimisticLockErrorMsg)
   }
   if strings.Contains(obj.Spec.NetworkID, "error") {
     return nil, errors.New("fatal error, don't retry")

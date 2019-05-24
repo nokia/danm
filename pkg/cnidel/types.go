@@ -3,12 +3,13 @@ package cnidel
 import (
   "github.com/containernetworking/cni/pkg/types"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  "github.com/nokia/danm/pkg/datastructs"
 )
 
-type cniConfigReader func(netInfo *danmtypes.DanmNet, ipam danmtypes.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error)
+type cniConfigReader func(netInfo *danmtypes.DanmNet, ipam datastructs.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error)
 
 type cniBackendConfig struct {
-  danmtypes.CniBackend
+  datastructs.CniBackend
   readConfig cniConfigReader
   ipamNeeded bool
   deviceNeeded bool
@@ -24,7 +25,7 @@ type SriovNet struct {
   // VLAN ID to assign for the VF
   Vlan   int        `json:"vlan,omitEmpty"`
   // IPAM configuration to be used for this network
-  Ipam   danmtypes.IpamConfig `json:"ipam,omitEmpty"`
+  Ipam   datastructs.IpamConfig `json:"ipam,omitEmpty"`
   // Device PCI ID
   DeviceID string `json:"deviceID"`
 }
@@ -45,5 +46,5 @@ type MacvlanNet struct {
   //MTU to be set to the MACVLAN slave interface (default 1500)
   MTU    int    `json:"mtu"`
   //IPAM configuration to be used for this network
-  Ipam   danmtypes.IpamConfig `json:"ipam,omitEmpty"`
+  Ipam   datastructs.IpamConfig `json:"ipam,omitEmpty"`
 }

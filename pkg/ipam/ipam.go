@@ -126,7 +126,7 @@ func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string) (error) 
     return nil
   } else if reqType == "dynamic" {
     if netInfo.Spec.Options.Alloc == "" {
-      return errors.New("Ipv4 address cannot be dynamically allocated for an L2 network!")
+      return errors.New("IPv4 address cannot be dynamically allocated for an L2 network!")
     }
     ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
     _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)

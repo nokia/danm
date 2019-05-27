@@ -96,7 +96,7 @@ func CreateInterfaces(args *skel.CmdArgs) error {
   return types.PrintResult(cniResult, cniVersion)
 }
 
-func createDanmClient() (danmclientset.Interface,error) {
+func CreateDanmClient() (danmclientset.Interface,error) {
   config, err := getClientConfig()
   if err != nil {
     return nil, errors.New("Parsing kubeconfig failed with error:" + err.Error())
@@ -235,7 +235,7 @@ func preparePodForIpv6(args *cniArgs) error {
 }
 
 func setupNetworking(args *cniArgs) (*current.Result, error) {
-  danmClient, err := createDanmClient()
+  danmClient, err := CreateDanmClient()
   if err != nil {
     return nil, errors.New("failed to create DanmClient due to:" + err.Error())
   }
@@ -404,7 +404,7 @@ func createDanmEp(epInput danmtypes.DanmEpIface, netInfo *danmtypes.DanmNet, arg
 }
 
 func putDanmEp(ep danmtypes.DanmEp) error {
-  danmClient, err := createDanmClient()
+  danmClient, err := CreateDanmClient()
   if err != nil {
     return err
   }
@@ -447,7 +447,7 @@ func DeleteInterfaces(args *skel.CmdArgs) error {
     log.Println("INFO: DEL: cannot load DANM CNI config due to error:" + err.Error())
     return nil
   }
-  danmClient, err := createDanmClient()
+  danmClient, err := CreateDanmClient()
   if err != nil {
     log.Println("INFO: DEL: DanmEp REST client could not be created because" + err.Error())
     return nil

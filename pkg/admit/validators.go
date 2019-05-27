@@ -1,8 +1,9 @@
-package netadmit
+package admit
 
 import (
   "errors"
   "net"
+  "strconv"
   "encoding/binary"
   admissionv1 "k8s.io/api/admission/v1beta1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
@@ -15,9 +16,9 @@ const (
 )
 
 var (
-  DanmNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateAbsenceOfAllowedTenants}
-  ClusterNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId}
-  TenantNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateNetworkId,validateAbsenceOfAllowedTenants,validateTenantNetRules}
+  DanmNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateAbsenceOfAllowedTenants,validateNeType}
+  ClusterNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateNeType}
+  TenantNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateNetworkId,validateAbsenceOfAllowedTenants,validateTenantNetRules,validateNeType}
   danmValidationConfig = map[string]ValidatorMapping {
     "DanmNet": DanmNetMapping,
     "ClusterNetwork": ClusterNetMapping,
@@ -57,7 +58,7 @@ func validateIpFields(cidr string, routes map[string]string) error {
 
 func validateAllocationPool(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
   if opType == admissionv1.Create && newManifest.Spec.Options.Alloc != "" {
-    return errors.New("Allocation bitmask shall not be manually defined upon creation!")  
+    return errors.New("Allocation bitmask shall not be manually defined upon creation!")
   }
   cidr := newManifest.Spec.Options.Cidr
   if cidr == "" {
@@ -119,17 +120,16 @@ func validateAbsenceOfAllowedTenants(oldManifest, newManifest *danmtypes.DanmNet
 }
 
 func validateTenantNetRules(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
-  if opType == admissionv1.Create && 
-    (newManifest.Spec.Options.Device != "" ||
-     newManifest.Spec.Options.Vxlan  != 0  ||
+  if opType == admissionv1.Create &&
+    (newManifest.Spec.Options.Vxlan  != 0  ||
      newManifest.Spec.Options.Vlan   != 0) {
-    return errors.New("Manually configuring any one of host_device, vlan, or vxlan attributes is not allowed for TenantNetworks!")  
+    return errors.New("Manually configuring vlan, or vxlan attributes is not allowed for TenantNetworks!")
   }
-  if opType == admissionv1.Update && 
-    (newManifest.Spec.Options.Device  != oldManifest.Spec.Options.Device  || 
+  if opType == admissionv1.Update &&
+    (newManifest.Spec.Options.Device  != oldManifest.Spec.Options.Device  ||
      newManifest.Spec.Options.Vxlan   != oldManifest.Spec.Options.Vxlan   ||
      newManifest.Spec.Options.Vlan    != oldManifest.Spec.Options.Vlan) {
-    return errors.New("Manually changing any one of host_device, vlan, or vxlan attributes is not allowed for TenantNetworks!")  
+    return errors.New("Manually changing any one of host_device, vlan, or vxlan attributes is not allowed for TenantNetworks!")
   }
   return nil
 }
@@ -145,10 +145,13 @@ func validateTenantconfig(oldManifest, newManifest *danmtypes.TenantConfig, opTy
       return err
     }
   }
-  for nId, nType := range newManifest.NetworkIds {
-    if nId == "" || nType == "" {
+  for nType, nId := range newManifest.NetworkIds {
+    if nType == "" || nId == "" {
       return errors.New("neither NetworkID, nor NetworkType can be empty in a NetworkID mapping!")
-    } 
+    }
+    if len(nId) > MaxNidLength {
+      return errors.New("NetworkID:" + nId + " cannot be longer than 12 characters (otherwise VLAN and VxLAN host interface creation might fail)!")
+    }
   }
   return nil
 }
@@ -159,18 +162,33 @@ func validateIfaceConfig(ifaceConf danmtypes.IfaceProfile, opType admissionv1.Op
   }
   if (ifaceConf.VniType == "" && ifaceConf.VniRange != "") ||
      (ifaceConf.VniRange == "" && ifaceConf.VniType != "") {
-    return errors.New("vniRange and vniType attributes must be provided together for interface:" + ifaceConf.Name)   
+    return errors.New("vniRange and vniType attributes must be provided together for interface:" + ifaceConf.Name)
   }
   if ifaceConf.VniType != "" && ifaceConf.VniType != "vlan" && ifaceConf.VniType != "vxlan" {
-    return errors.New(ifaceConf.VniType + "is not in allowed vniType values: {vlan,vxlan} for interface:" + ifaceConf.Name) 
+    return errors.New(ifaceConf.VniType + "is not in allowed vniType values: {vlan,vxlan} for interface:" + ifaceConf.Name)
   }
   if opType == admissionv1.Create && ifaceConf.Alloc != "" {
     return errors.New("Allocation bitmask for interface: " + ifaceConf.Name + " shall not be manually defined upon creation!")
   }
   //I know this type is for CPU sets, but isn't it just perfect for handling arbitrarily defined integer ranges?
-  _, err := cpuset.Parse(ifaceConf.VniRange)
+  vniSet, err := cpuset.Parse(ifaceConf.VniRange)
   if err != nil {
     return errors.New("vniRange for interface:" + ifaceConf.Name + " must be improperly formatted becuase its parsing fails with:" + err.Error())
+  }
+  filteredSet := vniSet.Filter(func(vni int) bool {
+    return vni > MaxAllowedVni
+  })
+  if filteredSet.Size() > 0 {
+    return errors.New("vniRange for interface:" + ifaceConf.Name + " is invalid, because it cannot contain VNIs over the maximum supported number that is:" + strconv.Itoa(MaxAllowedVni))
+  }
+  return nil
+}
+
+func validateNeType(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
+  if newManifest.Spec.NetworkType == "sriov" {
+    if newManifest.Spec.Options.DevicePool == "" || newManifest.Spec.Options.Device != "" {
+      return errors.New("DevicePool must, and host_device cannot be provided for SR-IOV networks!")
+    }
   }
   return nil
 }

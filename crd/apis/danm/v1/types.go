@@ -95,9 +95,12 @@ type DanmEpList struct {
   meta_v1.ListMeta `json:"metadata"`
   Items            []DanmEp `json:"items"`
 }
+// VERY IMPORTANT NOT TO CHANGE THIS, INCLUDING THE EMPTY LINE BETWEEN THE ANNOTATIONS!!!
+// https://github.com/kubernetes/code-generator/issues/59
+// +genclient:nonNamespaced
 
-// +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +genclient
 type TenantConfig struct {
   meta_v1.TypeMeta              `json:",inline"`
   meta_v1.ObjectMeta            `json:"metadata"`
@@ -112,6 +115,7 @@ type IfaceProfile struct {
   Alloc     string  `json:"alloc,omitempty"`
 }
 
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type TenantConfigList struct {
   meta_v1.TypeMeta `json:",inline"`

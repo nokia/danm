@@ -7,7 +7,7 @@ import (
   "time"
   "crypto/tls"
   "net/http"
-  "github.com/nokia/danm/pkg/netadmit"
+  "github.com/nokia/danm/pkg/admit"
 )
 
 func main() {
@@ -25,8 +25,8 @@ func main() {
     log.Println("ERROR: TLS configuration could not be initialized, because:" + err.Error())
     return
   }
-  http.HandleFunc("/netvalidation", netadmit.ValidateNetwork)
-  http.HandleFunc("/confvalidation", netadmit.ValidateTenantConfig)
+  http.HandleFunc("/netvalidation", admit.ValidateNetwork)
+  http.HandleFunc("/confvalidation", admit.ValidateTenantConfig)
   server := &http.Server{
     Addr:         *address + ":" + strconv.Itoa(*port),
     TLSConfig:    &tls.Config{Certificates: []tls.Certificate{tlsConf}},

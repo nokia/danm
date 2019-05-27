@@ -11,7 +11,7 @@ import (
 )
 
 var (
-  supportedNativeCnis = map[string]*cniBackendConfig {
+  SupportedNativeCnis = map[string]*cniBackendConfig {
     "sriov": &cniBackendConfig {
       CniBackend: datastructs.CniBackend {
         CNIVersion: "0.3.1",

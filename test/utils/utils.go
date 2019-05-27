@@ -6,13 +6,13 @@ import (
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/ipam"
-  "github.com/nokia/danm/pkg/netadmit"
+  "github.com/nokia/danm/pkg/admit"
 )
 
 func SetupAllocationPools(nets []danmtypes.DanmNet) error {
   for index, dnet := range nets {
     if dnet.Spec.Options.Cidr != "" {
-      err := netadmit.CreateAllocationArray(&dnet)
+      err := admit.CreateAllocationArray(&dnet)
       if err != nil {
         return err
       }
@@ -24,7 +24,7 @@ func SetupAllocationPools(nets []danmtypes.DanmNet) error {
         dnet.Spec.Options.Pool.Start = (ipam.Int2ip(ipam.Ip2int(ipnet.IP) + 1)).String()
       }
       if dnet.Spec.Options.Pool.End == "" {
-        dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(netadmit.GetBroadcastAddress(ipnet)) - 1)).String()
+        dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(admit.GetBroadcastAddress(ipnet)) - 1)).String()
       }
       if strings.HasPrefix(dnet.Spec.NetworkID, "full") {
         exhaustNetwork(&dnet)

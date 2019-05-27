@@ -1,0 +1,28 @@
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: caas:danm
+rules:
+  - apiGroups:
+    - danm.k8s.io
+    resources:
+    - danmnets
+    - danmeps
+    verbs: [ "*" ]
+  - apiGroups: [ "" ]
+    resources: [ "pods" ]
+    verbs: [ "get","watch","list"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: caas:danm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: caas:danm
+subjects:
+  - kind: User
+    apiGroup: rbac.authorization.k8s.io
+    name: danm

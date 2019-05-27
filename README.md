@@ -157,10 +157,19 @@ The method of deploying the whole DANM suite into a Kubernetes cluster is the fo
 kubectl create -f integration/crds/
 ```
 **2. Put a valid CNI config file into the CNI configuration directory of all your kubelet nodes' (by default it is /etc/cni/net.d/) based on:**
-[cniconfig](https://github.com/nokia/danm/tree/master/integration/cni_config/00-danm.conf)
-The parameter "kubeconfig" is mandatory, and shall point to a valid kubeconfig file.
+
+[Example CNI config file](https://github.com/nokia/danm/tree/master/integration/cni_config/00-danm.conf)
+
 As kubelet considers the first .conf file in the configured directory as the valid CNI config of the cluster, it is generally a good idea to prefix the .conf file of any CNI metaplugin with "00".
-Make sure to configure the optional DANM configuration parameters to match your environment! 
+Make sure to configure the optional DANM configuration parameters to match your environment!
+The parameter "kubeconfig" is mandatory, and shall point to a valid kubeconfig file.
+You can find an example file here:
+
+[Example kubeconf file](https://github.com/nokia/danm/tree/master/integration/cni_config/example_kubeconfig.yaml)
+
+Don't forget to also provision the necessary RBAC rules so DANM can do its job:
+
+[RBAC rules](https://github.com/nokia/danm/tree/master/integration/cni_config/danm_rbac.yaml)
 
 **3. Copy the "danm" binary into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/):**
 ```

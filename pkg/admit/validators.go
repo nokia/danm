@@ -106,7 +106,7 @@ func validateNetworkId(oldManifest, newManifest *danmtypes.DanmNet, opType admis
   if newManifest.Spec.NetworkID == "" {
     return errors.New("Spec.NetworkID mandatory parameter is missing!")
   }
-  if len(newManifest.Spec.NetworkID) > MaxNidLength {
+  if len(newManifest.Spec.NetworkID) > MaxNidLength && IsTypeDynamic(newManifest.Spec.NetworkType) {
     return errors.New("Spec.NetworkID cannot be longer than 12 characters (otherwise VLAN and VxLAN host interface creation might fail)!")
   }
   return nil
@@ -149,7 +149,7 @@ func validateTenantconfig(oldManifest, newManifest *danmtypes.TenantConfig, opTy
     if nType == "" || nId == "" {
       return errors.New("neither NetworkID, nor NetworkType can be empty in a NetworkID mapping!")
     }
-    if len(nId) > MaxNidLength {
+    if len(nId) > MaxNidLength && IsTypeDynamic(nType) {
       return errors.New("NetworkID:" + nId + " cannot be longer than 12 characters (otherwise VLAN and VxLAN host interface creation might fail)!")
     }
   }

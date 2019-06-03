@@ -5,19 +5,17 @@ import (
   "errors"
   "net"
   "reflect"
-  "strconv"
   "strings"
+  "strconv"
   "time"
   "encoding/json"
   "math/rand"
   "net/http"
   "k8s.io/api/admission/v1beta1"
-  metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/confman"
   "github.com/nokia/danm/pkg/ipam"
-  "github.com/nokia/danm/pkg/metacni"
 )
 
 var (
@@ -133,7 +131,7 @@ func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ip
 //TODO: we could easily add CIDR + allocation pool overwrites as well for TenantNetworks, if needed
 //Open an issue with your use-case if you see the need!
 func addTenantSpecificDetails(tnet *danmtypes.DanmNet) error {
-  tconf, err := getTenantConfig()
+  tconf, err := confman.GetTenantConfig()
   if err != nil {
     return err
   }
@@ -147,23 +145,6 @@ func addTenantSpecificDetails(tnet *danmtypes.DanmNet) error {
   return nil
 }
 
-func getTenantConfig() (*danmtypes.TenantConfig, error) {
-  danmClient, err := metacni.CreateDanmClient()
-  if err != nil {
-    return nil, err
-  }
-  reply, err := danmClient.DanmV1().TenantConfigs().List(metav1.ListOptions{})
-  if err != nil {
-    return nil, err
-  }
-  configs := reply.Items
-  if len(configs) == 0 {
-    return nil, errors.New("TenantNetworks cannot be created without provisioning a TenantConfig first!")
-  }
-  //TODO: do a namespace based selection later if one generic config does not suffice
-  return &configs[0], nil
-}
-
 func allocateDetailsForDynamicBackends(tnet *danmtypes.DanmNet,tconf *danmtypes.TenantConfig) error {
   for _, iface := range tconf.HostDevices {
     if tnet.Spec.Options.DevicePool != "" && strings.Contains(tnet.Spec.Options.DevicePool, iface.Name) {
@@ -174,7 +155,7 @@ func allocateDetailsForDynamicBackends(tnet *danmtypes.DanmNet,tconf *danmtypes.
       return attachNetworkToIfaceProfile(tnet,tconf,iface)
     }
   }
-  //Device based networks need to have their related physical interfaces explicitly allowed configured by the administrator
+  //Device based networks need to have their related physical interfaces explicitly allowed by the administrator
   if tnet.Spec.Options.DevicePool != "" {
     return errors.New("The physical interface used by device_pool:" + tnet.Spec.Options.DevicePool + " is not forbidden for tenants!")
   }
@@ -185,7 +166,7 @@ func allocateDetailsForDynamicBackends(tnet *danmtypes.DanmNet,tconf *danmtypes.
 }
 
 func attachNetworkToIfaceProfile(tnet *danmtypes.DanmNet, tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) error {
-  if tnet.Spec.Options.Device != "" && tnet.Spec.Options.DevicePool == "" {
+  if tnet.Spec.Options.Device == "" && tnet.Spec.Options.DevicePool == "" {
     tnet.Spec.Options.Device = iface.Name
   }
   if (iface.VniType == "vlan" && tnet.Spec.Options.Vlan == 0) ||

@@ -37,6 +37,8 @@ spec:
                       pattern: '(^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$)?'
                 container_prefix:
                   type: string
+                host_device:
+                  type: string
                 device_pool:
                   type: string
                 rt_tables:

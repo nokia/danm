@@ -1,11 +1,12 @@
 package: github.com/nokia/danm
 ignore:
 - github.com/vishvananda/netlink
+- github.com/nokia/danm/pkg/admit
 - github.com/nokia/danm/pkg/bitarray
+- github.com/nokia/danm/pkg/confman
 - github.com/nokia/danm/pkg/cnidel
 - github.com/nokia/danm/pkg/ipam
 - github.com/nokia/danm/pkg/metacni
-- github.com/nokia/danm/pkg/netadmit
 - github.com/nokia/danm/pkg/netcontrol
 - github.com/nokia/danm/pkg/svccontrol
 - github.com/nokia/danm/pkg/syncher

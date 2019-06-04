@@ -94,7 +94,8 @@ func CreateGenericPatchFromChange(path string, value []byte ) Patch {
 }
 
 func IsTypeDynamic(cniType string) bool {
-  if _, ok := cnidel.SupportedNativeCnis[strings.ToLower(cniType)]; ok {
+  neType := strings.ToLower(cniType)
+  if _, ok := cnidel.SupportedNativeCnis[neType]; ok || neType == "" || neType == "ipvlan" {
     return true
   }
   return false

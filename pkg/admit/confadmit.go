@@ -12,6 +12,7 @@ import (
 )
 
 const (
+  //This is just a dimensioning decision to avoid reserving unnecessarily big bitarrays in TenantConfig
   MaxAllowedVni = 5000
   HostDevicePath = "/hostDevices"
 )
@@ -33,6 +34,10 @@ func ValidateTenantConfig(responseWriter http.ResponseWriter, request *http.Requ
     return
   }
   origNewManifest := *newManifest
+  //Don't judge until you have tried deep copying an array (not a slice) in Golang
+  origDevices := make([]danmtypes.IfaceProfile, len(newManifest.HostDevices))
+  copy(origDevices, newManifest.HostDevices)
+  origNewManifest.HostDevices = origDevices
   isManifestValid, err := validateConfig(oldManifest, newManifest, admissionReview.Request.Operation)
   if !isManifestValid {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
@@ -80,6 +85,26 @@ func validateConfig(oldManifest, newManifest *danmtypes.TenantConfig, opType v1b
   return true, nil
 }
 
+func createPatchListFromConfigChanges(origConfig danmtypes.TenantConfig, changedConfig *danmtypes.TenantConfig) []Patch {
+  patchList := make([]Patch, 0)
+  var hostDevicesPatch string
+  if !reflect.DeepEqual(origConfig.HostDevices, changedConfig.HostDevices) {
+    hostDevicesPatch = `[`
+    for ifaceIndex, ifaceConf := range changedConfig.HostDevices {
+      if ifaceIndex != 0 {
+        hostDevicesPatch += `,`
+      }
+      hostDevicesPatch += `{"name":"` + ifaceConf.Name +
+                          `","vniType":"` + ifaceConf.VniType +
+                          `","vniRange":"` + ifaceConf.VniRange +
+                          `","alloc":"` + ifaceConf.Alloc + `"}`
+    }
+    hostDevicesPatch += `]`
+    patchList = append(patchList, CreateGenericPatchFromChange(HostDevicePath, json.RawMessage(hostDevicesPatch)))
+  }
+  return patchList
+} 
+
 func mutateConfigManifest(tconf *danmtypes.TenantConfig) error {
   for ifaceIndex, ifaceConf := range tconf.HostDevices {
     //We don't want to either re-init existing allocations, or unnecessarily create arrays for non-virtual networks
@@ -93,18 +118,4 @@ func mutateConfigManifest(tconf *danmtypes.TenantConfig) error {
     tconf.HostDevices[ifaceIndex].Alloc = bitArray.Encode()
   }
   return nil
-}
-
-func createPatchListFromConfigChanges(origConfig danmtypes.TenantConfig, changedConfig *danmtypes.TenantConfig) []Patch {
-  patchList := make([]Patch, 0)
-  for ifaceIndex, ifaceConf := range changedConfig.HostDevices {
-    if !reflect.DeepEqual(origConfig.HostDevices[ifaceIndex], ifaceConf) {
-      patchList = append(patchList, CreateGenericPatchFromChange(HostDevicePath + "/" + ifaceConf.Name,
-                json.RawMessage(`{"name":"` + ifaceConf.Name +
-                                `","vniType":"` + ifaceConf.VniType +
-                                `","vniRange":"` + ifaceConf.VniRange +
-                                `","alloc":"` + ifaceConf.Alloc + `"}`)))
-    }
-  }
-  return patchList
 }

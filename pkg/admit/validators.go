@@ -17,8 +17,8 @@ const (
 
 var (
   DanmNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateAbsenceOfAllowedTenants,validateNeType}
-  ClusterNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateNeType}
-  TenantNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateNetworkId,validateAbsenceOfAllowedTenants,validateTenantNetRules,validateNeType}
+  ClusterNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNeType,validateNetworkId}
+  TenantNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateAbsenceOfAllowedTenants,validateTenantNetRules,validateNeType}
   danmValidationConfig = map[string]ValidatorMapping {
     "DanmNet": DanmNetMapping,
     "ClusterNetwork": ClusterNetMapping,
@@ -135,8 +135,8 @@ func validateTenantNetRules(oldManifest, newManifest *danmtypes.DanmNet, opType 
 }
 
 func validateTenantconfig(oldManifest, newManifest *danmtypes.TenantConfig, opType admissionv1.Operation) error {
-  if len(newManifest.HostDevices) == 0 {
-    return errors.New("hostDevices list must not be empty!")
+  if len(newManifest.HostDevices) == 0 && len(newManifest.NetworkIds) == 0 {
+    return errors.New("Either hostDevices, or networkIds must be provided!")
   }
   var err error
   for _, ifaceConf := range newManifest.HostDevices {

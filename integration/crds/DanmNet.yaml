@@ -17,8 +17,6 @@ spec:
     openAPIV3Schema:
       properties:
         spec:
-          required:
-          - NetworkID
           properties:
             NetworkID:
               type: string

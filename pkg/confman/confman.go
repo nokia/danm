@@ -3,7 +3,6 @@ package confman
 import (
   "errors"
   "log"
-  "strings"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/metacni"
@@ -12,7 +11,7 @@ import (
 )
 
 func GetTenantConfig() (*danmtypes.TenantConfig, error) {
-  danmClient, err := metacni.CreateDanmClient()
+  danmClient, err := metacni.CreateDanmClient("")
   if err != nil {
     return nil, err
   }
@@ -61,7 +60,7 @@ func getIfaceIndex(tconf *danmtypes.TenantConfig, name, vniType string) int {
   for index, iface := range tconf.HostDevices {
     //As HostDevices is a list, the same interface might be added multiple types but with different VNI types
     //We don't want to accidentally overwrite the wrong profile
-    if strings.Contains(iface.Name, name) && iface.VniType == vniType {
+    if iface.Name == name && iface.VniType == vniType {
       return index
     }
   }
@@ -69,7 +68,7 @@ func getIfaceIndex(tconf *danmtypes.TenantConfig, name, vniType string) int {
 }
 
 func updateConfigInApi(tconf *danmtypes.TenantConfig) error {
-  danmClient, err := metacni.CreateDanmClient()
+  danmClient, err := metacni.CreateDanmClient("")
   if err != nil {
     return err
   }

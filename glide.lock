@@ -1,5 +1,5 @@
-hash: 7944d7fcb1c247ee8568840a7669f2f6c32db3753bff819f508868cf09cddbcc
-updated: 2019-05-24T17:43:48.928763287+02:00
+hash: db2cbe18e286a1fe2f90bb53d9504898c3d34ebde78ca40fbe1415c5e2221a4a
+updated: 2019-06-07T18:03:02.914179306+02:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
@@ -86,7 +86,7 @@ imports:
 - name: github.com/peterbourgon/diskv
   version: 5f041e8faa004a95c88a202771f4cc3e991971e6
 - name: github.com/pkg/errors
-  version: 856c240a51a2bf8fb8269ea7f3f9b046aadde36e
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/satori/go.uuid
   version: 36e9d2ebbde5e3f13ab2e25625fd453271d6522e
 - name: github.com/spf13/pflag
@@ -343,7 +343,7 @@ imports:
   - util/retry
   - util/workqueue
 - name: k8s.io/klog
-  version: 8e90cee79f823779174776412c13478955131846
+  version: 8139d8cb77af419532b33dfa7dd09fbc5f1d344f
 - name: k8s.io/kube-openapi
   version: 91cfa479c814065e420cee7ed227db0f63a5854e
   subpackages:
@@ -351,8 +351,5 @@ imports:
 - name: k8s.io/kubernetes
   version: ddf47ac13c1a9483ea035a79cd7c10005ff21a6d
   subpackages:
-  - pkg/kubelet/apis/podresources
-  - pkg/kubelet/apis/podresources/v1alpha1
   - pkg/kubelet/cm/cpuset
-  - pkg/kubelet/util
 testImports: []

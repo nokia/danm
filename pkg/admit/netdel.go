@@ -7,6 +7,9 @@ import (
   "github.com/nokia/danm/pkg/confman"
 )
 
+//A GIGANTIC DISCLAIMER: THIS DOES NOT WORK UNTIL K8S 1.15 IS RELEASED!
+//See ticket: https://github.com/kubernetes/kubernetes/pull/76346
+//Until then, don't use in production!
 func DeleteNetwork(responseWriter http.ResponseWriter, request *http.Request) {
   admissionReview, err := DecodeAdmissionReview(request)
   if err != nil {

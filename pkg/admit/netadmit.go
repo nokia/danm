@@ -21,6 +21,7 @@ import (
 var (
   NetworkPatchPaths = map[string]string {
     "NetworkType": "/spec/NetworkType",
+    "NetworkID": "/spec/NetworkID",
     "Alloc": "/spec/Options/alloc",
     "Pool": "/spec/Options/allocation_pool",
     "Device": "/spec/Options/host_device",
@@ -52,6 +53,11 @@ func ValidateNetwork(responseWriter http.ResponseWriter, request *http.Request) 
     return
   }
   err = mutateNetManifest(newManifest)
+  if err != nil {
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    return
+  }
+  err = postValidateManifest(newManifest)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
@@ -110,6 +116,14 @@ func mutateNetManifest(dnet *danmtypes.DanmNet) error {
   return err
 }
 
+//This is needed because some mandatory validation rules might be only enforced during mutation phase.
+//So we cannot validate those rules beforehand, but we also can't be sure they are satisfied by variable user configuration.
+//Example is NetworkID related validations for TenantNetworks
+//TODO: make this also fancy when more post validation needs surface
+func postValidateManifest(dnet *danmtypes.DanmNet) error {
+  return validateNetworkId(nil, dnet, "")
+}
+
 func CreateAllocationArray(dnet *danmtypes.DanmNet) error {
   _,ipnet,_ := net.ParseCIDR(dnet.Spec.Options.Cidr)
   bitArray, err := bitarray.CreateBitArrayFromIpnet(ipnet)
@@ -137,30 +151,45 @@ func addTenantSpecificDetails(tnet *danmtypes.DanmNet) error {
   }
   if IsTypeDynamic(tnet.Spec.NetworkType) {
     err = allocateDetailsForDynamicBackends(tnet,tconf)
+    if err != nil {
+      return err
+    }
   }
-  nId, isPresent := tconf.NetworkIds[tnet.Spec.NetworkType]
-  if isPresent {
-    tnet.Spec.NetworkID = nId
+  for nType, nId := range tconf.NetworkIds {
+    //K8s API server converts first character to uppercase... This is why we can't have nice things
+    if strings.EqualFold(nType, tnet.Spec.NetworkType) {
+      tnet.Spec.NetworkID = nId
+      break
+    }
   }
   return nil
 }
 
 func allocateDetailsForDynamicBackends(tnet *danmtypes.DanmNet,tconf *danmtypes.TenantConfig) error {
+  var pfProfiles []danmtypes.IfaceProfile
   for _, iface := range tconf.HostDevices {
-    if tnet.Spec.Options.DevicePool != "" && strings.Contains(tnet.Spec.Options.DevicePool, iface.Name) {
+    if tnet.Spec.Options.DevicePool != "" && tnet.Spec.Options.DevicePool == iface.Name {
       //This is the interface profile belonging to the network's DevicePool
       return attachNetworkToIfaceProfile(tnet,tconf,iface)
-    } else if tnet.Spec.Options.Device == iface.Name {
+    } else if tnet.Spec.Options.Device == iface.Name && !strings.Contains(iface.Name,"/") {
       //This is the interface profile matching the requested host_device
       return attachNetworkToIfaceProfile(tnet,tconf,iface)
     }
+    //DevicePools generally look like this: "xyz.abc.io/resource_name".
+    //Here we separate "real" NICs from abstract K8s Devices 
+    if !strings.Contains(iface.Name,"/") {
+      pfProfiles = append(pfProfiles,iface)
+    }
   }
-  //Device based networks need to have their related physical interfaces explicitly allowed by the administrator
-  if tnet.Spec.Options.DevicePool != "" {
-    return errors.New("The physical interface used by device_pool:" + tnet.Spec.Options.DevicePool + " is not forbidden for tenants!")
+  //Explicitly requested physical interfaces shall be also explicitly allowed by the administrator
+  if tnet.Spec.Options.DevicePool != "" || tnet.Spec.Options.Device != "" {
+    return errors.New("The provided physical interface is not allowed to be used by tenants!")
+  }
+  if len(pfProfiles) == 0 {
+    return errors.New("There are no suitable interface profiles configured for TenantNetworks!")
   }
   rand.Seed(time.Now().UnixNano())
-  chosenProfile := tconf.HostDevices[rand.Intn(len(tconf.HostDevices))]
+  chosenProfile := pfProfiles[rand.Intn(len(pfProfiles))]
   //Otherwise we randomly choose an interface profile and attach the TenantNetwork to it
   return attachNetworkToIfaceProfile(tnet,tconf,chosenProfile)
 }
@@ -175,7 +204,7 @@ func attachNetworkToIfaceProfile(tnet *danmtypes.DanmNet, tconf *danmtypes.Tenan
     if err != nil {
       return errors.New("cannot reserve VNI for interface:" + iface.Name + " , because:" + err.Error())
     }
-    if iface.VniType != "vlan" {
+    if iface.VniType == "vlan" {
       tnet.Spec.Options.Vlan = vni
     } else {
       tnet.Spec.Options.Vxlan = vni
@@ -194,6 +223,10 @@ func createPatchListFromNetChanges(origNetwork danmtypes.DanmNet, changedNetwork
   if origNetwork.Spec.NetworkType != changedNetwork.Spec.NetworkType {
     patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["NetworkType"],
                 json.RawMessage(`"` +  changedNetwork.Spec.NetworkType + `"`)))
+  }
+  if origNetwork.Spec.NetworkID != changedNetwork.Spec.NetworkID {
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["NetworkID"],
+                json.RawMessage(`"` +  changedNetwork.Spec.NetworkID + `"`)))
   }
   if !reflect.DeepEqual(origNetwork.Spec.Options.Pool, changedNetwork.Spec.Options.Pool) {
     patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Pool"],

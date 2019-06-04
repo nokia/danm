@@ -1,3 +1,32 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: danm-webhook
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: caas:danm-webhook
+rules:
+- apiGroups:
+  - danm.k8s.io
+  resources:
+  - tenantconfigs
+  verbs: [ "*" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: caas:danm-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: caas:danm-webhook
+subjects:
+- kind: ServiceAccount
+  name: danm-webhook
+  namespace: kube-system
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
@@ -17,7 +46,7 @@ webhooks:
       - operations: ["CREATE","UPDATE"]
         apiGroups: ["danm.k8s.io"]
         apiVersions: ["v1"]
-        resources: ["danmnets","clusterneworks","tenantnetworks"]
+        resources: ["danmnets","clusternetworks","tenantnetworks"]
     failurePolicy: Fail
   - name: danm-configvalidation.nokia.k8s.io
     clientConfig:
@@ -32,6 +61,20 @@ webhooks:
         apiGroups: ["danm.k8s.io"]
         apiVersions: ["v1"]
         resources: ["tenantconfigs"]
+    failurePolicy: Fail
+  - name: danm-netdeletion.nokia.k8s.io
+    clientConfig:
+      service:
+        name: danm-webhook-svc
+        namespace: kube-system
+        path: "/netdeletion"
+      # Configure your pre-generated certificate matching the details of your environment
+      caBundle: <CA_BUNDLE>
+    rules:
+      - operations: ["DELETE"]
+        apiGroups: ["danm.k8s.io"]
+        apiVersions: ["v1"]
+        resources: ["tenantnetworks"]
     failurePolicy: Fail
 ---
 apiVersion: v1
@@ -74,6 +117,7 @@ spec:
       labels:
         danm: webhook
     spec:
+      serviceAccountName: danm-webhook
       containers:
         - name: danm-webhook
           image: danm_webhook

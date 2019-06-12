@@ -6,7 +6,6 @@ import (
   "log"
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/clientcmd"
-  "k8s.io/client-go/tools/cache"
   "github.com/nokia/danm/pkg/netcontrol"
 )
 
@@ -15,11 +14,6 @@ func getClientConfig(kubeConfig *string) (*rest.Config, error) {
     return clientcmd.BuildConfigFromFlags("", *kubeConfig)
   }
   return rest.InClusterConfig()
-}
-
-func watchRes(controller cache.Controller) {
-  stop := make(chan struct{})
-  go controller.Run(stop)
 }
 
 func main() {
@@ -32,14 +26,12 @@ func main() {
     log.Println("ERROR: Parsing kubeconfig failed with error:" + err.Error() + " , exiting")
     os.Exit(-1)
   }
-  netHandler, err := netcontrol.NewHandler(config)
+  netWatcher, err := netcontrol.NewWatcher(config)
   if err != nil {
-    log.Println("ERROR: Creation of K8s DanmNet Controller failed with error:" + err.Error() + " , exiting")
+    log.Println("ERROR: Creation of NetWatcher failed with error:" + err.Error() + " , exiting")
     os.Exit(-1)
   }
-  dnController := netHandler.CreateController()
-  watchRes(dnController)
-
-  // Wait forever
+  stopCh := make(chan struct{})
+  netWatcher.Run(&stopCh)
   select {}
 }

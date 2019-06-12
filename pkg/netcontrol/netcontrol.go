@@ -16,37 +16,65 @@ import (
 
 // Handler represents an object watching the K8s API for changes in the DanmNet API path
 // Upon the reception of a notification it validates the body, and handles the related VxLAN/VLAN/RT creation/deletions on the host
-type Handler struct {
-  client danmclientset.Interface
+type NetWatcher struct {
+  Client danmclientset.Interface
+  Controllers []cache.Controller
 }
 
 // NewHandler initializes and returns a new Handler object
 // Upon the reception of a notification it performs DanmNet validation, and host network management operations
 // Handler contains additional members: one performing HTTPS operations, the other to interact with DamnEp objects
-func NewHandler(cfg *rest.Config) (Handler,error) {
-  danmnethandler := Handler{}
+func NewWatcher(cfg *rest.Config) (*NetWatcher,error) {
+  netWatcher := NetWatcher{}
   client, err := danmclientset.NewForConfig(cfg)
   if err != nil {
-    return danmnethandler, err
+    return &netWatcher, err
   }
-  danmnethandler.client = client
-  return danmnethandler, nil
-}
-
-func (dnetHandler Handler) CreateController() cache.Controller {
-  danmInformerFactory := danminformers.NewSharedInformerFactory(dnetHandler.client, time.Minute*10)
-  controller := danmInformerFactory.Danm().V1().DanmNets().Informer()
-  controller.AddEventHandler(cache.ResourceEventHandlerFuncs{
+  netWatcher.Client = client
+  danmInformerFactory := danminformers.NewSharedInformerFactory(client, time.Minute*10)
+  dnetController := danmInformerFactory.Danm().V1().DanmNets().Informer()
+  dnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: func(obj interface{}) {
-        addDanmNet(dnetHandler.client, *(reflect.ValueOf(obj).Interface().(*danmtypes.DanmNet)))
+        AddDanmNet(netWatcher.Client, *(reflect.ValueOf(obj).Interface().(*danmtypes.DanmNet)))
       },
       DeleteFunc: func(obj interface{}) {
-        deleteDanmNet(*(reflect.ValueOf(obj).Interface().(*danmtypes.DanmNet))) 
+        DeleteDanmNet(*(reflect.ValueOf(obj).Interface().(*danmtypes.DanmNet)))
       },
       UpdateFunc: func(oldObj, newObj interface{}) {
      },
   })
-  return controller
+  netWatcher.Controllers = append(netWatcher.Controllers, dnetController)
+  tnetController := danmInformerFactory.Danm().V1().TenantNetworks().Informer()
+  tnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
+      AddFunc: func(obj interface{}) {
+        AddDanmNet(netWatcher.Client, *(reflect.ValueOf(obj).Interface().(*danmtypes.DanmNet)))
+      },
+      DeleteFunc: func(obj interface{}) {
+        DeleteDanmNet(*(reflect.ValueOf(obj).Interface().(*danmtypes.DanmNet)))
+      },
+      UpdateFunc: func(oldObj, newObj interface{}) {
+     },
+  })
+  netWatcher.Controllers = append(netWatcher.Controllers, tnetController)
+  cnetController := danmInformerFactory.Danm().V1().ClusterNetworks().Informer()
+  cnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
+      AddFunc: func(obj interface{}) {
+        AddDanmNet(netWatcher.Client, *(reflect.ValueOf(obj).Interface().(*danmtypes.DanmNet)))
+      },
+      DeleteFunc: func(obj interface{}) {
+        DeleteDanmNet(*(reflect.ValueOf(obj).Interface().(*danmtypes.DanmNet)))
+      },
+      UpdateFunc: func(oldObj, newObj interface{}) {
+     },
+  })
+  netWatcher.Controllers = append(netWatcher.Controllers, cnetController)
+  return &netWatcher, nil
+}
+
+func (netWatcher *NetWatcher) Run(stopCh *chan struct{}) {
+  for _, controller := range netWatcher.Controllers {
+    go controller.Run(*stopCh)
+  }
 }
 
 func PutDanmNet(client client.DanmNetInterface, dnet *danmtypes.DanmNet) (bool,error) {
@@ -65,7 +93,7 @@ func PutDanmNet(client client.DanmNetInterface, dnet *danmtypes.DanmNet) (bool,e
 // validate DanmNet body
 // update validity in apiserver, don't care for 409 (PATCH or PUT)
 // create host specific network stuff: rt_tables, vlan, and vxlan interfaces
-func addDanmNet(client danmclientset.Interface, dn danmtypes.DanmNet) {
+func AddDanmNet(client danmclientset.Interface, dn danmtypes.DanmNet) {
   err := setupHost(&dn)
   if err != nil {
     log.Println("ERROR: Creating host interfaces for DanmNet:" + dn.ObjectMeta.Name + " failed with error:" + err.Error())
@@ -74,7 +102,7 @@ func addDanmNet(client danmclientset.Interface, dn danmtypes.DanmNet) {
 }
 
 // delete host_specific network stuff: rt_tables, vlan, and vxlan interfaces
-func deleteDanmNet(dn danmtypes.DanmNet) {
+func DeleteDanmNet(dn danmtypes.DanmNet) {
   err := deleteNetworks(&dn)
   if err != nil {
     log.Println("INFO: Deletion of host interfaces for DanmNet:" + dn.ObjectMeta.Name + " failed with error:" + err.Error())

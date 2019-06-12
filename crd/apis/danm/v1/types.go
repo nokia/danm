@@ -48,16 +48,16 @@ type DanmNetOption struct {
   Vlan  int  `json:"vlan,omitempty"`
 }
 
-type IP4Pool struct {
-  Start string `json:"start"`
-  End   string `json:"end"`
-}
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type DanmNetList struct {
   meta_v1.TypeMeta `json:",inline"`
   meta_v1.ListMeta `json:"metadata"`
   Items            []DanmNet `json:"items"`
+}
+
+type IP4Pool struct {
+  Start string `json:"start"`
+  End   string `json:"end"`
 }
 
 // +genclient
@@ -95,6 +95,7 @@ type DanmEpList struct {
   meta_v1.ListMeta `json:"metadata"`
   Items            []DanmEp `json:"items"`
 }
+
 // VERY IMPORTANT NOT TO CHANGE THIS, INCLUDING THE EMPTY LINE BETWEEN THE ANNOTATIONS!!!
 // https://github.com/kubernetes/code-generator/issues/59
 // +genclient:nonNamespaced
@@ -121,4 +122,39 @@ type TenantConfigList struct {
   meta_v1.TypeMeta `json:",inline"`
   meta_v1.ListMeta `json:"metadata"`
   Items            []TenantConfig `json:"items"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type TenantNetwork struct {
+  meta_v1.TypeMeta   `json:",inline"`
+  meta_v1.ObjectMeta `json:"metadata"`
+  Spec               DanmNetSpec `json:"spec"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type TenantNetworkList struct {
+  meta_v1.TypeMeta `json:",inline"`
+  meta_v1.ListMeta `json:"metadata"`
+  Items            []DanmNet `json:"items"`
+}
+
+// VERY IMPORTANT NOT TO CHANGE THIS, INCLUDING THE EMPTY LINE BETWEEN THE ANNOTATIONS!!!
+// https://github.com/kubernetes/code-generator/issues/59
+// +genclient:nonNamespaced
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +genclient
+type ClusterNetwork struct {
+  meta_v1.TypeMeta   `json:",inline"`
+  meta_v1.ObjectMeta `json:"metadata"`
+  Spec               DanmNetSpec `json:"spec"`
+}
+
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type ClusterNetworkList struct {
+  meta_v1.TypeMeta `json:",inline"`
+  meta_v1.ListMeta `json:"metadata"`
+  Items            []DanmNet `json:"items"`
 }

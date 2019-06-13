@@ -41,6 +41,16 @@ spec:
                   type: string
                 device_pool:
                   type: string
+                vxlan:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 16777214
+                vlan:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                  maximum: 4094
                 rt_tables:
                   type: integer
                   format: int32

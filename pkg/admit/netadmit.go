@@ -6,7 +6,6 @@ import (
   "net"
   "reflect"
   "strings"
-  "strconv"
   "time"
   "encoding/json"
   "math/rand"
@@ -217,33 +216,25 @@ func createPatchListFromNetChanges(origNetwork danmtypes.DanmNet, changedNetwork
   patchList := make([]Patch, 0)
   if origNetwork.Spec.Options.Alloc != changedNetwork.Spec.Options.Alloc {
     //TODO: Could (?) use some reflecting here to determine name of the struct field
-    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Alloc"],
-                json.RawMessage(`"` + changedNetwork.Spec.Options.Alloc + `"`)))
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Alloc"], changedNetwork.Spec.Options.Alloc))
   }
   if origNetwork.Spec.NetworkType != changedNetwork.Spec.NetworkType {
-    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["NetworkType"],
-                json.RawMessage(`"` +  changedNetwork.Spec.NetworkType + `"`)))
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["NetworkType"], changedNetwork.Spec.NetworkType))
   }
   if origNetwork.Spec.NetworkID != changedNetwork.Spec.NetworkID {
-    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["NetworkID"],
-                json.RawMessage(`"` +  changedNetwork.Spec.NetworkID + `"`)))
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["NetworkID"], changedNetwork.Spec.NetworkID))
   }
   if !reflect.DeepEqual(origNetwork.Spec.Options.Pool, changedNetwork.Spec.Options.Pool) {
-    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Pool"],
-                json.RawMessage(`{"Start":"` + changedNetwork.Spec.Options.Pool.Start +
-                                `","End":"` + changedNetwork.Spec.Options.Pool.End + `"}`)))
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Pool"], changedNetwork.Spec.Options.Pool))
   }
   if origNetwork.Spec.Options.Device != changedNetwork.Spec.Options.Device {
-    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Device"],
-                json.RawMessage(`"` + changedNetwork.Spec.Options.Device + `"`)))
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Device"], changedNetwork.Spec.Options.Device))
   }
   if origNetwork.Spec.Options.Vlan != changedNetwork.Spec.Options.Vlan {
-    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Vlan"],
-                json.RawMessage(`"` + strconv.Itoa(changedNetwork.Spec.Options.Vlan) + `"`)))
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Vlan"], changedNetwork.Spec.Options.Vlan))
   }
   if origNetwork.Spec.Options.Vxlan != changedNetwork.Spec.Options.Vxlan {
-    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Vxlan"],
-                json.RawMessage(`"` + strconv.Itoa(changedNetwork.Spec.Options.Vxlan) + `"`)))
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Vxlan"], changedNetwork.Spec.Options.Vxlan))
   }
   return patchList
 }

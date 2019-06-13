@@ -24,6 +24,14 @@ func (client *ClientStub) TenantConfigs() client.TenantConfigInterface {
   return nil
 }
 
+func (client *ClientStub) TenantNetworks(namespace string) client.TenantNetworkInterface {
+  return nil
+}
+
+func (client *ClientStub) ClusterNetworks() client.ClusterNetworkInterface {
+  return nil
+}
+
 func (c *ClientStub) RESTClient() rest.Interface {
   return nil
 }

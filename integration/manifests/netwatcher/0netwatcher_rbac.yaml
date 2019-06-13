@@ -17,6 +17,8 @@ rules:
   - "danm.k8s.io"
   resources:
   - danmnets
+  - clusternetworks
+  - tenantnetworks
   verbs:
   - get
   - list

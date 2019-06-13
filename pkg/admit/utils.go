@@ -18,7 +18,7 @@ import (
 type Patch struct {
   Op    string          `json:"op"`
   Path  string          `json:"path"`
-  Value json.RawMessage `json:"value"`
+  Value interface{}     `json:"value,omitempty"`
 }
 
 func DecodeAdmissionReview(httpRequest *http.Request) (*v1beta1.AdmissionReview,error) {
@@ -77,14 +77,14 @@ func CreateReviewResponseFromPatches(patchList []Patch) *v1beta1.AdmissionRespon
     }
   }
   if len(patches) > 0 {
-    reviewResponse.Patch = []byte(patches)
+    reviewResponse.Patch = patches
     pt := v1beta1.PatchTypeJSONPatch
     reviewResponse.PatchType = &pt
   }
   return &reviewResponse
 }
 
-func CreateGenericPatchFromChange(path string, value []byte ) Patch {
+func CreateGenericPatchFromChange(path string, value interface{} ) Patch {
   patch := Patch {
     Op:    "replace",
     Path:  path,

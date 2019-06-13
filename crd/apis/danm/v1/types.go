@@ -136,7 +136,7 @@ type TenantNetwork struct {
 type TenantNetworkList struct {
   meta_v1.TypeMeta `json:",inline"`
   meta_v1.ListMeta `json:"metadata"`
-  Items            []DanmNet `json:"items"`
+  Items            []TenantNetwork `json:"items"`
 }
 
 // VERY IMPORTANT NOT TO CHANGE THIS, INCLUDING THE EMPTY LINE BETWEEN THE ANNOTATIONS!!!
@@ -156,5 +156,5 @@ type ClusterNetwork struct {
 type ClusterNetworkList struct {
   meta_v1.TypeMeta `json:",inline"`
   meta_v1.ListMeta `json:"metadata"`
-  Items            []DanmNet `json:"items"`
+  Items            []ClusterNetwork `json:"items"`
 }

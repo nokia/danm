@@ -77,6 +77,7 @@ type DanmEpSpec struct {
   Pod         string      `json:"Pod"`
   CID         string      `json:"CID,omitempty"`
   Netns       string      `json:"netns,omitempty"`
+  ApiType     string      `json:"apiType"`
 }
 
 type DanmEpIface struct {

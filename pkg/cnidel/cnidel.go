@@ -16,7 +16,6 @@ import (
   "github.com/nokia/danm/pkg/ipam"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
-  meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -30,21 +29,13 @@ var (
 )
 
 // IsDelegationRequired decides if the interface creation operations should be delegated to a 3rd party CNI, or can be handled by DANM
-// Decision is made based on the NetworkType parameter of the DanmNet object
-func IsDelegationRequired(danmClient danmclientset.Interface, nid, namespace string) (bool,*danmtypes.DanmNet,error) {
-  netInfo, err := danmClient.DanmV1().DanmNets(namespace).Get(nid, meta_v1.GetOptions{})
-  if err != nil || netInfo.ObjectMeta.Name == ""{
-    var detailedErrorMessage string
-    if err != nil {
-      detailedErrorMessage = err.Error()
-    }
-    return false, nil, errors.New("NID:" + nid + " in namespace:" + namespace + " cannot be GET from K8s API server, because of error:" + detailedErrorMessage)
-  }
+// Decision is made based on the NetworkType parameter of the network object
+func IsDelegationRequired(netInfo *danmtypes.DanmNet) bool {
   neType := strings.ToLower(netInfo.Spec.NetworkType)
   if neType == "ipvlan" || neType == "" {
-    return false, netInfo, nil
+    return false
   }
-  return true, netInfo, nil
+  return true
 }
 
 // DelegateInterfaceSetup delegates K8s Pod network interface setup task to the input 3rd party CNI plugin
@@ -259,7 +250,7 @@ func GetEnv(key, fallback string) string {
 
 // CalculateIfaceName decides what should be the name of a container's interface.
 // If a name is explicitly set in the related DanmNet API object, the NIC will be named accordingly.
-// If a name is not explicitly set, then DANM will name the interface ethX where X=sequence number of the interface
+// If a name is not explicitly set, then DANM names the interface ethX where X=sequence number of the interface
 // When legacy naming scheme is configured container_prefix behaves as the exact name of an interface, rather than its name suggest
 func CalculateIfaceName(namingScheme, chosenName, defaultName string, sequenceId int) string {
   //Kubelet expects the first interface to be literally named "eth0", so...

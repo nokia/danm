@@ -38,7 +38,7 @@ func NewWatcher(cfg *rest.Config) (*NetWatcher,error) {
   dnetClient, err := danmclientset.NewForConfig(cfg)
   if err != nil {
     return nil, err
-  } 
+  }
   _, err = dnetClient.DanmV1().DanmNets("").List(meta_v1.ListOptions{})
   if err == nil {
     netWatcher.createDnetInformer(dnetClient)
@@ -73,7 +73,7 @@ func (netWatcher *NetWatcher) Run(stopCh *chan struct{}) {
 }
 
 
-func (netWatcher *NetWatcher) createDnetInformer(dnetClient danmclientset.Interface) { 
+func (netWatcher *NetWatcher) createDnetInformer(dnetClient danmclientset.Interface) {
   netWatcher.Clients["DanmNet"] = dnetClient
   dnetInformerFactory := danminformers.NewSharedInformerFactory(dnetClient, time.Minute*10)
   netWatcher.Factories["DanmNet"] = dnetInformerFactory
@@ -239,4 +239,44 @@ func PutDanmNet(client client.DanmNetInterface, dnet *danmtypes.DanmNet) (bool,e
     return wasResourceAlreadyUpdated, err
   }
   return wasResourceAlreadyUpdated, nil
+}
+
+func GetDefaultNetwork(danmClient danmclientset.Interface, defaultNetworkName, nameSpace string) (*danmtypes.DanmNet,error) {
+  dnet, err := danmClient.DanmV1().DanmNets(nameSpace).Get(defaultNetworkName, meta_v1.GetOptions{})
+  if err == nil && dnet.ObjectMeta.Name == defaultNetworkName  {
+    return dnet, nil
+  }
+  tnet, err := danmClient.DanmV1().TenantNetworks(nameSpace).Get(defaultNetworkName, meta_v1.GetOptions{})
+  if err == nil && tnet.ObjectMeta.Name == defaultNetworkName  {
+    dn := ConvertTnetToDnet(tnet)
+    return dn, nil
+  }
+  cnet, err := danmClient.DanmV1().ClusterNetworks().Get(defaultNetworkName, meta_v1.GetOptions{})
+  if err == nil && cnet.ObjectMeta.Name == defaultNetworkName  {
+    dn := ConvertCnetToDnet(cnet)
+    return dn, nil
+  }
+  return nil, errors.New("none of DANM APIs have a suitable default network configured")
+}
+
+func GetNetworkFromInterface(danmClient danmclientset.Interface, iface datastructs.Interface, nameSpace string) (*danmtypes.DanmNet,error) {
+  if iface.Network != "" {
+    dnet, err := danmClient.DanmV1().DanmNets(nameSpace).Get(iface.Network, meta_v1.GetOptions{})
+    if err == nil && dnet.ObjectMeta.Name == iface.Network  {
+      return dnet, nil
+    }
+  } else if iface.TenantNetwork != "" {
+    tnet, err := danmClient.DanmV1().TenantNetworks(nameSpace).Get(iface.TenantNetwork, meta_v1.GetOptions{})
+    if err == nil && tnet.ObjectMeta.Name == iface.TenantNetwork  {
+      dnet := ConvertTnetToDnet(tnet)
+      return dnet, nil
+    }
+  } else if iface.ClusterNetwork != "" {
+    cnet, err := danmClient.DanmV1().ClusterNetworks().Get(iface.ClusterNetwork, meta_v1.GetOptions{})
+    if err == nil && cnet.ObjectMeta.Name == iface.ClusterNetwork  {
+      dnet := ConvertCnetToDnet(cnet)
+      return dnet, nil
+    }
+  }
+  return nil, errors.New("requested network does not exist")
 }

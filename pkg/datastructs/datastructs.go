@@ -10,9 +10,9 @@ const (
 
 type NetConf struct {
   types.NetConf
-  Kubeconfig   string `json:"kubeconfig"`
-  CniConfigDir string `json:"cniDir"`
-  NamingScheme string `json:"namingScheme"`
+  Kubeconfig          string `json:"kubeconfig"`
+  CniConfigDir        string `json:"cniDir"`
+  NamingScheme        string `json:"namingScheme"`
 }
 
 type CniBackend struct {
@@ -20,17 +20,19 @@ type CniBackend struct {
 }
 
 // Interface represents a request coming from the Pod to connect it to one DanmNet during CNI_ADD operation
-// It contains the name of the DanmNet the Pod should be connected to, and other optional requests
+// It contains the name of the network object the Pod should be connected to, and other optional requests
 // Pods can influence the scheme of IP allocation (dynamic, static, none),
 // and can ask for the provisioning of policy-based IP routes
 type Interface struct {
-  Network string `json:"network"`
-  Ip string `json:"ip"`
-  Ip6 string `json:"ip6"`
-  Proutes map[string]string `json:"proutes"`
-  Proutes6 map[string]string `json:"proutes6"`
+  Network        string `json:"network,omitempty"`
+  TenantNetwork  string `json:"tenantNetwork,omitempty"`
+  ClusterNetwork string `json:"clusterNetwork,omitempty"`
+  Ip  string `json:"ip,omitempty"`
+  Ip6 string `json:"ip6,omitempty"`
+  Proutes  map[string]string `json:"proutes,omitempty"`
+  Proutes6 map[string]string `json:"proutes6,omitempty"`
   DefaultIfaceName string
-  Device string `json:"Device,omitempty"`
+  Device string
   SequenceId int
 }
 

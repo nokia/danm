@@ -80,8 +80,9 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, errors.New("Error delegating ADD to CNI plugin:" + cniType + " because:" + err.Error())
   }
-  if cniResult != nil {
-    setEpIfaceAddress(cniResult, &ep.Spec.Iface)
+  err = setEpIfaceAddress(cniResult, ipamOptions, &ep.Spec.Iface)
+  if err != nil {
+    return nil, err
   }
   err = danmep.CreateRoutesInNetNs(*ep, netInfo)
   if err != nil {
@@ -117,12 +118,14 @@ func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (datastructs.
                                 IpCidr: ip4,
                                 Version: 4,
                               })
+    log.Println("DEBUG: gonna delegate an IPv4 address:" + ip4)
   }
   if ip6 != "" {
     ipSlice = append(ipSlice, datastructs.IpamIp{
                                 IpCidr: ip6,
                                 Version: 6,
                               })
+    log.Println("DEBUG: gonna delegate an IPv6 address:" + ip6)
   }
   return  datastructs.IpamConfig{
             Type: ipamType,
@@ -179,13 +182,31 @@ func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, ep *danmtypes.
   return cniPath, cniArgs, nil
 }
 
-func setEpIfaceAddress(cniResult *current.Result, epIface *danmtypes.DanmEpIface) error {
+func setEpIfaceAddress(cniResult *current.Result, expectedIpamConf datastructs.IpamConfig, epIface *danmtypes.DanmEpIface) error {
+  if cniResult == nil {
+    return errors.New("result of CNI delegation operation was nil")
+  } 
   for _, ip := range cniResult.IPs {
     if ip.Version == "4" {
       epIface.Address = ip.Address.String()
     } else {
       epIface.AddressIPv6 = ip.Address.String()
     }
+  }
+  var isV4AddressExpected, isV6AddressExpected bool
+  for _, ip := range expectedIpamConf.Ips {
+    if ip.Version == 4 {
+      isV4AddressExpected = true
+    }
+    if ip.Version == 6 {
+      isV6AddressExpected = true
+    }
+  }
+  if isV4AddressExpected && epIface.Address == "" {
+    return errors.New("we have expected an IPv4 address to be provisioned by the the CNI delegate, but it did not happen!")
+  }
+  if isV6AddressExpected && epIface.AddressIPv6 == "" {
+    return errors.New("we have expected an IPv6 address to be provisioned by the the CNI delegate, but it did not happen!")
   }
   return nil
 }

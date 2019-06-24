@@ -7,7 +7,6 @@ import (
   "strings"
   "time"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
-  client "github.com/nokia/danm/crd/client/clientset/versioned/typed/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
   "github.com/nokia/danm/pkg/datastructs"
@@ -16,6 +15,11 @@ import (
   "k8s.io/client-go/tools/cache"
 )
 
+const(
+  DanmNetKind = "DanmNet"
+  TenantNetworkKind = "TenantNetwork"
+  ClusterNetworkKind = "ClusterNetwork"
+)
 // Handler represents an object watching the K8s API for changes in the DanmNet API path
 // Upon the reception of a notification it validates the body, and handles the related VxLAN/VLAN/RT creation/deletions on the host
 type NetWatcher struct {
@@ -228,9 +232,36 @@ func ConvertCnetToDnet(cnet *danmtypes.ClusterNetwork) *danmtypes.DanmNet {
   }
 }
 
-func PutDanmNet(client client.DanmNetInterface, dnet *danmtypes.DanmNet) (bool,error) {
-  var wasResourceAlreadyUpdated bool = false
-  _, err := client.Update(dnet)
+func ConvertDnetToTnet(dnet *danmtypes.DanmNet) *danmtypes.TenantNetwork {
+  return &danmtypes.TenantNetwork {
+    TypeMeta: dnet.TypeMeta,
+    ObjectMeta: dnet.ObjectMeta,
+    Spec: dnet.Spec,
+  }
+}
+
+func ConvertDnetToCnet(dnet *danmtypes.DanmNet) *danmtypes.ClusterNetwork {
+  return &danmtypes.ClusterNetwork {
+    TypeMeta: dnet.TypeMeta,
+    ObjectMeta: dnet.ObjectMeta,
+    Spec: dnet.Spec,
+  }
+}
+
+func PutNetwork(danmClient danmclientset.Interface, dnet *danmtypes.DanmNet) (bool,error) {
+  var err error
+  var wasResourceAlreadyUpdated bool
+  if dnet.TypeMeta.Kind == DanmNetKind || dnet.TypeMeta.Kind == "" {
+    _, err = danmClient.DanmV1().DanmNets(dnet.ObjectMeta.Namespace).Update(dnet)
+  } else if dnet.TypeMeta.Kind == TenantNetworkKind {
+    tn := ConvertDnetToTnet(dnet)
+    _, err = danmClient.DanmV1().TenantNetworks(dnet.ObjectMeta.Namespace).Update(tn)
+  } else if dnet.TypeMeta.Kind == ClusterNetworkKind {
+    cn := ConvertDnetToCnet(dnet)
+    _, err = danmClient.DanmV1().ClusterNetworks().Update(cn)
+  } else {
+    return wasResourceAlreadyUpdated, errors.New("can't refresh network object because it has an invalid type:" + dnet.TypeMeta.Kind)  
+  }  
   if err != nil {
     if strings.Contains(err.Error(),datastructs.OptimisticLockErrorMsg) {
       wasResourceAlreadyUpdated = true
@@ -279,4 +310,20 @@ func GetNetworkFromInterface(danmClient danmclientset.Interface, iface datastruc
     }
   }
   return nil, errors.New("requested network does not exist")
+}
+
+func GetNetworkFromEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp) (*danmtypes.DanmNet,error) {
+  dummyIface := datastructs.Interface{}
+  if ep.Spec.ApiType == DanmNetKind || ep.Spec.ApiType == "" {dummyIface.Network = ep.Spec.NetworkName}
+  if ep.Spec.ApiType == TenantNetworkKind  {dummyIface.TenantNetwork = ep.Spec.NetworkName}
+  if ep.Spec.ApiType == ClusterNetworkKind {dummyIface.ClusterNetwork = ep.Spec.NetworkName}
+  return GetNetworkFromInterface(danmClient, dummyIface, ep.ObjectMeta.Namespace)
+}
+
+func RefreshNetwork(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet) (*danmtypes.DanmNet,error) {
+  dummyIface := datastructs.Interface{}
+  if netInfo.TypeMeta.Kind == DanmNetKind || netInfo.TypeMeta.Kind == "" {dummyIface.Network = netInfo.ObjectMeta.Name}
+  if netInfo.TypeMeta.Kind == TenantNetworkKind  {dummyIface.TenantNetwork = netInfo.ObjectMeta.Name}
+  if netInfo.TypeMeta.Kind == ClusterNetworkKind {dummyIface.ClusterNetwork = netInfo.ObjectMeta.Name}
+  return GetNetworkFromInterface(danmClient, dummyIface, netInfo.ObjectMeta.Namespace)
 }

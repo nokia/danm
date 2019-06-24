@@ -20,6 +20,8 @@ import (
 
 const (
   LegacyNamingScheme = "legacy"
+  CniAddOp = "ADD"
+  CniDelOp = "DEL"
 )
 
 var (
@@ -54,7 +56,6 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
    //Therefore, anyone wishing to further update the same DanmNet later on will use an outdated representation as the input.
    //IPAM should be refactored to always pass back the up-to-date DanmNet object.
    //I guess it is okay now because we only want to free IPs, and RV differences are resolved by the generated client code.
-   //log.Println("inside cnidel testnet alloc after:" + netInfo.Spec.Options.Alloc)
     ipamOptions, err = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
       return nil, errors.New("IPAM config creation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
@@ -66,7 +67,7 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
     return nil, err
   }
   cniType := netInfo.Spec.NetworkType
-  cniResult,err := execCniPlugin(cniType, netInfo, rawConfig, ep)
+  cniResult,err := execCniPlugin(cniType, CniAddOp, netInfo, rawConfig, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, errors.New("Error delegating ADD to CNI plugin:" + cniType + " because:" + err.Error())
@@ -129,8 +130,8 @@ func getCniPluginConfig(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet
   }
 }
 
-func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep *danmtypes.DanmEp) (*current.Result,error) {
-  cniPath, cniArgs, err := getExecCniParams(cniType, netInfo, ep)
+func execCniPlugin(cniType, cniOpType string, netInfo *danmtypes.DanmNet, rawConfig []byte, ep *danmtypes.DanmEp) (*current.Result,error) {
+  cniPath, cniArgs, err := getExecCniParams(cniType, cniOpType, netInfo, ep)
   if err != nil {
     return nil, errors.New("exec CNI params couldn't be gathered:" + err.Error())
   }
@@ -152,14 +153,14 @@ func execCniPlugin(cniType string, netInfo *danmtypes.DanmNet, rawConfig []byte,
   return finalResult, nil
 }
 
-func getExecCniParams(cniType string, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (string,[]string,error) {
+func getExecCniParams(cniType, cniOpType string, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (string,[]string,error) {
   cniPaths := filepath.SplitList(os.Getenv("CNI_PATH"))
   cniPath, err := invoke.FindInPath(cniType, cniPaths)
   if err != nil {
     return "", nil, err
   }
   cniArgs := []string {
-    "CNI_COMMAND="     + os.Getenv("CNI_COMMAND"),
+    "CNI_COMMAND="     + cniOpType,
     "CNI_CONTAINERID=" + os.Getenv("CNI_CONTAINERID"),
     "CNI_NETNS="       + os.Getenv("CNI_NETNS"),
     "CNI_IFNAME="      + ep.Spec.Iface.Name,
@@ -190,7 +191,7 @@ func DelegateInterfaceDelete(netConf *datastructs.NetConf, danmClient danmclient
     return err
   }
   cniType := netInfo.Spec.NetworkType
-  _, err = execCniPlugin(cniType, netInfo, rawConfig, ep)
+  _, err = execCniPlugin(cniType, CniDelOp, netInfo, rawConfig, ep)
   if err != nil {
     freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return errors.New("Error delegating DEL to CNI plugin:" + cniType + " because:" + err.Error())

@@ -527,7 +527,7 @@ func DeleteInterfaces(args *skel.CmdArgs) error {
 }
 
 func deleteInterface(danmClient danmclientset.Interface, args *cniArgs, syncher *syncher.Syncher, ep danmtypes.DanmEp) {
-  netInfo, err := danmClient.DanmV1().DanmNets(args.nameSpace).Get(ep.Spec.NetworkName, meta_v1.GetOptions{})
+  netInfo, err := netcontrol.GetNetworkFromEp(danmClient, ep)
   if err != nil {
     syncher.PushResult(ep.Spec.NetworkName, errors.New("failed to get DanmNet:"+ err.Error()), nil)
     return

@@ -9,6 +9,8 @@ rules:
     resources:
     - danmnets
     - danmeps
+    - tenantnetworks
+    - clusternetworks
     verbs: [ "*" ]
   - apiGroups: [ "" ]
     resources: [ "pods" ]

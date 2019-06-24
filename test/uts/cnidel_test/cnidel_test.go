@@ -58,9 +58,6 @@ var testNets = []danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "hululululu"},
     Spec: danmtypes.DanmNetSpec{NetworkID: "hululululu", NetworkType: "hululululu"},
   },
-  danmtypes.DanmNet{
-    Spec: danmtypes.DanmNetSpec{NetworkID: "nometa", NetworkType: "macvlan"},
-  },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "ipamNeeded"},
     Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "cidr",},
@@ -153,17 +150,14 @@ var testEps = []danmtypes.DanmEp {
 
 var delegationRequiredTcs = []struct {
   netName string
-  isErrorExpected bool
   isDelegationExpected bool
 }{
-  {"empty", false, false},
-  {"ipvlan", false, false},
-  {"IPVLAN-UPPER", false, false},
-  {"sriov", false, true},
-  {"flannel", false, true},
-  {"hululululu", false, true},
-  {"error", true, false},
-  {"nometa", true, false},
+  {"empty", false},
+  {"ipvlan", false},
+  {"IPVLAN-UPPER", false},
+  {"sriov", true},
+  {"flannel", true},
+  {"hululululu", true},
 }
 
 var isDeviceNeededTcs = []struct {
@@ -212,17 +206,10 @@ var delDeleteTcs = []struct {
 }
 
 func TestIsDelegationRequired(t *testing.T) {
-  netClientStub := stubs.NewClientSetStub(testNets, nil, nil)
   for _, tc := range delegationRequiredTcs {
     t.Run(tc.netName, func(t *testing.T) {
-      isDelRequired,_,err := cnidel.IsDelegationRequired(netClientStub,tc.netName,"hululululu")
-      if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
-        var detailedErrorMessage string
-        if err != nil {
-          detailedErrorMessage = err.Error()
-        }
-        t.Errorf("Received error does not match with expectation: %t for TC: %s, detailed error message: %s", tc.isErrorExpected, tc.netName, detailedErrorMessage)
-      }
+      dnet := getTestNet(tc.netName)
+      isDelRequired := cnidel.IsDelegationRequired(dnet)
       if isDelRequired != tc.isDelegationExpected {
         t.Errorf("Received delegation result does not match with expected for TC: %s", tc.netName)
       }

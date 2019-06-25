@@ -32,7 +32,7 @@ hostDevices:
   #   VLAN/VxLAN respective VNI kernel limits apply.
   #   When a virtual network is configured for an interface, DANM automatically selects a free VNI from the provided range, and configures into the TenantNetworks respective field (spec.Options.vlan, or spec.Options.vxlan).
   #   MANDATORY WHEN "vniType" IS DEFINED, STRING TYPE LIST NOTATION WITH RANGES E.G. "2000-2500,2601,2650-2700"
-  #   vniRange ## VNI_RANGE ##
+  #   vniRange: ## VNI_RANGE ##
 # Cluster administrators can configure which CNI config files should be used by a tenant when they ask network connections to statically configured backends (i.e. not IPVLAN, MACVLAN, or SR-IOV).
 # The name of the CNI config files used for static network provisioning operations are chosen via the TenantNetwork's NetworkID parameter.
 # If the tenant user configures a static backend into the spec.NetworkType attribute of the TenantNetwork object, the NetworkID parameter will be overwritten with the value configured into this attribute.

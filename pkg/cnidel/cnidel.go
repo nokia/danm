@@ -53,8 +53,8 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
       return nil, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }
    //TODO: as netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
-   //Therefore, anyone wishing to further update the same DanmNet later on will use an outdated representation as the input.
-   //IPAM should be refactored to always pass back the up-to-date DanmNet object.
+   //Therefore, anyone wishing to further update the same network object later on will use an outdated representation as the input.
+   //IPAM should be refactored to always pass back the up-to-date object.
    //I guess it is okay now because we only want to free IPs, and RV differences are resolved by the generated client code.
     ipamOptions, err = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
@@ -215,7 +215,8 @@ func freeDelegatedIp(danmClient danmclientset.Interface, netInfo *danmtypes.Danm
   if isIpamNeeded(netInfo.Spec.NetworkType) && ip != "" {
     err := ipam.Free(danmClient, *netInfo, ip)
     if err != nil {
-      return errors.New("cannot give back ip address for DanmNet:" + netInfo.ObjectMeta.Name + " addr:" + ip)
+      return errors.New("cannot give back ip address: " + ip + " for network:" + netInfo.ObjectMeta.Name +
+                        " of type: " + netInfo.TypeMeta.Kind + " because:" + err.Error())
     }
   }
   return nil
@@ -250,7 +251,7 @@ func GetEnv(key, fallback string) string {
 }
 
 // CalculateIfaceName decides what should be the name of a container's interface.
-// If a name is explicitly set in the related DanmNet API object, the NIC will be named accordingly.
+// If a name is explicitly set in the related network API object, the NIC will be named accordingly.
 // If a name is not explicitly set, then DANM names the interface ethX where X=sequence number of the interface
 // When legacy naming scheme is configured container_prefix behaves as the exact name of an interface, rather than its name suggest
 func CalculateIfaceName(namingScheme, chosenName, defaultName string, sequenceId int) string {

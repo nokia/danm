@@ -20,17 +20,17 @@ const(
   TenantNetworkKind = "TenantNetwork"
   ClusterNetworkKind = "ClusterNetwork"
 )
-// Handler represents an object watching the K8s API for changes in the DanmNet API path
-// Upon the reception of a notification it validates the body, and handles the related VxLAN/VLAN/RT creation/deletions on the host
+// NetWatcher represents an object watching the K8s API for changes in all three network management API paths
+// Upon the reception of a notification it handles the related VxLAN/VLAN/RT creation/deletions on the host
 type NetWatcher struct {
   Factories map[string]danminformers.SharedInformerFactory
   Clients map[string]danmclientset.Interface
   Controllers map[string]cache.Controller
 }
 
-// NewHandler initializes and returns a new Handler object
-// Upon the reception of a notification it performs DanmNet validation, and host network management operations
-// Handler contains additional members: one performing HTTPS operations, the other to interact with DamnEp objects
+// NewWatcher initializes and returns a new NetWatcher object
+// Upon the reception of a notification it performs host network management operations
+// Watcher stores all K8s Clients, Factories, and Informeres of the DANM network management APIs
 func NewWatcher(cfg *rest.Config) (*NetWatcher,error) {
   netWatcher := &NetWatcher{
     Factories: make(map[string]danminformers.SharedInformerFactory),
@@ -78,39 +78,39 @@ func (netWatcher *NetWatcher) Run(stopCh *chan struct{}) {
 
 
 func (netWatcher *NetWatcher) createDnetInformer(dnetClient danmclientset.Interface) {
-  netWatcher.Clients["DanmNet"] = dnetClient
+  netWatcher.Clients[DanmNetKind] = dnetClient
   dnetInformerFactory := danminformers.NewSharedInformerFactory(dnetClient, time.Minute*10)
-  netWatcher.Factories["DanmNet"] = dnetInformerFactory
+  netWatcher.Factories[DanmNetKind] = dnetInformerFactory
   dnetController := dnetInformerFactory.Danm().V1().DanmNets().Informer()
   dnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: AddDanmNet,
       DeleteFunc: DeleteDanmNet,
   })
-  netWatcher.Controllers["DanmNet"] = dnetController
+  netWatcher.Controllers[DanmNetKind] = dnetController
 }
 
 func (netWatcher *NetWatcher) createTnetInformer(tnetClient danmclientset.Interface) {
-  netWatcher.Clients["TenantNetwork"] = tnetClient
+  netWatcher.Clients[TenantNetworkKind] = tnetClient
   tnetInformerFactory := danminformers.NewSharedInformerFactory(tnetClient, time.Minute*10)
-  netWatcher.Factories["TenantNetwork"] = tnetInformerFactory
+  netWatcher.Factories[TenantNetworkKind] = tnetInformerFactory
   tnetController := tnetInformerFactory.Danm().V1().TenantNetworks().Informer()
   tnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: AddTenantNetwork,
       DeleteFunc: DeleteTenantNetwork,
   })
-  netWatcher.Controllers["TenantNetwork"] = tnetController
+  netWatcher.Controllers[TenantNetworkKind] = tnetController
 }
 
 func (netWatcher *NetWatcher) createCnetInformer(cnetClient danmclientset.Interface) {
-  netWatcher.Clients["ClusterNetwork"] = cnetClient
+  netWatcher.Clients[ClusterNetworkKind] = cnetClient
   cnetInformerFactory := danminformers.NewSharedInformerFactory(cnetClient, time.Minute*10)
-  netWatcher.Factories["ClusterNetwork"] = cnetInformerFactory
+  netWatcher.Factories[ClusterNetworkKind] = cnetInformerFactory
   cnetController := cnetInformerFactory.Danm().V1().ClusterNetworks().Informer()
   cnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: AddClusterNetwork,
       DeleteFunc: DeleteClusterNetwork,
   })
-  netWatcher.Controllers["ClusterNetwork"] = cnetController
+  netWatcher.Controllers[ClusterNetworkKind] = cnetController
 }
 
 func AddDanmNet(obj interface{}) {
@@ -217,19 +217,25 @@ func DeleteClusterNetwork(obj interface{}) {
 }
 
 func ConvertTnetToDnet(tnet *danmtypes.TenantNetwork) *danmtypes.DanmNet {
-  return &danmtypes.DanmNet {
+  dnet := danmtypes.DanmNet {
     TypeMeta: tnet.TypeMeta,
     ObjectMeta: tnet.ObjectMeta,
     Spec: tnet.Spec,
   }
+  //Why do I need to set this, you could ask?
+  //Well, don't: https://github.com/kubernetes/client-go/issues/308
+  dnet.TypeMeta.Kind = TenantNetworkKind
+  return &dnet
 }
 
 func ConvertCnetToDnet(cnet *danmtypes.ClusterNetwork) *danmtypes.DanmNet {
-  return &danmtypes.DanmNet {
+  dnet := danmtypes.DanmNet {
     TypeMeta: cnet.TypeMeta,
     ObjectMeta: cnet.ObjectMeta,
     Spec: cnet.Spec,
   }
+  dnet.TypeMeta.Kind = ClusterNetworkKind
+  return &dnet
 }
 
 func ConvertDnetToTnet(dnet *danmtypes.DanmNet) *danmtypes.TenantNetwork {
@@ -291,25 +297,32 @@ func GetDefaultNetwork(danmClient danmclientset.Interface, defaultNetworkName, n
 }
 
 func GetNetworkFromInterface(danmClient danmclientset.Interface, iface datastructs.Interface, nameSpace string) (*danmtypes.DanmNet,error) {
+  var netName, netType string
   if iface.Network != "" {
+    netName = iface.Network
+    netType = DanmNetKind
     dnet, err := danmClient.DanmV1().DanmNets(nameSpace).Get(iface.Network, meta_v1.GetOptions{})
     if err == nil && dnet.ObjectMeta.Name == iface.Network  {
       return dnet, nil
     }
   } else if iface.TenantNetwork != "" {
+    netName = iface.TenantNetwork
+    netType = TenantNetworkKind
     tnet, err := danmClient.DanmV1().TenantNetworks(nameSpace).Get(iface.TenantNetwork, meta_v1.GetOptions{})
     if err == nil && tnet.ObjectMeta.Name == iface.TenantNetwork  {
       dnet := ConvertTnetToDnet(tnet)
       return dnet, nil
     }
   } else if iface.ClusterNetwork != "" {
+    netName = iface.ClusterNetwork
+    netType = ClusterNetworkKind
     cnet, err := danmClient.DanmV1().ClusterNetworks().Get(iface.ClusterNetwork, meta_v1.GetOptions{})
     if err == nil && cnet.ObjectMeta.Name == iface.ClusterNetwork  {
       dnet := ConvertCnetToDnet(cnet)
       return dnet, nil
     }
   }
-  return nil, errors.New("requested network does not exist")
+  return nil, errors.New("requested network:" + netName + " of type:" + netType + " in namespace:" + nameSpace + " does not exist")
 }
 
 func GetNetworkFromEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp) (*danmtypes.DanmNet,error) {

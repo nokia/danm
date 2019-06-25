@@ -16,10 +16,10 @@ import (
   "github.com/nokia/danm/pkg/bitarray"
 )
 
-// Reserve inspects the DanmNet object received as an input, and allocates an IPv4 or IPv6 address from the appropriate allocation pool
+// Reserve inspects the network object received as an input, and allocates an IPv4 or IPv6 address from the appropriate allocation pool
 // In case static IP allocation is requested, it will try reserver the requested error. If it is not possible, it returns an error
 // The reserved IP address is represented by setting a bit in the network's BitArray type allocation matrix
-// The refreshed DanmNet object is modified in the K8s API server at the end
+// The refreshed network object is modified in the K8s API server at the end
 func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4, req6 string) (string, string, string, error) {
   tempNetSpec := netInfo
   for {
@@ -39,9 +39,9 @@ func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4
   }
 }
 
-// Free inspects the DanmNet object received as an input, and releases an IPv4 or IPv6 address from the appropriate allocation pool
+// Free inspects the network object received as an input, and releases an IPv4 or IPv6 address from the appropriate allocation pool
 // The IP address liberation is represented by unsetting a bit in the network's BitArray type allocation matrix
-// The refreshed DanmNet object is modified in the K8s API server at the end
+// The refreshed network object is modified in the K8s API server at the end
 func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, ip string) error {
   if netInfo.Spec.Options.Alloc == "" || ip == "" {
     // Nothing to return here: either network, or the interface is an L2

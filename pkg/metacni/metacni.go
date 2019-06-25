@@ -195,7 +195,7 @@ func extractConnections(args *cniArgs) error {
       decoder.DisallowUnknownFields()
       err := decoder.Decode(&ifaces)
       if err != nil {
-        return errors.New("Can't create network interfaces for Pod: " + args.pod.ObjectMeta.Name + " due to badly formatted " + danmIfDefinitionSyntax + " definition in Pod annotation")
+        return errors.New("Can't create network interfaces for Pod: " + args.pod.ObjectMeta.Name + " due to badly formatted " + danmIfDefinitionSyntax + " definition in Pod annotation:" + err.Error())
       }
       break
     }
@@ -527,17 +527,18 @@ func DeleteInterfaces(args *skel.CmdArgs) error {
 }
 
 func deleteInterface(danmClient danmclientset.Interface, args *cniArgs, syncher *syncher.Syncher, ep danmtypes.DanmEp) {
+  //During delete we are not that interested in errors, but we also can't just return yet.
+  //We need to try and clean-up as many remaining resources as possible
+  var aggregatedError string
   netInfo, err := netcontrol.GetNetworkFromEp(danmClient, ep)
   if err != nil {
-    syncher.PushResult(ep.Spec.NetworkName, errors.New("failed to get DanmNet:"+ err.Error()), nil)
-    return
+    aggregatedError += "failed to get network:"+ err.Error() + "; "
   }
-  var aggregatedError string
-  err = deleteNic(danmClient, netInfo, ep)
-  //It can happen that a container was already destroyed at this point in this fully asynch world
-  //So we are not interested in errors, but we also can't just return yet, we need to try and clean-up remaining resources, if, any
-  if err != nil {
-    aggregatedError += "failed to delete container NIC:" + err.Error() + "; "
+  if netInfo != nil {
+    err = deleteNic(danmClient, netInfo, ep)
+    if err != nil {
+      aggregatedError += "failed to delete container NIC:" + err.Error() + "; "
+    }
   }
   err = danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(ep.ObjectMeta.Name, &meta_v1.DeleteOptions{})
   if err != nil {

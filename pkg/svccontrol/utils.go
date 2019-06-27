@@ -5,12 +5,18 @@ import (
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
+	"github.com/nokia/danm/pkg/netcontrol"
 	"reflect"
 )
 
-const danmSelector = "danm.k8s.io/selector"
-const danmNetwork = "danm.k8s.io/network"
-const TolerateUnreadyEps = "service.alpha.kubernetes.io/tolerate-unready-endpoints"
+const (
+  PodSelector = "danm.k8s.io/selector"
+  DanmNetSelector = "danm.k8s.io/network"
+  TenantNetSelector = "danm.k8s.io/tenantNetwork"
+  ClusterNetSelector = "danm.k8s.io/clusterNetwork"
+  TolerateUnreadyEps = "service.alpha.kubernetes.io/tolerate-unready-endpoints"
+)
+
 
 func IsContain(ep, svc map[string]string) bool {
 	epFit := true
@@ -28,26 +34,35 @@ func IsContain(ep, svc map[string]string) bool {
 	return epFit
 }
 
-func GetDanmSvcAnnotations(annotations map[string]string) (map[string]string, string, error) {
+func GetDanmSvcAnnotations(annotations map[string]string) (map[string]string, map[string]string, error) {
 	selectorMap := make(map[string]string)
-	svcNet := ""
-	if danmSel, ok := annotations[danmSelector]; ok {
+	netSelectors := make(map[string]string)
+	if danmSel, ok := annotations[PodSelector]; ok {
 		if danmSel != "" {
 			err := json.Unmarshal([]byte(danmSel), &selectorMap)
 			if err != nil {
 				glog.Errorf("utils: json error: %s", err)
-				return selectorMap, svcNet, err
+				return selectorMap, netSelectors, err
 			}
 		}
 	}
-
-	if danmNet, ok := annotations[danmNetwork]; ok {
+	//TODO: instead of this we might need to iterate over the whole annotation and do strings.EqualFold for a case-insensitive key comparison
+	if danmNet, ok := annotations[DanmNetSelector]; ok {
 		if danmNet != "" {
-			svcNet = danmNet
+			netSelectors[netcontrol.DanmNetKind] = danmNet
 		}
 	}
-
-	return selectorMap, svcNet, nil
+	if tenantNet, ok := annotations[TenantNetSelector]; ok {
+		if tenantNet != "" {
+			netSelectors[netcontrol.TenantNetworkKind] = tenantNet
+		}
+	}
+	if clusterNet, ok := annotations[ClusterNetSelector]; ok {
+		if clusterNet != "" {
+			netSelectors[netcontrol.ClusterNetworkKind] = clusterNet
+		}
+	}
+	return selectorMap, netSelectors, nil
 }
 
 func PodReady(pod *corev1.Pod) bool {
@@ -59,7 +74,7 @@ func PodReady(pod *corev1.Pod) bool {
 	return false
 }
 
-func SelectDesMatchLabels(des []*danmv1.DanmEp, selectorMap map[string]string, svcNet string, svcNs string) []*danmv1.DanmEp {
+func SelectDesMatchLabels(des []*danmv1.DanmEp, selectorMap map[string]string, svcNets map[string]string, svcNs string) []*danmv1.DanmEp {
 	var deList []*danmv1.DanmEp
 	for _, de := range des {
 		deFit := true
@@ -68,7 +83,7 @@ func SelectDesMatchLabels(des []*danmv1.DanmEp, selectorMap map[string]string, s
 		} else {
 			deMap := de.GetLabels()
 			deFit = IsContain(deMap, selectorMap)
-			if deFit && de.Spec.NetworkName != svcNet {
+			if deFit && !isDepSelectedBySvc(de, svcNets) {
 				deFit = false
 			}
 		}
@@ -95,12 +110,12 @@ func SvcChanged(oldSvc, newSvc *corev1.Service) bool {
 	// danm svc annotations and annotations.ealy change are relevant
 	oldAnno := oldSvc.Annotations
 	newAnno := newSvc.Annotations
-	oldSelMap, oldNet, oldErr := GetDanmSvcAnnotations(oldAnno)
-	newSelMap, newNet, newErr := GetDanmSvcAnnotations(newAnno)
+	oldSelMap, oldNets, oldErr := GetDanmSvcAnnotations(oldAnno)
+	newSelMap, newNets, newErr := GetDanmSvcAnnotations(newAnno)
 	if oldErr != nil || newErr != nil {
 		return true
 	}
-	if reflect.DeepEqual(oldSelMap, newSelMap) && oldNet == newNet && reflect.DeepEqual(oldSvc.Spec.Ports, newSvc.Spec.Ports) && (oldSvc.Annotations[TolerateUnreadyEps] == newSvc.Annotations[TolerateUnreadyEps]) {
+	if reflect.DeepEqual(oldSelMap, newSelMap) && reflect.DeepEqual(oldNets, newNets) && reflect.DeepEqual(oldSvc.Spec.Ports, newSvc.Spec.Ports) && (oldSvc.Annotations[TolerateUnreadyEps] == newSvc.Annotations[TolerateUnreadyEps]) {
 		// no change
 		return false
 	}
@@ -120,11 +135,11 @@ func MatchExistingSvc(de *danmv1.DanmEp, servicesList []*corev1.Service) []*core
 	var svcList []*corev1.Service
 	for _, svc := range servicesList {
 		annotations := svc.GetAnnotations()
-		selectorMap, svcNet, err := GetDanmSvcAnnotations(annotations)
+		selectorMap, svcNets, err := GetDanmSvcAnnotations(annotations)
 		if err != nil {
 			return svcList
 		}
-		if len(selectorMap) == 0 || svcNet != de.Spec.NetworkName || svc.GetNamespace() != deNs {
+		if len(selectorMap) == 0 || !isDepSelectedBySvc(de, svcNets) || svc.GetNamespace() != deNs {
 			continue
 		}
 		deMap := de.GetLabels()
@@ -137,3 +152,24 @@ func MatchExistingSvc(de *danmv1.DanmEp, servicesList []*corev1.Service) []*core
 	return svcList
 }
 
+func isDepSelectedBySvc(dep *danmv1.DanmEp, netSelectors map[string]string) bool {
+  if len(netSelectors) == 0 {
+    return false
+  }
+  if danmNet, ok := netSelectors[netcontrol.DanmNetKind]; ok {
+    if danmNet == dep.Spec.NetworkName && (netcontrol.DanmNetKind == dep.Spec.ApiType || "" == dep.Spec.ApiType) {
+      return true
+    }
+  }
+  if tenantNet, ok := netSelectors[netcontrol.TenantNetworkKind]; ok {
+    if tenantNet == dep.Spec.NetworkName && netcontrol.TenantNetworkKind == dep.Spec.ApiType {
+      return true
+    }
+  }
+  if clusterNet, ok := netSelectors[netcontrol.ClusterNetworkKind]; ok {
+    if clusterNet == dep.Spec.NetworkName && netcontrol.ClusterNetworkKind == dep.Spec.ApiType {
+      return true
+    }
+  }
+  return false
+}

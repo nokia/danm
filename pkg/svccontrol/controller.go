@@ -410,12 +410,12 @@ func (c *Controller) delDanmep(obj interface{}) {
 		}
 		epNew := ep.DeepCopy()
 		annotations := epNew.GetAnnotations()
-		selectorMap, svcNet, err := GetDanmSvcAnnotations(annotations)
+		selectorMap, svcNets, err := GetDanmSvcAnnotations(annotations)
 		if err != nil {
 			glog.Errorf("delDanmEp: selector %s", err)
 			return
 		}
-		if len(selectorMap) == 0 || svcNet != de.Spec.NetworkName || epNew.Namespace != deNs {
+		if len(selectorMap) == 0 || !isDepSelectedBySvc(de, svcNets) || epNew.Namespace != deNs {
 			continue
 		}
 		deMap := de.GetLabels()
@@ -482,7 +482,7 @@ func (c *Controller) updatePod(old, new interface{}) {
 	}
 	// first we need to reflect status change
 	if oldReady != newReady {
-		// status change 
+		// status change
 		epList := c.UpdatePodStatusInEps(epsList, newPod, oldReady, newReady)
 		if len(epList) > 0 {
 			c.UpdateEndpointsList(epList)
@@ -490,7 +490,7 @@ func (c *Controller) updatePod(old, new interface{}) {
 	}
 	// label change has lower priority
 	if labelChange {
-		// label change 
+		// label change
 		podName := newPod.Name
 		podNs := newPod.Namespace
 		desList, err := c.danmepLister.List(sel)
@@ -528,19 +528,19 @@ func (c *Controller) addSvc(obj interface{}) {
 	svcNs := svc.Namespace
 	svcName := svc.Name
 	annotations := svc.Annotations
-	selectorMap, svcNet, err := GetDanmSvcAnnotations(annotations)
+	selectorMap, svcNets, err := GetDanmSvcAnnotations(annotations)
 	if err != nil {
 		glog.Errorf("addSvc: get anno %s", err)
 		return
 	}
-	if len(selectorMap) > 0 && svcNet != "" {
+	if len(selectorMap) > 0 && len(svcNets) > 0 {
 		sel := labels.Everything()
 		d, err := c.danmepLister.List(sel)
 		if err != nil {
 			glog.Errorf("addSvc: get danmep %s", err)
 			return
 		}
-		deList := SelectDesMatchLabels(d, selectorMap, svcNet, svcNs)
+		deList := SelectDesMatchLabels(d, selectorMap, svcNets, svcNs)
 		e, err := c.epsLister.List(sel)
 		if err != nil {
 			glog.Errorf("addSvc: get eps %s", err)

@@ -36,7 +36,6 @@ rules:
 - apiGroups:
   - "danm.k8s.io"
   resources:
-  - danmnets
   - danmeps
   verbs:
   - get

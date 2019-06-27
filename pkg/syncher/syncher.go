@@ -28,13 +28,13 @@ func NewSyncher(numOfResults int) *Syncher {
 }
 
 func (synch *Syncher) PushResult(cniName string, opRes error, cniRes *current.Result) {
+  synch.mux.Lock()
+  defer synch.mux.Unlock()
   cniOpResult := cniOpResult {
     CniName: cniName,
     OpResult: opRes,
     CniResult: cniRes,
   }
-  synch.mux.Lock()
-  defer synch.mux.Unlock()
   synch.CniResults = append(synch.CniResults, cniOpResult)
 }
 

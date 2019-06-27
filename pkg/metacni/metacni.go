@@ -236,7 +236,7 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
     defParam := datastructs.Interface{SequenceId: 0, Ip: "dynamic",}
     err = createIface(args, danmClient, args.defaultNetwork, defParam, syncher, allocatedDevices)
     if err != nil {
-      return nil, err
+      syncher.PushResult(args.defaultNetwork.ObjectMeta.Name, err, nil)
     }
   }
   for nicID, nicParams := range args.interfaces {
@@ -244,12 +244,14 @@ func setupNetworking(args *cniArgs) (*current.Result, error) {
     nicParams.DefaultIfaceName = defaultIfName
     netInfo, err := netcontrol.GetNetworkFromInterface(danmClient, nicParams, args.pod.ObjectMeta.Namespace)
     if err != nil {
-      return nil, errors.New("failed to get network object for Pod:" + args.pod.ObjectMeta.Name +
-                             "'s connection no.:" + strconv.Itoa(nicID) + " due to:" + err.Error())
+      syncher.PushResult("", errors.New("failed to get network object for Pod:" + args.pod.ObjectMeta.Name +
+                             "'s connection no.:" + strconv.Itoa(nicID) + " due to:" + err.Error()), nil)
+      continue
     }
     err = createIface(args, danmClient, netInfo, nicParams, syncher, allocatedDevices)
     if err != nil {
-      return nil, err
+      syncher.PushResult(netInfo.ObjectMeta.Name, err, nil)
+      continue
     }
   }
   err = syncher.GetAggregatedResult()
@@ -367,13 +369,15 @@ func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("CNI delegation failed due to error:" + err.Error()), nil)
     return
   }
-  _, err = danmClient.DanmV1().DanmEps(ep.Namespace).Create(&ep)
+  err = danmep.PutDanmEp(danmClient, ep)
   if err != nil {
+    cnidel.FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("DanmEp object could not be PUT to K8s due to error:" + err.Error()), nil)
     return
   }
   err = danmep.SetDanmEpSysctls(ep)
   if err != nil {
+    cnidel.FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("Sysctls could not be set due to error:" + err.Error()), nil)
     return
   }
@@ -400,7 +404,7 @@ func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Inte
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("DanmEp object could not be created due to error:" + err.Error()), nil)
     return
   }
-  _, err = danmClient.DanmV1().DanmEps(ep.Namespace).Create(&ep)
+  err = danmep.PutDanmEp(danmClient, ep)
   if err != nil {
     ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("EP could not be PUT into K8s due to error:" + err.Error()), nil)

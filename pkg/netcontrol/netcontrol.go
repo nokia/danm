@@ -266,8 +266,8 @@ func PutNetwork(danmClient danmclientset.Interface, dnet *danmtypes.DanmNet) (bo
     cn := ConvertDnetToCnet(dnet)
     _, err = danmClient.DanmV1().ClusterNetworks().Update(cn)
   } else {
-    return wasResourceAlreadyUpdated, errors.New("can't refresh network object because it has an invalid type:" + dnet.TypeMeta.Kind)  
-  }  
+    return wasResourceAlreadyUpdated, errors.New("can't refresh network object because it has an invalid type:" + dnet.TypeMeta.Kind)
+  }
   if err != nil {
     if strings.Contains(err.Error(),datastructs.OptimisticLockErrorMsg) {
       wasResourceAlreadyUpdated = true

@@ -63,13 +63,13 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
   }
   rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamOptions, ep)
   if err != nil {
-    freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, err
   }
   cniType := netInfo.Spec.NetworkType
   cniResult,err := execCniPlugin(cniType, CniAddOp, netInfo, rawConfig, ep)
   if err != nil {
-    freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, errors.New("Error delegating ADD to CNI plugin:" + cniType + " because:" + err.Error())
   }
   if cniResult != nil {
@@ -187,19 +187,19 @@ func setEpIfaceAddress(cniResult *current.Result, epIface *danmtypes.DanmEpIface
 func DelegateInterfaceDelete(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
   rawConfig, err := getCniPluginConfig(netConf, netInfo, datastructs.IpamConfig{Type: ipamType}, ep)
   if err != nil {
-    freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return err
   }
   cniType := netInfo.Spec.NetworkType
   _, err = execCniPlugin(cniType, CniDelOp, netInfo, rawConfig, ep)
   if err != nil {
-    freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return errors.New("Error delegating DEL to CNI plugin:" + cniType + " because:" + err.Error())
   }
-  return freeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+  return FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
 }
 
-func freeDelegatedIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) error {
+func FreeDelegatedIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) error {
   err4 := freeDelegatedIp(danmClient, netInfo, ip4)
   err6 := freeDelegatedIp(danmClient, netInfo, ip6)
   if err4 != nil {

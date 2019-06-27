@@ -6,16 +6,12 @@ import (
   "log"
   "runtime"
   "strconv"
+  "time"
   "github.com/containernetworking/plugins/pkg/ns"
   "github.com/containernetworking/plugins/pkg/utils/sysctl"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
-)
-
-const (
-  defaultNamespace = "default"
-  dockerApiVersion = "1.22"
 )
 
 type sysctlFunction func(danmtypes.DanmEp) bool
@@ -180,4 +176,23 @@ func isIPv6NotNeeded(ep danmtypes.DanmEp) bool {
     return true
   }
   return false
+}
+
+func PutDanmEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp) error {
+  _, err := danmClient.DanmV1().DanmEps(ep.Namespace).Create(&ep)
+  if err != nil {
+    return errors.New("DanmEp object could not be PUT to K8s API server due to error:" + err.Error())
+  }
+  //We block the thread until DanmEp is really created in the API server, just in case
+  //We achieve this by not returning until Get for the same resource is successful
+  //Otherwise garbage collection could leak during CNI ADD if another thread finished unsuccessfully,
+  //simply because the DanmEp directing interface deletion does not yet exist
+  for i := 0; i < 100; i++ {
+    tempEp, err := danmClient.DanmV1().DanmEps(ep.Namespace).Get(ep.ObjectMeta.Name, meta_v1.GetOptions{})
+    if err == nil && tempEp.ObjectMeta.Name == ep.ObjectMeta.Name {
+      return nil
+    }
+    time.Sleep(10 * time.Millisecond)
+  }
+  return errors.New("DanmEp creation was supposedly successful, but the object hasn't really appeared within 1 sec")
 }

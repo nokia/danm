@@ -1,0 +1,9 @@
+apiVersion: danm.k8s.io/v1
+kind: TenantConfig
+metadata:
+  name: wrong-tconf
+hostDevices:
+- name: ens4
+  vniType: vlan
+networkIds:
+  flannel: flannel

@@ -1,0 +1,9 @@
+apiVersion: danm.k8s.io/v1
+kind: ClusterNetwork
+metadata:
+  name: default
+spec:
+  NetworkID: flannel
+  NetworkType: flannel
+  AllowedTenants:
+  - default

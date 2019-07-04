@@ -1,0 +1,17 @@
+apiVersion: danm.k8s.io/v1
+kind: TenantNetwork
+metadata:
+  name: internal
+  namespace: default
+spec:
+  NetworkID: internal
+  NetworkType: ipvlan
+  Options:
+    host_device: ens4
+    container_prefix: int
+    rt_tables: 200
+    vlan: 700
+    cidr: 10.240.1.0/24
+    allocation_pool:
+      start: 10.240.1.100
+      end: 10.240.1.200

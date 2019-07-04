@@ -1,0 +1,8 @@
+apiVersion: danm.k8s.io/v1
+kind: TenantNetwork
+metadata:
+  name: management
+  namespace: default
+spec:
+  NetworkID: iknowitbetter
+  NetworkType: flannel

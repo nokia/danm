@@ -1,0 +1,16 @@
+apiVersion: danm.k8s.io/v1
+kind: ClusterNetwork
+metadata:
+  name: external
+spec:
+  NetworkID: external
+  NetworkType: ipvlan
+  Options:
+    host_device: ens4
+    vlan: 500
+    container_prefix: ext
+    rt_tables: 100
+    cidr: 10.100.1.0/24
+    allocation_pool:
+      start: 10.100.1.100
+      end: 10.100.1.200

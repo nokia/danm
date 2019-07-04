@@ -1,0 +1,18 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: test-deployment
+  namespace: kube-system
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: test-deployment
+    spec:
+      containers:
+      - name: busybox
+        image: busybox:latest
+        args:
+        - sleep
+        - "1000"

@@ -1,0 +1,8 @@
+apiVersion: danm.k8s.io/v1
+kind: DanmNet
+metadata:
+  name: flannel
+  namespace: kube-system
+spec:
+  NetworkID: flannel
+  NetworkType: flannel 

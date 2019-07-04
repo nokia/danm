@@ -1,0 +1,13 @@
+apiVersion: danm.k8s.io/v1
+kind: TenantConfig
+metadata:
+  name: tconf
+hostDevices:
+- name: ens4
+  vniType: vlan
+  vniRange: 1000-2000
+- name: ens5
+  vniType: vlan
+  vniRange: 2000-3000
+networkIds:
+  flannel: flannel

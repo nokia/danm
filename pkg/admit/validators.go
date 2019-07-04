@@ -12,7 +12,7 @@ import (
 )
 
 const (
-  MaxNidLength = 12
+  MaxNidLength = 11
 )
 
 var (
@@ -127,6 +127,7 @@ func validateTenantNetRules(oldManifest, newManifest *danmtypes.DanmNet, opType 
   }
   if opType == admissionv1.Update &&
     (newManifest.Spec.Options.Device  != oldManifest.Spec.Options.Device  ||
+     newManifest.Spec.Options.DevicePool  != oldManifest.Spec.Options.DevicePool  ||
      newManifest.Spec.Options.Vxlan   != oldManifest.Spec.Options.Vxlan   ||
      newManifest.Spec.Options.Vlan    != oldManifest.Spec.Options.Vlan) {
     return errors.New("Manually changing any one of host_device, vlan, or vxlan attributes is not allowed for TenantNetworks!")
@@ -189,6 +190,8 @@ func validateNeType(oldManifest, newManifest *danmtypes.DanmNet, opType admissio
     if newManifest.Spec.Options.DevicePool == "" || newManifest.Spec.Options.Device != "" {
       return errors.New("DevicePool must, and host_device cannot be provided for SR-IOV networks!")
     }
+  } else if newManifest.Spec.Options.Device != "" && newManifest.Spec.Options.DevicePool != "" {
+    return errors.New("DevicePool and host_device cannot be provided together!")
   }
   return nil
 }

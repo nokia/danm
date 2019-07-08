@@ -243,7 +243,7 @@ We also assume RBAC is configured in your cluster.
 
 ***You are now ready to use the services of DANM, and can start bringing-up Pods within your cluster!***
 
- **+1. OPTIONAL: Create the servicewatcher Deployment by executing the following command from the project's root directory:**
+ **+1. OPTIONAL: Create the svcwatcher Deployment by executing the following command from the project's root directory:**
  ```
 kubectl create -f integration/manifests/svcwatcher/
 ```
@@ -285,7 +285,7 @@ To satisfy the needs of this complex ecosystem, DANM provides different APIs for
 **TenantNetworks** is a namespaced API, and can be freely created by tenant users. It basically is the same API as DanmNet, with one big difference: parameters any way related to host settings cannot be freely configured through this API. These parameters are automatically filled by DANM instead!
 Wonder how? Refer to chapter [Connecting TenantNetworks to TenantConfigs](#connecting-tenantnetworks-to-tenantconfigs) for more information.
 
- **ClusterNetworks** on the other hand is a cluster-wide API, and as such, can be -or should be- only provisioned by administrator level users. Administrators can freely set all available configuration options, even the physical paremeters.
+ **ClusterNetworks** on the other hand is a cluster-wide API, and as such, can be -or should be- only provisioned by administrator level users. Administrators can freely set all available configuration options, even the physical parameters.
  The other nice thing in ClusterNetworks is that all Pods, in any namespace can connect to them - unless the network administrator forbade it via the newly introduced **AllowedTenants** configuration list.
 
 Interested user can find reference manifests showcasing the features of the new APIs under [DANM V4 example manifests](https://github.com/nokia/danm/tree/master/example/4_0_examples).
@@ -458,7 +458,7 @@ The CNI provisions IPVLAN interfaces in L2 mode, and supports the following extr
 DANM provides general support to CNIs which interwork with Kubernetes' Device Plugin mechanism such as SR-IOV CNI.
 When a properly configured Network Device Plugin runs, the allocatable resource list for the node should be updated with resource discovered by the plugin.
 ##### Using Intel SR-IOV CNI
-SR-IOV Network Device Plugin allows to create a list of *netdevice* type resource definitions with *sriovMode*, where each resource definition can have one or more assigned *rootDevice* (Physical Function). The plugin looks for Virtual Funtions (VF) for each configured Physical Function (PF) and adds all discovered VF to the allocatable resource's list of the given Kubernetes Node. The Device Plugin resource name will be the device pool name on the Node. These device pools can be referred in Pod definition's resource request part on the usual way.
+SR-IOV Network Device Plugin allows to create a list of *netdevice* type resource definitions with *sriovMode*, where each resource definition can have one or more assigned *rootDevice* (Physical Function). The plugin looks for Virtual Functions (VF) for each configured Physical Function (PF) and adds all discovered VF to the allocatable resource's list of the given Kubernetes Node. The Device Plugin resource name will be the device pool name on the Node. These device pools can be referred in Pod definition's resource request part on the usual way.
 
 In the following example, the "nokia.k8s.io/sriov_ens1f0" device pool name consists of the "nokia.k8s.io" prefix and "sriov_ens1f0" resourceName.
 ```
@@ -527,9 +527,9 @@ spec:
 ### Usage of DANM's Webhook component
 #### Responsibilities
 The Webhook component introduced in DANM V4 is responsible for three things:
- - it initializes API attributes necessary to perform network management, but not made for human consumption (i.e. allocation tracking bitmasks) at the time of object creation
- - it matches, and connects TenantNetworks to administrator configured allowed physical profiles
- - it validates the syntactic and semantic integrity of all API object before any CREATE, or PUT REST operation are allowed to be persisted in the K8s API server's data store
+ - it initializes essential, but not human configurable API attributes (i.e. allocation tracking bitmasks) at the time of object creation
+ - it matches, and connects TenantNetworks to administrator configured physical profiles allowed for tenant users
+ - it validates the syntactic and semantic integrity of all API objects before any CREATE, or PUT REST operation are allowed to be persisted in the K8s API server's data store
 #### Connecting TenantNetworks to TenantConfigs
 ##### TenantConfig API
 TenantNetworks cannot freely define the following attributes:
@@ -539,22 +539,24 @@ TenantNetworks cannot freely define the following attributes:
  - vxlan
  - NetworkID
 
-Reason is that all these attributes are related to physical resources, which might not be allowed to be used by the specific tenant: VLANs might not be configured in the switches, specific NICs are reserved for infrastructure usage, static CNI configuration files do not exist on the container host's disk etc.
-Instead, these parameters are either entirely, or partially managed, and allocated by DANM in TenantNetwork provisioning time.
+Reason is that all these attributes are related to physical resources, which might not be allowed to be used by the specific tenants: VLANs might not be configured in the switches, specific NICs are reserved for infrastructure use, static CNI configuration files might not exist on the container host's disk etc.
+Instead, these parameters are either entirely, or partially managed by DANM in TenantNetwork provisioning time.
 
-DANM does this by introducing a third new API with v4.0 called **TenantConfig**. TenantConfig is a mandatorily added API when DANM is used in the production grade mode.
+DANM does this by introducing a third new API with v4.0 called **TenantConfig**. TenantConfig is a mandatory API when DANM is used in the production grade mode.
 TenantConfig is a cluster-wide API, containing two major parameters: physical interface profiles usable by TenantNetworks, and NetworkType:NetworkID mappings.
 
 Refer to [TenantConfig schema](https://github.com/nokia/danm/tree/master/schema/TenantConfig.yaml) for more information on TenantConfigs.
 ##### Selecting a physical interface profile
-There are multiple ways of how DANM can select the appropriate interface profile for a tenant user's network, but it only does for dynamic backends.
+There are multiple ways of how DANM can select the appropriate interface profile for a tenant user's network.
+Note: physical interface profiles are only relevant for dynamic backends.
 
 For backends dependent on the host_device option (such as IPVLAN, and MACVLAN):
 
  - if the TenantNetwork contains host_device attribute, DANM selects the entry from the TenantConfig with the matching name
- - if host_device is not provided, DANM selects one configured interface profile randomly
+ - if host_device is not provided by user, DANM randomly selects an interface profile from the TenantConfig
 
-For backends dependent on the device_pool option (such as SR-IOV), the TenantNetwork need to explicitly state which device_pool it wants to use. The reasoning behind not supporting random profile selection for K8s Devices based backens, is that the Pod using such Devices anyway need to explicitly request resources from the exact pool in its own Pod manifest. Randomly matching its network with a possible different pool could result in run-time failures.
+For backends dependent on the device_pool option (such as SR-IOV), the user needs to explicitly state which device_pool it wants to use.
+The reasoning behind not supporting random profile selection for K8s Devices based backends is that the Pod using such Devices anyway need to explicitly request resources from a specific pool in its own Pod manifest. Randomly matching its network with a possibly different pool could result in run-time failures.
 
 If there are no suitable physical interface profiles configured by the cluster's network administrator, or the TenantNetwork tried to select a physical device which is not allowed; webhook denies the creation of the TenantNetwork.
 
@@ -568,7 +570,8 @@ To avoid the leaking of VNIs in the cluster, DANM also takes care of freeing the
 ##### Overwrite NetworkID for static delegates
 Delegation to backends with static integration level (e.g. Calico, Flannel etc.) is configured via static CNI config files read from the container host's disk.
 These files are selected based on the NetworkType parameter of the TenantNetwork.
-Network administrators can configure NetworkType: NetworkID mappings into the TenantConfig. When a TenantNetwork is provisioned with a configured NetworkType, DANM automatically overwrites it NetworkID; and thus makes sure the tenant user's network will use the right CNI configuration file during Pod creation!
+Network administrators can configure NetworkType: NetworkID mappings into the TenantConfig. When a TenantNetwork is created with a NetworkType having a configured mapping, DANM automatically overwrites it's NetworkID with the provided value.
+Thus it becomes guaranteed that the tenant user's network will use the right CNI configuration file during Pod creation!
 #### List of validation rules
 ##### DanmNet
 Every CREATE, and PUT DanmNet operation is subject to the following validation rules:
@@ -624,7 +627,7 @@ If the network in question contained either the "vxlan", or the "vlan" attribute
 This feature is the most beneficial when used together with a dynamic network provisioning backend supporting connecting Pod interfaces to virtual host devices (IPVLAN, MACVLAN, SR-IOV for VLANs). Whenever a Pod is connected to such a network containing a virtual network identifier, the CNI component automatically connects the created interface to the VxLAN or VLAN host interface created by the netwatcher; instead of directly connecting it to the configured host device.
 ### Usage of DANM's Svcwatcher component
 #### Feature description
-Svcwatcher component showcases the whole reason why DANM exists, and is architected the way it is. It is the first higher-level feature accomplishing our true goal described in the introduction section, that is, extending basic Kubernetes constructs to seamlessly work with multiple network interfaces.
+Svcwatcher component showcases the whole reason why DANM exists, and is designed the way it is. It is the first higher-level feature accomplishing our true goal described in the introduction section, that is, extending basic Kubernetes constructs to seamlessly work with multiple network interfaces.
 
 The first such construct is the Kubernetes Service!
 Let's see how it works.
@@ -697,7 +700,7 @@ Please read [CONTRIBUTING.md](https://github.com/nokia/danm/blob/master/CONTRIBU
 
 ## Authors
 
-* **Robert Springer** (@rospring) - Initial work (V1 Python), IPAM, Netwatcher, Servicewatcher [Nokia](https://github.com/nokia)
+* **Robert Springer** (@rospring) - Initial work (V1 Python), IPAM, Netwatcher, Svcwatcher [Nokia](https://github.com/nokia)
 * **Levente Kale** (@Levovar) - Initial work (V2 Golang), Documentation, Integration, SCM, UTs, Metaplugin, V4 work [Nokia](https://github.com/nokia)
 
 Special thanks to the original author who started the whole project in 2015 by putting a proprietary network management plugin between Kubelet and Docker; and also for coining the DANM acronym:

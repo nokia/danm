@@ -5,6 +5,11 @@
 
 <img src="https://github.com/nokia/danm/raw/master/logo_w_name.png" width="100">
 
+# Join our community!
+Want to hang-out with us? Join our Slack under https://danmws.slack.com/!
+
+Feel yourself officially invited by clicking on [this](https://join.slack.com/t/danmws/shared_invite/enQtNjc2MzA3MjU0NzEwLWVkZDQ3ZDA1ZTU2YTM2MjI3YzJmYWFhZjUzZjNmNTcwMTUwYmI0NDhhNzQzMzA3NWRkNmMzNTIxMTI0MDlmYjk) link!
+
 ## Table of Contents
 * [Table of Contents](#table-of-contents)
 * [Introduction](#introduction)

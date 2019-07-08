@@ -4,27 +4,23 @@ import (
   "errors"
   "log"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/metacni"
   metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   "k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
 
-func GetTenantConfig() (*danmtypes.TenantConfig, error) {
-  danmClient, err := metacni.CreateDanmClient("")
-  if err != nil {
-    return nil, err
-  }
+func GetTenantConfig(danmClient danmclientset.Interface) (*danmtypes.TenantConfig, error) {
   reply, err := danmClient.DanmV1().TenantConfigs().List(metav1.ListOptions{})
   if err != nil {
     return nil, err
   }
-  configs := reply.Items
-  if len(configs) == 0 {
+  if reply == nil || len(reply.Items) == 0 {
     return nil, errors.New("TenantNetworks cannot be created without provisioning a TenantConfig first!")
   }
   //TODO: do a namespace based selection later if one generic config does not suffice
-  return &configs[0], nil
+  return &reply.Items[0], nil
 }
 
 func Reserve(tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (int,error) {

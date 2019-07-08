@@ -6,22 +6,37 @@ import (
   rest "k8s.io/client-go/rest"
 )
 
+type TestArtifacts struct {
+  TestNets []danmtypes.DanmNet
+  TestEps []danmtypes.DanmEp
+  ReservedIps []ReservedIpsList
+  TestTconfs []danmtypes.TenantConfig
+}
+
+type ReservedIpsList struct {
+  NetworkId string
+  Reservations []Reservation
+}
+
+type Reservation struct {
+  Ip string
+  Set bool
+}
+
 type ClientStub struct {
-  testNets []danmtypes.DanmNet
-  testEps []danmtypes.DanmEp
-  reservedIps []ReservedIpsList
+  Objects TestArtifacts
 }
 
 func (client *ClientStub) DanmNets(namespace string) client.DanmNetInterface {
-  return newNetClientStub(client.testNets, client.reservedIps)
+  return newNetClientStub(client.Objects.TestNets, client.Objects.ReservedIps)
 }
 
 func (client *ClientStub) DanmEps(namespace string) client.DanmEpInterface {
-  return newEpClientStub(client.testEps)
+  return newEpClientStub(client.Objects.TestEps)
 }
 
 func (client *ClientStub) TenantConfigs() client.TenantConfigInterface {
-  return nil
+  return newTconfClientStub(client.Objects.TestTconfs)
 }
 
 func (client *ClientStub) TenantNetworks(namespace string) client.TenantNetworkInterface {
@@ -36,10 +51,8 @@ func (c *ClientStub) RESTClient() rest.Interface {
   return nil
 }
 
-func newClientStub(nets []danmtypes.DanmNet, eps []danmtypes.DanmEp, ips []ReservedIpsList) *ClientStub {
+func newClientStub(ta TestArtifacts) *ClientStub {
   return &ClientStub {
-    testNets: nets,
-    testEps: eps,
-    reservedIps: ips,
+    Objects: ta,
   }
 }

@@ -12,9 +12,11 @@ import (
   "net/http"
   "k8s.io/api/admission/v1beta1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/confman"
   "github.com/nokia/danm/pkg/ipam"
+  "github.com/nokia/danm/pkg/metacni"
 )
 
 var (
@@ -29,7 +31,21 @@ var (
   }
 )
 
-func ValidateNetwork(responseWriter http.ResponseWriter, request *http.Request) {
+type Validator struct {
+  Client danmclientset.Interface
+}
+
+func CreateNewValidator() (*Validator, error) {
+  validator := Validator{}
+  danmClient, err := metacni.CreateDanmClient("")
+  if err != nil {
+    return nil, err
+  }
+  validator.Client = danmClient
+  return &validator, nil
+}
+
+func (validator *Validator) ValidateNetwork(responseWriter http.ResponseWriter, request *http.Request) {
   admissionReview, err := DecodeAdmissionReview(request)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
@@ -51,7 +67,7 @@ func ValidateNetwork(responseWriter http.ResponseWriter, request *http.Request) 
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
   }
-  err = mutateNetManifest(newManifest)
+  err = mutateNetManifest(validator.Client, newManifest)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
     return
@@ -97,7 +113,7 @@ func validateNetworkByType(oldManifest, newManifest *danmtypes.DanmNet, opType v
   return true, nil
 }
 
-func mutateNetManifest(dnet *danmtypes.DanmNet) error {
+func mutateNetManifest(danmClient danmclientset.Interface, dnet *danmtypes.DanmNet) error {
   if dnet.Spec.NetworkType == "" {
     dnet.Spec.NetworkType = "ipvlan"
   }
@@ -110,7 +126,7 @@ func mutateNetManifest(dnet *danmtypes.DanmNet) error {
     }
   }
   if dnet.TypeMeta.Kind == "TenantNetwork" {
-    err = addTenantSpecificDetails(dnet)
+    err = addTenantSpecificDetails(danmClient, dnet)
   }
   return err
 }
@@ -143,8 +159,8 @@ func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ip
 
 //TODO: we could easily add CIDR + allocation pool overwrites as well for TenantNetworks, if needed
 //Open an issue with your use-case if you see the need!
-func addTenantSpecificDetails(tnet *danmtypes.DanmNet) error {
-  tconf, err := confman.GetTenantConfig()
+func addTenantSpecificDetails(danmClient danmclientset.Interface, tnet *danmtypes.DanmNet) error {
+  tconf, err := confman.GetTenantConfig(danmClient)
   if err != nil {
     return err
   }

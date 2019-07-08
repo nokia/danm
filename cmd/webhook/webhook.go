@@ -25,9 +25,13 @@ func main() {
     log.Println("ERROR: TLS configuration could not be initialized, because:" + err.Error())
     return
   }
-  http.HandleFunc("/netvalidation", admit.ValidateNetwork)
-  http.HandleFunc("/confvalidation", admit.ValidateTenantConfig)
-  http.HandleFunc("/netdeletion", admit.DeleteNetwork)
+  validator, err := admit.CreateNewValidator()
+  if err != nil {
+    log.Println("ERROR: Cannot create DANM REST client, because:" + err.Error())
+  }
+  http.HandleFunc("/netvalidation", validator.ValidateNetwork)
+  http.HandleFunc("/confvalidation", validator.ValidateTenantConfig)
+  http.HandleFunc("/netdeletion", validator.DeleteNetwork)
   server := &http.Server{
     Addr:         *address + ":" + strconv.Itoa(*port),
     TLSConfig:    &tls.Config{Certificates: []tls.Certificate{tlsConf}},

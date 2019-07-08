@@ -102,7 +102,8 @@ func TestReserve(t *testing.T) {
   for _, tc := range reserveTcs {
     t.Run(tc.netName, func(t *testing.T) {
       ips := createExpectedAllocationsList(tc.expectedIp4,true,tc.netIndex)
-      netClientStub := stubs.NewClientSetStub(testNets, nil, ips)
+      testArtifacts := stubs.TestArtifacts{TestNets: testNets, ReservedIps: ips}
+      netClientStub := stubs.NewClientSetStub(testArtifacts)
       ip4, ip6, mac, err := ipam.Reserve(netClientStub, testNets[tc.netIndex], tc.requestedIp4, tc.requestedIp6)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         t.Errorf("Received error:%v does not match with expectation", err)
@@ -131,7 +132,8 @@ func TestFree(t *testing.T) {
   for _, tc := range freeTcs {
     t.Run(tc.netName, func(t *testing.T) {
       ips := createExpectedAllocationsList(tc.allocatedIp,false,tc.netIndex)
-      netClientStub := stubs.NewClientSetStub(testNets, nil, ips)
+      testArtifacts := stubs.TestArtifacts{TestNets: testNets, ReservedIps: ips}
+      netClientStub := stubs.NewClientSetStub(testArtifacts)
       err := ipam.Free(netClientStub, testNets[tc.netIndex], tc.allocatedIp)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         t.Errorf("Received error:%v does not match with expectation", err)
@@ -149,7 +151,8 @@ func TestGarbageCollectIps(t *testing.T) {
   for _, tc := range gcTcs {
     t.Run(tc.netName, func(t *testing.T) {
       ips := createExpectedAllocationsList(tc.allocatedIp4,false,tc.netIndex)
-      netClientStub := stubs.NewClientSetStub(testNets, nil, ips)
+      testArtifacts := stubs.TestArtifacts{TestNets: testNets, ReservedIps: ips}
+      netClientStub := stubs.NewClientSetStub(testArtifacts)
       ipam.GarbageCollectIps(netClientStub, &testNets[tc.netIndex], tc.allocatedIp4, tc.allocatedIp6)
     })
   }

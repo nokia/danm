@@ -268,7 +268,8 @@ func TestCalculateIfaceName(t *testing.T) {
 }
 
 func TestDelegateInterfaceSetup(t *testing.T) {
-  netClientStub := stubs.NewClientSetStub(testNets, nil, nil)
+  testArtifacts := stubs.TestArtifacts{TestNets: testNets}
+  netClientStub := stubs.NewClientSetStub(testArtifacts)
   err := setupDelTest("ADD")
   if err != nil {
     t.Errorf("Test suite could not be set-up because:%s", err.Error())
@@ -314,7 +315,8 @@ func TestDelegateInterfaceSetup(t *testing.T) {
 }
 
 func TestDelegateInterfaceDelete(t *testing.T) {
-  netClientStub := stubs.NewClientSetStub(testNets, nil, nil)
+  testArtifacts := stubs.TestArtifacts{TestNets: testNets}
+  netClientStub := stubs.NewClientSetStub(testArtifacts)
   err := setupDelTest("DEL")
   if err != nil {
     t.Errorf("Test suite could not be set-up because:%s", err.Error())

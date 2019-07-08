@@ -16,9 +16,9 @@ const (
 )
 
 var (
-  DanmNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateAbsenceOfAllowedTenants,validateNeType}
-  ClusterNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNeType,validateNetworkId}
-  TenantNetMapping = []Validator{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateAbsenceOfAllowedTenants,validateTenantNetRules,validateNeType}
+  DanmNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateAbsenceOfAllowedTenants,validateNeType}
+  ClusterNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNeType,validateNetworkId}
+  TenantNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateAbsenceOfAllowedTenants,validateTenantNetRules,validateNeType}
   danmValidationConfig = map[string]ValidatorMapping {
     "DanmNet": DanmNetMapping,
     "ClusterNetwork": ClusterNetMapping,
@@ -26,8 +26,8 @@ var (
   }
 )
 
-type Validator func(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error
-type ValidatorMapping []Validator
+type ValidatorFunc func(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error
+type ValidatorMapping []ValidatorFunc
 
 func validateIpv4Fields(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
   return validateIpFields(newManifest.Spec.Options.Cidr, newManifest.Spec.Options.Routes)

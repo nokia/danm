@@ -10,7 +10,7 @@ import (
 //A GIGANTIC DISCLAIMER: THIS DOES NOT WORK BEFORE K8S 1.15!
 //See ticket: https://github.com/kubernetes/kubernetes/pull/76346
 //Tested with 1.15 though, works like a charm
-func DeleteNetwork(responseWriter http.ResponseWriter, request *http.Request) {
+func (validator *Validator) DeleteNetwork(responseWriter http.ResponseWriter, request *http.Request) {
   admissionReview, err := DecodeAdmissionReview(request)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
@@ -22,7 +22,7 @@ func DeleteNetwork(responseWriter http.ResponseWriter, request *http.Request) {
     return
   }
   if oldManifest.TypeMeta.Kind == "TenantNetwork" && IsTypeDynamic(oldManifest.Spec.NetworkType) {
-    tconf, err := confman.GetTenantConfig()
+    tconf, err := confman.GetTenantConfig(validator.Client)
     if err != nil {
       SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID,
       errors.New("The network's VNI could not be freed, because:" + err.Error()))

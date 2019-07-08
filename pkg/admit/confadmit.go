@@ -17,7 +17,7 @@ const (
   HostDevicePath = "/hostDevices"
 )
 
-func ValidateTenantConfig(responseWriter http.ResponseWriter, request *http.Request) {
+func (validator *Validator) ValidateTenantConfig(responseWriter http.ResponseWriter, request *http.Request) {
   admissionReview, err := DecodeAdmissionReview(request)
   if err != nil {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)

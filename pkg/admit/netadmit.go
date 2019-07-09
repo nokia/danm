@@ -165,7 +165,7 @@ func addTenantSpecificDetails(danmClient danmclientset.Interface, tnet *danmtype
     return err
   }
   if IsTypeDynamic(tnet.Spec.NetworkType) {
-    err = allocateDetailsForDynamicBackends(tnet,tconf)
+    err = allocateDetailsForDynamicBackends(danmClient, tnet,tconf)
     if err != nil {
       return err
     }
@@ -180,15 +180,15 @@ func addTenantSpecificDetails(danmClient danmclientset.Interface, tnet *danmtype
   return nil
 }
 
-func allocateDetailsForDynamicBackends(tnet *danmtypes.DanmNet,tconf *danmtypes.TenantConfig) error {
+func allocateDetailsForDynamicBackends(danmClient danmclientset.Interface, tnet *danmtypes.DanmNet,tconf *danmtypes.TenantConfig) error {
   var pfProfiles []danmtypes.IfaceProfile
   for _, iface := range tconf.HostDevices {
     if tnet.Spec.Options.DevicePool != "" && tnet.Spec.Options.DevicePool == iface.Name {
       //This is the interface profile belonging to the network's DevicePool
-      return attachNetworkToIfaceProfile(tnet,tconf,iface)
+      return attachNetworkToIfaceProfile(danmClient, tnet,tconf,iface)
     } else if tnet.Spec.Options.Device == iface.Name && !strings.Contains(iface.Name,"/") {
       //This is the interface profile matching the requested host_device
-      return attachNetworkToIfaceProfile(tnet,tconf,iface)
+      return attachNetworkToIfaceProfile(danmClient, tnet,tconf,iface)
     }
     //DevicePools generally look like this: "xyz.abc.io/resource_name".
     //Here we separate "real" NICs from abstract K8s Devices 
@@ -206,16 +206,16 @@ func allocateDetailsForDynamicBackends(tnet *danmtypes.DanmNet,tconf *danmtypes.
   rand.Seed(time.Now().UnixNano())
   chosenProfile := pfProfiles[rand.Intn(len(pfProfiles))]
   //Otherwise we randomly choose an interface profile and attach the TenantNetwork to it
-  return attachNetworkToIfaceProfile(tnet,tconf,chosenProfile)
+  return attachNetworkToIfaceProfile(danmClient, tnet,tconf,chosenProfile)
 }
 
-func attachNetworkToIfaceProfile(tnet *danmtypes.DanmNet, tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) error {
+func attachNetworkToIfaceProfile(danmClient danmclientset.Interface, tnet *danmtypes.DanmNet, tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) error {
   if tnet.Spec.Options.Device == "" && tnet.Spec.Options.DevicePool == "" {
     tnet.Spec.Options.Device = iface.Name
   }
   if (iface.VniType == "vlan" && tnet.Spec.Options.Vlan == 0) ||
      (iface.VniType == "vxlan" && tnet.Spec.Options.Vxlan == 0) {
-    vni,err := confman.Reserve(tconf, iface)
+    vni,err := confman.Reserve(danmClient, tconf, iface)
     if err != nil {
       return errors.New("cannot reserve VNI for interface:" + iface.Name + " , because:" + err.Error())
     }

@@ -6,7 +6,6 @@ import (
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   "github.com/nokia/danm/pkg/bitarray"
-  "github.com/nokia/danm/pkg/metacni"
   metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   "k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
@@ -23,7 +22,7 @@ func GetTenantConfig(danmClient danmclientset.Interface) (*danmtypes.TenantConfi
   return &reply.Items[0], nil
 }
 
-func Reserve(tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (int,error) {
+func Reserve(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (int,error) {
   allocs := bitarray.NewBitArrayFromBase64(iface.Alloc)
   vnis, err := cpuset.Parse(iface.VniRange)
   if err != nil {
@@ -44,8 +43,14 @@ func Reserve(tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (int,e
     return 0, errors.New("VNI cannot be allocated from interface profile:" + iface.Name + " because the whole range is already reserved")
   }
   index := getIfaceIndex(tconf, iface.Name, iface.VniType)
+  if index == -1 {
+    return 0, errors.New("VNI cannot be reserved because selected interface does not exist. You should call for a tech priest, and start praying to the Omnissiah immediately.")
+  }
   tconf.HostDevices[index] = iface
-  err = updateConfigInApi(tconf)
+  //TODO: now, do we actually need to manually check for the OptimisticLockErrorMessage when we use a generated client,
+  //or that is actually dead code in ipam as well?
+  //Let's find out!
+  _, err = danmClient.DanmV1().TenantConfigs().Update(tconf)
   if err != nil {
     return 0, errors.New("VNI allocation of TenantConfig cannot be updated in the Kubernetes API because:" + err.Error())
   }
@@ -61,19 +66,6 @@ func getIfaceIndex(tconf *danmtypes.TenantConfig, name, vniType string) int {
     }
   }
   return -1
-}
-
-func updateConfigInApi(tconf *danmtypes.TenantConfig) error {
-  danmClient, err := metacni.CreateDanmClient("")
-  if err != nil {
-    return err
-  }
-  confClient := danmClient.DanmV1().TenantConfigs()
-  //TODO: now, do we actually need to manually check for the OptimisticLockErrorMessage when we use a generated client,
-  //or that is actually dead code in ipam as well?
-  //Let's find out!
-  _, err = confClient.Update(tconf)
-  return err
 }
 
 func Free(tconf *danmtypes.TenantConfig, dnet *danmtypes.DanmNet) error {
@@ -102,5 +94,6 @@ func Free(tconf *danmtypes.TenantConfig, dnet *danmtypes.DanmNet) error {
   }
   allocs.Reset(uint32(vni))
   tconf.HostDevices[index].Alloc = allocs.Encode()
-  return updateConfigInApi(tconf)
+  return nil
+  //  return updateConfigInApi(tconf)
 }

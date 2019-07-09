@@ -22,7 +22,10 @@ func (tconfClient TconfClientStub) Create(obj *danmtypes.TenantConfig) (*danmtyp
 }
 
 func (tconfClient TconfClientStub) Update(obj *danmtypes.TenantConfig) (*danmtypes.TenantConfig, error) {
-  return nil, nil
+  if strings.HasPrefix(obj.ObjectMeta.Name,"error") {
+    return nil, errors.New("here you go")
+  }
+  return &danmtypes.TenantConfig{}, nil
 }
 
 func (tconfClient TconfClientStub) Delete(name string, options *meta_v1.DeleteOptions) error {

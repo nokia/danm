@@ -51,10 +51,7 @@ func Reserve(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, 
   //or that is actually dead code in ipam as well?
   //Let's find out!
   _, err = danmClient.DanmV1().TenantConfigs().Update(tconf)
-  if err != nil {
-    return 0, errors.New("VNI allocation of TenantConfig cannot be updated in the Kubernetes API because:" + err.Error())
-  }
-  return chosenVni, nil
+  return chosenVni, err
 }
 
 func getIfaceIndex(tconf *danmtypes.TenantConfig, name, vniType string) int {
@@ -68,7 +65,7 @@ func getIfaceIndex(tconf *danmtypes.TenantConfig, name, vniType string) int {
   return -1
 }
 
-func Free(tconf *danmtypes.TenantConfig, dnet *danmtypes.DanmNet) error {
+func Free(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, dnet *danmtypes.DanmNet) error {
   if dnet.Spec.Options.Vlan == 0 && dnet.Spec.Options.Vxlan == 0 {
     return nil
   }
@@ -84,7 +81,7 @@ func Free(tconf *danmtypes.TenantConfig, dnet *danmtypes.DanmNet) error {
   if index < 0 {
     log.Println("WARNING: There is a data incosistency between TenantNetwork:" + dnet.ObjectMeta.Name + " in namespace:" +
     dnet.ObjectMeta.Namespace + " , and TenantConfig:" + tconf.ObjectMeta.Name +
-    " as the used network details are actually not present in TenantConfig. This means your APIs were possibly tampered with!")
+    " as the used network details (interface name, VNI type) doe not match any entries in TenantConfig. This means your APIs were possibly tampered with!")
     return nil
   }
   allocs := bitarray.NewBitArrayFromBase64(tconf.HostDevices[index].Alloc)
@@ -94,6 +91,6 @@ func Free(tconf *danmtypes.TenantConfig, dnet *danmtypes.DanmNet) error {
   }
   allocs.Reset(uint32(vni))
   tconf.HostDevices[index].Alloc = allocs.Encode()
-  return nil
-  //  return updateConfigInApi(tconf)
+  _, err := danmClient.DanmV1().TenantConfigs().Update(tconf)
+  return err
 }

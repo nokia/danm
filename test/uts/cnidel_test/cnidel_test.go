@@ -208,7 +208,7 @@ var delDeleteTcs = []struct {
 func TestIsDelegationRequired(t *testing.T) {
   for _, tc := range delegationRequiredTcs {
     t.Run(tc.netName, func(t *testing.T) {
-      dnet := getTestNet(tc.netName)
+      dnet := utils.GetTestNet(tc.netName, testNets)
       isDelRequired := cnidel.IsDelegationRequired(dnet)
       if isDelRequired != tc.isDelegationExpected {
         t.Errorf("Received delegation result does not match with expected for TC: %s", tc.netName)
@@ -280,7 +280,7 @@ func TestDelegateInterfaceSetup(t *testing.T) {
       if err != nil {
         t.Errorf("TC could not be set-up because:%s", err.Error())
       }
-      testNet := getTestNet(tc.netName)
+      testNet := utils.GetTestNet(tc.netName, testNets)
       testEp := getTestEp(tc.epName)
       cniRes, err := cnidel.DelegateInterfaceSetup(&cniConf,netClientStub,testNet,testEp)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
@@ -327,7 +327,7 @@ func TestDelegateInterfaceDelete(t *testing.T) {
       if err != nil {
         t.Errorf("TC could not be set-up because:%s", err.Error())
       }
-      testNet := getTestNet(tc.netName)
+      testNet := utils.GetTestNet(tc.netName, testNets)
       testEp := getTestEp(tc.epName)
       if testNet.Spec.NetworkType == "flannel" && testEp.Spec.Iface.Address != "" {
         var dataDir = filepath.Join(defaultDataDir, flannelBridge)
@@ -424,15 +424,6 @@ func setupDelTestTc(expectedCniConfig string) error {
   err := ioutil.WriteFile(filepath.Join(cniTestConfigDir, cniTestConfigFile), expectedConf.Conftent, 0666)
   if err != nil {
     return err
-  }
-  return nil
-}
-
-func getTestNet(netId string) *danmtypes.DanmNet {
-  for _, net := range testNets {
-    if net.ObjectMeta.Name == netId {
-      return &net
-    }
   }
   return nil
 }

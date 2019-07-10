@@ -28,7 +28,7 @@ func (validator *Validator) DeleteNetwork(responseWriter http.ResponseWriter, re
       errors.New("The network's VNI could not be freed, because:" + err.Error()))
       return
     }
-    err = confman.Free(tconf,oldManifest)
+    err = confman.Free(validator.Client, tconf, oldManifest)
     if err != nil {
       SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID,
       errors.New("The network's VNI could not be freed, because:" + err.Error()))

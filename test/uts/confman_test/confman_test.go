@@ -6,6 +6,7 @@ import (
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/confman"
   "github.com/nokia/danm/test/stubs"
+  "github.com/nokia/danm/test/utils"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -32,7 +33,12 @@ const (
 var (
   emptyTconfs []danmtypes.TenantConfig
   errorTconfs = []danmtypes.TenantConfig {
-    danmtypes.TenantConfig{ObjectMeta: meta_v1.ObjectMeta {Name: "error"}},
+    danmtypes.TenantConfig{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "error"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc:AllocFor5k},
+      },
+    },
   }
   multipleTconfs = []danmtypes.TenantConfig {
     danmtypes.TenantConfig{ObjectMeta: meta_v1.ObjectMeta {Name: "firstConf"}},
@@ -44,6 +50,9 @@ var (
       HostDevices: []danmtypes.IfaceProfile {
         danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc:AllocFor5k},
         danmtypes.IfaceProfile{Name: "ens4", VniType: "vlan", VniRange: "200,500-510", Alloc:AllocFor5k},
+        danmtypes.IfaceProfile{Name: "ens6", VniType: "vxlan", VniRange: "1200-1300", Alloc:AllocFor5k},
+        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vlan", VniRange: "1500-1550", Alloc:AllocFor5k},
+        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vxlan", VniRange: "1600-1650", Alloc:AllocFor5k},
       },
     },
     danmtypes.TenantConfig{
@@ -65,6 +74,32 @@ var (
     TconfSet{name: "multipleConfigs", tconfs: multipleTconfs},
   }
   testConfigs = TconfSets {sets: tconfSets}
+  testNets = []danmtypes.DanmNet {
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "ens5"},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "int", Options: danmtypes.DanmNetOption{Device: "ens5", Vlan: 1200}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "ens6"},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "int", Options: danmtypes.DanmNetOption{Device: "ens6", Vlan: 1200}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "ipvlan_vlan"},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "int", NetworkType: "ipvlan", Options: danmtypes.DanmNetOption{Device: "ens4", Vlan: 510}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "ipvlan_vxlan"},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "int", NetworkType: "ipvlan", Options: danmtypes.DanmNetOption{Device: "ens4", Vxlan: 700}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "sriov_vlan"},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "ext", NetworkType: "sriov", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f0", Vlan: 1540}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "sriov_vxlan"},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "ext", NetworkType: "sriov", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f0", Vxlan: 1600}},
+    },
+  }
 )
 
 var getTconfTcs = []struct {
@@ -92,6 +127,24 @@ var reserveTcs = []struct {
   {"noFreeVniInIface", "tconf", "ens4", "vlan", []int{200,510}, true, 0},
   {"errorUpdating", "error", "ens4", "vxlan", nil, true, 0},
   {"nonExistentProfile", "tconf", "hupak", "vlan", nil, true, 0},
+}
+
+var freeTcs = []struct {
+  tcName string
+  tconfName string
+  networkName string
+  ifaceNameToCheck string
+  ifaceTypeToCheck string
+  vniShouldBeSet bool
+  isErrorExpected bool
+}{
+  {"invalidIface", "tconf", "ens5", "", "", false, false},
+  {"invalidVniType", "tconf", "ens6", "ens6", "vxlan", true, false},
+  {"hostDeviceWithVlan", "tconf", "ipvlan_vlan", "ens4", "vlan", false, false},
+  {"hostDeviceWithVxlan", "tconf", "ipvlan_vxlan", "ens4", "vxlan", false, false},
+  {"devicePoolWithVlan", "tconf", "sriov_vlan", "nokia.k8s.io/sriov_ens1f0", "vlan", false, false},
+  {"devicePoolWithVxlan", "tconf", "sriov_vxlan", "nokia.k8s.io/sriov_ens1f0", "vxlan", false, false},
+  {"errorUpdating", "error", "ipvlan_vxlan", "ens4", "vxlan", false, true},  
 }
 
 func TestGetTenantConfig(t *testing.T) {
@@ -142,6 +195,38 @@ func TestReserve(t *testing.T) {
   }
 }
 
+func TestFree(t *testing.T) {
+  for _, tc := range freeTcs {
+    t.Run(tc.tcName, func(t *testing.T) {
+      tconf := getTconf(tc.tconfName, reserveConfs)
+      dnet := utils.GetTestNet(tc.networkName, testNets)
+      if tc.ifaceNameToCheck != "" {
+        index, iface := getIfaceFromTconf(tc.ifaceNameToCheck, tc.ifaceTypeToCheck, tconf)
+        reserveVnis(&iface,[]int{0,4999})
+        tconf.HostDevices[index] = iface
+      }
+      testArtifacts := stubs.TestArtifacts{TestTconfs: reserveConfs, TestNets: testNets}
+      tconfClientStub := stubs.NewClientSetStub(testArtifacts)
+      err := confman.Free(tconfClientStub, tconf, dnet)
+      if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
+        t.Errorf("Received error:%v does not match with expectation", err)
+        return
+      }
+      _, ifaceAfter := getIfaceFromTconf(tc.ifaceNameToCheck, tc.ifaceTypeToCheck, tconf)
+      vniToCheck := dnet.Spec.Options.Vlan
+      if dnet.Spec.Options.Vxlan != 0 {
+        vniToCheck = dnet.Spec.Options.Vxlan
+      }
+      if tc.ifaceNameToCheck != "" && tc.vniShouldBeSet && !isVniSet(ifaceAfter,vniToCheck) {
+        t.Errorf("VNI:%d in interface profile:%s should be set, but it's not!", vniToCheck, tc.ifaceNameToCheck)
+        return
+      } else if tc.ifaceNameToCheck != "" && !tc.vniShouldBeSet && isVniSet(ifaceAfter,vniToCheck) {
+        t.Errorf("VNI:%d in interface profile:%s should not be set, but it is!", vniToCheck, tc.ifaceNameToCheck)
+        return
+      }
+    })
+  }
+}
 func getTconfSet(tconfName string, tconfSets []TconfSet) []danmtypes.TenantConfig {
   for _, tconfSet := range tconfSets {
     if tconfSet.name == tconfName {
@@ -184,4 +269,9 @@ func reserveVnis(iface *danmtypes.IfaceProfile, vniRange []int) {
     allocs.Set(uint32(i))
   }
   iface.Alloc = allocs.Encode()
+}
+
+func isVniSet(iface danmtypes.IfaceProfile, vni int) bool {
+  allocs := bitarray.NewBitArrayFromBase64(iface.Alloc)
+  return allocs.Get(uint32(vni))
 }

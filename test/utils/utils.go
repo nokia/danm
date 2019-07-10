@@ -35,6 +35,15 @@ func SetupAllocationPools(nets []danmtypes.DanmNet) error {
   return nil
 }
 
+func GetTestNet(netId string, testNets []danmtypes.DanmNet) *danmtypes.DanmNet {
+  for _, net := range testNets {
+    if net.ObjectMeta.Name == netId {
+      return &net
+    }
+  }
+  return nil
+}
+
 func exhaustNetwork(netInfo *danmtypes.DanmNet) {
     ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
     _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)

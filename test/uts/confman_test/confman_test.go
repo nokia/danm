@@ -99,6 +99,10 @@ var (
       ObjectMeta: meta_v1.ObjectMeta {Name: "sriov_vxlan"},
       Spec: danmtypes.DanmNetSpec{NetworkID: "ext", NetworkType: "sriov", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f0", Vxlan: 1600}},
     },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "novni"},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "internal", NetworkType: "ipvlan", Options: danmtypes.DanmNetOption{Device: "ens4"}},
+    },
   }
 )
 
@@ -144,7 +148,8 @@ var freeTcs = []struct {
   {"hostDeviceWithVxlan", "tconf", "ipvlan_vxlan", "ens4", "vxlan", false, false},
   {"devicePoolWithVlan", "tconf", "sriov_vlan", "nokia.k8s.io/sriov_ens1f0", "vlan", false, false},
   {"devicePoolWithVxlan", "tconf", "sriov_vxlan", "nokia.k8s.io/sriov_ens1f0", "vxlan", false, false},
-  {"errorUpdating", "error", "ipvlan_vxlan", "ens4", "vxlan", false, true},  
+  {"errorUpdating", "error", "ipvlan_vxlan", "ens4", "vxlan", false, true},
+  {"noVnis", "tconf", "novni", "", "", false, false},
 }
 
 func TestGetTenantConfig(t *testing.T) {

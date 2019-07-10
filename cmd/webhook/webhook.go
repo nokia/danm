@@ -28,6 +28,7 @@ func main() {
   validator, err := admit.CreateNewValidator()
   if err != nil {
     log.Println("ERROR: Cannot create DANM REST client, because:" + err.Error())
+    return
   }
   http.HandleFunc("/netvalidation", validator.ValidateNetwork)
   http.HandleFunc("/confvalidation", validator.ValidateTenantConfig)

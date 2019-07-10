@@ -16,12 +16,15 @@ metadata:
   # MANDATORY - STRING
   name: ## TENANTCONFIG_NAME  ##
 # A list of physical network interfaces in the cluster's Node's host network namespace tenant users can connect to.
-# Whenever a TenantNetwork is created with a NetworkType requiring direct access to a host device (e.g. ipvlan, macvlan etc.), DANM automatically selects one from this list.
-# The selected interface is then configured in the TenantNetwork object's "host_device" attribute.
+# Whenever a TenantNetwork is created with a NetworkType requiring direct access to a host device (i.e. ipvlan, macvlan), or to a K8s Device pool (i.e. sriov),
+# DANM selects an appropriate one from this list.
+# The physical details from the selected interface are then configured to the relevant attributes in the TenantNetwork (host_device/device_pool, vlan, vxlan).
 # MANDATORY - LIST OF INTERFACE PROFILES USABLE BY TENANTS
 hostDevices:
   # One host device profile can have the following attributes:
-  #   The name of the network device as seen in the Linux kernel. E.g. eno4, bond1 etc.
+  #   The name of the physical device used by the network. It can be either:
+  #   - the name of a network device as seen in the Linux kernel for NetworkTypes directly connecting to a PF E.g. eno4, bond1 etc.
+  #   - the name of a Kubernetes managed Device Pool, in case the NetworkType is Device dependent (such as sriov)
   #   MANDATORY - STRING
   # - name: ## DEVICE_NAME ##
   #   The cluster administrator can configure if TenantNetworks should be connected to a virtual network rather than directly to the physical device.

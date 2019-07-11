@@ -14,7 +14,7 @@ Feel yourself officially invited by clicking on [this](https://join.slack.com/t/
 * [Table of Contents](#table-of-contents)
 * [Introduction](#introduction)
 * [Our philosophy and motivation behind DANM](#our-philosophy-and-motivation-behind-danm)
-* [How is DANM different than Multus?](#how-is-danm-different-than-multus)
+* [Note about boundaries](#note-about-boundaries)
 * [Getting started](#getting-started)
      * [Install an Akraino REC and get DANM for free](#install-an-akraino-rec-and-get-danm-for-free)
      * [Prerequisites](#prerequisites)
@@ -97,29 +97,18 @@ This is the historical reason why DANM's CRD based, abstract network management 
 This approach opens-up a plethora of possibilities, even with today's Kubernetes core code!
 
 The following chapters will guide you through the description of these features, and will show you how you can leverage them in your Kubernetes cluster.
-## How is DANM different than Multus?
-Let's get this question immediately out-of-the way though, shall we? Considering that one of DANM’s aspects is to be a CNI metaplugin, we are sure this question has crossed most people’s mind.
+## Note about boundaries
+You will see at the end of this README that we really went above and beyond what "networks" are in vanilla Kubernetes.
 
-Let it be first known, that the creators of this project have a a great deal of respect towards the contributors of Multus, and actually we are working together on trying to enhance the upstream Kubernetes with many generic features (both within networking SIG, and without).
-We have always viewed DANM as a temporary solution, and were waiting for the upstream community, or another project to provide the complete feature set TelCo applications require (while we were sitting on our own for more than 4 years now, way before even the concept of CNI specification was conceived. Shame on us!)
-As even until today this has not happened, we thought it is time to showcase our approach instead!
+But, DANM core project never did, and will break one core concept: DANM is first and foremost a run-time agnostic standard CNI system for Kubernetes, 100% adhering to the Kubernetes life-cycle management principles.
 
-**So, which CNI metaplugin is actually better?**
-*The answer is very simple: **neither***. They are just a different solution to the same problem, neither of them being the ultimate one!
+It is important to state this, because the features DANM provides open up a couple of very enticing, but also very dangerous avenues:
+ - what if we would monitor the run-time and provide added high-availability feature based on events happening on that level?
+ - what if we could change the networks of existing Pods?
 
-**Multus** is a very generic CNI metaplugin 100% employing the capabilities of other CNI plugins to manage multiple networks transparently.
-Multus leaves everything to delegates, while its role remains neutral.
-Multus is mainly configuration driven, and very loosely coupled.
-CNI configurations are always transparent for Multus.
-
-Whereas **DANM** is an E2E suite implementing one, big solution to a whole array of specific networking related features TelCo applications usually demand.
-While Multus always delegates, DANM implements a lot of these functionalities on its own (but still being capable of delegating sub-tasks whenever it is configured to).
-All components of DANM are driven by and tightly coupled with abstract, CRD-based Kubernetes network management APIs.
-DANM actively interprets and mutates CNI configurations, even when it delegates network provisioning operations to other CNIs.
-
-So, basically it is up to you to decide which solution is better suited to your needs. If you would like to remain close to the original networking ideals of Kubernetes, and only want to provision multiple network interfaces to your possibly enterprise, or IT Pods, you might go with Multus.
-
-If you are not afraid of going against the grain, looking for a coupled E2E solution revolving around the idea of making networks first-class citizens in Kubernetes, and you want all of the networking goodies required by TelCo apps, you might be tempted to try DANM instead!
+ We strongly feel that all such scenarios incompatible with the life-cycle of a standard CNI plugin firmly fall outside the responsibility of the core DANM project.
+That being said, tell us about your Kubernetes breaking ideas! We are open to accept such plugins into the wider umbrella of the existing eco-system: outside of the core project, but still loosely linked to suite as optional, external components.
+Just because something doesn't fit into DANM, it does not mean it can't fit into your cloud! 
 ## Getting started
 ### Install an Akraino REC and get DANM for free!
 Just kidding as DANM is always free, but if you want to install a production grade, open-source Kubernetes-based bare metal CaaS infrastructure by default equipped with DANM **and** with a single click of a button nonetheless; just head over to Linux Foundation Akraino Radio Edge Cloud site:
@@ -342,9 +331,13 @@ Generally speaking, you need to care about how the network interfaces of your Po
 The hard reality to keep in mind is that you shall always have an interface literally called "eth0" created within all your Kubernetes Pods, because Kubelet will always search for the existence of such an interface at the end of Pod instantiation.
 If such an interface does not exist after CNI is invoked (also having an IPv4 address), the state of the Pod will be considered "faulty", and it will be re-created in a loop.
 To be able to comply with this Kubernetes limitation, DANM always names the first container interface "eth0", regardless of your intention.
+
 Sorry, but they made us do it :)
 
-However, DANM also supports both explicit, and implicit interface naming schemes for all NetworkTypes to help you flexibly name the other interfaces!
+**Note**: some CNI plugins try to be smart about this limitation on their own, and decided not to adhere to the CNI standard! An example of this behaviour can be found in Flannel.
+It is the user's responsibility to put the network connection of such boneheaded backends to the first place in the Pod's annotation!
+
+However, DANM also supports both explicit, and implicit interface naming schemes for all NetworkTypes to help you flexibly name the other -and CNI standard- interfaces!
 An interface connected to a network containing the container_prefix attribute is always named accordingly. You can use this API to explicitly set descriptive, unique names to NICs connecting to this network.
 In case container_prefix is not set in an interface's network descriptor, DANM automatically uses the "eth" as the prefix when naming the interface.
 Regardless which prefix is used, the interface name is also suffixed with an integer number corresponding to the sequence number of the network connection (e.g. the first interface defined in the annotation is called "eth0", second interface "eth1" etc.)

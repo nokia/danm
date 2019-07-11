@@ -1,4 +1,4 @@
-package stubs
+package danm
 
 import (
   discovery "k8s.io/client-go/discovery"

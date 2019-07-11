@@ -106,7 +106,7 @@ type DanmEpList struct {
 type TenantConfig struct {
   meta_v1.TypeMeta              `json:",inline"`
   meta_v1.ObjectMeta            `json:"metadata"`
-  HostDevices []IfaceProfile    `json:"hostDevices"`
+  HostDevices []IfaceProfile    `json:"hostDevices,omitempty"`
   NetworkIds  map[string]string `json:"networkIds,omitempty"`
 }
 

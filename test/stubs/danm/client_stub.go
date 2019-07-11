@@ -1,4 +1,4 @@
-package stubs
+package danm
 
 import (
   client "github.com/nokia/danm/crd/client/clientset/versioned/typed/danm/v1"

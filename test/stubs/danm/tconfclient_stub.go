@@ -1,4 +1,4 @@
-package stubs
+package danm
 
 import (
   "errors"

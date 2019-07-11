@@ -11,7 +11,7 @@ import (
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/pkg/datastructs"
-  "github.com/nokia/danm/test/stubs"
+  stubs "github.com/nokia/danm/test/stubs/danm"
   "github.com/nokia/danm/test/utils"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

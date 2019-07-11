@@ -20,17 +20,17 @@ const (
 func (validator *Validator) ValidateTenantConfig(responseWriter http.ResponseWriter, request *http.Request) {
   admissionReview, err := DecodeAdmissionReview(request)
   if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   oldManifest, err := decodeTenantConfig(admissionReview.Request.OldObject.Raw)
   if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   newManifest, err := decodeTenantConfig(admissionReview.Request.Object.Raw)
   if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   origNewManifest := *newManifest
@@ -40,12 +40,12 @@ func (validator *Validator) ValidateTenantConfig(responseWriter http.ResponseWri
   origNewManifest.HostDevices = origDevices
   isManifestValid, err := validateConfig(oldManifest, newManifest, admissionReview.Request.Operation)
   if !isManifestValid {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   err = mutateConfigManifest(newManifest)
   if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   responseAdmissionReview := v1beta1.AdmissionReview {
@@ -103,7 +103,7 @@ func createPatchListFromConfigChanges(origConfig danmtypes.TenantConfig, changed
     patchList = append(patchList, CreateGenericPatchFromChange(HostDevicePath, json.RawMessage(hostDevicesPatch)))
   }
   return patchList
-} 
+}
 
 func mutateConfigManifest(tconf *danmtypes.TenantConfig) error {
   for ifaceIndex, ifaceConf := range tconf.HostDevices {

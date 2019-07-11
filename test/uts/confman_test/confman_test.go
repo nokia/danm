@@ -5,7 +5,7 @@ import (
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/confman"
-  "github.com/nokia/danm/test/stubs"
+  stubs "github.com/nokia/danm/test/stubs/danm"
   "github.com/nokia/danm/test/utils"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,24 +19,13 @@ type TconfSet struct {
   tconfs []danmtypes.TenantConfig
 }
 
-const (
-  AllocFor5k = "gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
-                "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
-)
-
 var (
   emptyTconfs []danmtypes.TenantConfig
   errorTconfs = []danmtypes.TenantConfig {
     danmtypes.TenantConfig{
       ObjectMeta: meta_v1.ObjectMeta {Name: "error"},
       HostDevices: []danmtypes.IfaceProfile {
-        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc:AllocFor5k},
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
       },
     },
   }
@@ -48,25 +37,25 @@ var (
     danmtypes.TenantConfig{
       ObjectMeta: meta_v1.ObjectMeta {Name: "tconf"},
       HostDevices: []danmtypes.IfaceProfile {
-        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc:AllocFor5k},
-        danmtypes.IfaceProfile{Name: "ens4", VniType: "vlan", VniRange: "200,500-510", Alloc:AllocFor5k},
-        danmtypes.IfaceProfile{Name: "ens6", VniType: "vxlan", VniRange: "1200-1300", Alloc:AllocFor5k},
-        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vlan", VniRange: "1500-1550", Alloc:AllocFor5k},
-        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vxlan", VniRange: "1600-1650", Alloc:AllocFor5k},
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vlan", VniRange: "200,500-510", Alloc: utils.AllocFor5k},
+        danmtypes.IfaceProfile{Name: "ens6", VniType: "vxlan", VniRange: "1200-1300", Alloc: utils.AllocFor5k},
+        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vlan", VniRange: "1500-1550", Alloc: utils.AllocFor5k},
+        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vxlan", VniRange: "1600-1650", Alloc: utils.AllocFor5k},
       },
     },
     danmtypes.TenantConfig{
       ObjectMeta: meta_v1.ObjectMeta {Name: "error"},
       HostDevices: []danmtypes.IfaceProfile {
-        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "800-810", Alloc:AllocFor5k},
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "800-810", Alloc: utils.AllocFor5k},
       },
     },
   }
   reserveIfaces = []danmtypes.IfaceProfile {
     danmtypes.IfaceProfile{Name:"invalidVni", VniRange: "invalid"},
-    danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc:AllocFor5k},
-    danmtypes.IfaceProfile{Name: "ens4", VniType: "vlan", VniRange: "200,500-510", Alloc:AllocFor5k},
-    danmtypes.IfaceProfile{Name: "hupak", VniType: "vlan", VniRange: "1000,1001", Alloc:AllocFor5k},
+    danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
+    danmtypes.IfaceProfile{Name: "ens4", VniType: "vlan", VniRange: "200,500-510", Alloc: utils.AllocFor5k},
+    danmtypes.IfaceProfile{Name: "hupak", VniType: "vlan", VniRange: "1000,1001", Alloc: utils.AllocFor5k},
   }
   tconfSets = []TconfSet {
     TconfSet{name: "emptyTcs", tconfs: emptyTconfs},
@@ -173,7 +162,7 @@ func TestGetTenantConfig(t *testing.T) {
 func TestReserve(t *testing.T) {
   for _, tc := range reserveTcs {
     t.Run(tc.tcName, func(t *testing.T) {
-      tconf := getTconf(tc.tconfName, reserveConfs)
+      tconf := utils.GetTconf(tc.tconfName, reserveConfs)
       iface := getIface(tc.ifaceName, tc.vniType, reserveIfaces)
       if tc.reserveVnis != nil {
         reserveVnis(&iface,tc.reserveVnis)
@@ -203,7 +192,7 @@ func TestReserve(t *testing.T) {
 func TestFree(t *testing.T) {
   for _, tc := range freeTcs {
     t.Run(tc.tcName, func(t *testing.T) {
-      tconf := getTconf(tc.tconfName, reserveConfs)
+      tconf := utils.GetTconf(tc.tconfName, reserveConfs)
       dnet := utils.GetTestNet(tc.networkName, testNets)
       if tc.ifaceNameToCheck != "" {
         index, iface := getIfaceFromTconf(tc.ifaceNameToCheck, tc.ifaceTypeToCheck, tconf)
@@ -236,15 +225,6 @@ func getTconfSet(tconfName string, tconfSets []TconfSet) []danmtypes.TenantConfi
   for _, tconfSet := range tconfSets {
     if tconfSet.name == tconfName {
       return tconfSet.tconfs
-    }
-  }
-  return nil
-}
-
-func getTconf(tconfName string, tconfSet []danmtypes.TenantConfig) *danmtypes.TenantConfig {
-  for _, tconf := range tconfSet {
-    if tconf.ObjectMeta.Name == tconfName {
-      return &tconf
     }
   }
   return nil

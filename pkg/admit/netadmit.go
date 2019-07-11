@@ -48,33 +48,33 @@ func CreateNewValidator() (*Validator, error) {
 func (validator *Validator) ValidateNetwork(responseWriter http.ResponseWriter, request *http.Request) {
   admissionReview, err := DecodeAdmissionReview(request)
   if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   oldManifest, err := getNetworkManifest(admissionReview.Request.OldObject.Raw)
   if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   newManifest, err := getNetworkManifest(admissionReview.Request.Object.Raw)
   if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   origNewManifest := *newManifest
   isManifestValid, err := validateNetworkByType(oldManifest, newManifest, admissionReview.Request.Operation)
   if !isManifestValid {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   err = mutateNetManifest(validator.Client, newManifest)
   if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   err = postValidateManifest(newManifest)
   if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request.UID, err)
+    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
   responseAdmissionReview := v1beta1.AdmissionReview {

@@ -11,7 +11,6 @@ import (
   metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   "k8s.io/apimachinery/pkg/runtime"
   "k8s.io/apimachinery/pkg/runtime/serializer"
-  "k8s.io/apimachinery/pkg/types"
   "github.com/nokia/danm/pkg/cnidel"
 )
 
@@ -21,31 +20,33 @@ type Patch struct {
   Value interface{}     `json:"value,omitempty"`
 }
 
-func DecodeAdmissionReview(httpRequest *http.Request) (*v1beta1.AdmissionReview,error) {
+func DecodeAdmissionReview(httpRequest *http.Request) (v1beta1.AdmissionReview,error) {
   var payload []byte
+  reviewRequest := v1beta1.AdmissionReview{}
   if httpRequest.Body == nil {
-    return nil, errors.New("Received review request is empty!")
+    return reviewRequest, errors.New("Received review request is empty!")
   }
   payload, err := ioutil.ReadAll(httpRequest.Body);
   if err != nil {
-    return nil, err
+    return reviewRequest, err
   }
   codecs := serializer.NewCodecFactory(runtime.NewScheme())
   deserializer := codecs.UniversalDeserializer()
-  reviewRequest := v1beta1.AdmissionReview{}
   _, _, err = deserializer.Decode(payload, nil, &reviewRequest)
-  return &reviewRequest, err
+  return reviewRequest, err
 }
 
-func SendErroneousAdmissionResponse(responseWriter http.ResponseWriter, uid types.UID, err error) {
+func SendErroneousAdmissionResponse(responseWriter http.ResponseWriter, request *v1beta1.AdmissionRequest, err error) {
   log.Println("ERROR: Admitting resource failed with error:" + err.Error())
   failedResponse := &v1beta1.AdmissionResponse {
-    Result: &metav1.Status{
+    Result: &metav1.Status {
       Message: err.Error(),
     },
     Allowed: false,
   }
-  failedResponse.UID = uid
+  if request != nil {
+    failedResponse.UID = request.UID
+  }
   responseAdmissionReview := v1beta1.AdmissionReview {
     Response: failedResponse,
   }
@@ -84,7 +85,7 @@ func CreateReviewResponseFromPatches(patchList []Patch) *v1beta1.AdmissionRespon
   return &reviewResponse
 }
 
-func CreateGenericPatchFromChange(path string, value interface{} ) Patch {
+func CreateGenericPatchFromChange(path string, value interface{}) Patch {
   patch := Patch {
     Op:    "replace",
     Path:  path,

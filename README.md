@@ -111,7 +111,7 @@ That being said, tell us about your Kubernetes breaking ideas! We are open to ac
 Just because something doesn't fit into DANM, it does not mean it can't fit into your cloud! 
 ## Getting started
 ### Install an Akraino REC and get DANM for free!
-Just kidding as DANM is always free, but if you want to install a production grade, open-source Kubernetes-based bare metal CaaS infrastructure by default equipped with DANM **and** with a single click of a button nonetheless; just head over to Linux Foundation Akraino Radio Edge Cloud (REC) wiki for the [Akraino REC Architecture](https://wiki.akraino.org/display/AK/REC+Architecture+Document) and the [Akraino REC Intallation Guide](https://wiki.akraino.org/display/AK/REC+Installation+Guide)
+Just kidding as DANM is always free, but if you want to install a production grade, open-source Kubernetes-based bare metal CaaS infrastructure by default equipped with DANM **and** with a single click of a button nonetheless; just head over to Linux Foundation Akraino Radio Edge Cloud (REC) wiki for the [Akraino REC Architecture](https://wiki.akraino.org/display/AK/REC+Architecture+Document) and the [Akraino REC Installation Guide](https://wiki.akraino.org/display/AK/REC+Installation+Guide)
 Not just for TelCo!
 ### Prerequisites
 Otherwise, you need to create your own Kubernetes cluster, and install DANM manually. We suggest to use any of the automated Kubernetes installing solutions (kubeadm, minikube etc.) for a painless experience.

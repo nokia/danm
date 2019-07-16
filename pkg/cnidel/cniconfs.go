@@ -57,9 +57,9 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions datastructs.IpamC
   sriovConfig.PfName   = pfname
   sriovConfig.L2Mode   = true
   sriovConfig.Vlan     = netInfo.Spec.Options.Vlan
-  sriovConfig.Ipam     = ipamOptions
   sriovConfig.DeviceID = ep.Spec.Iface.DeviceID
   if len(ipamOptions.Ips) > 0 {
+    sriovConfig.Ipam   = ipamOptions
     sriovConfig.L2Mode = false
   }
   rawConfig, err := json.Marshal(sriovConfig)

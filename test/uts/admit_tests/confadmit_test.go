@@ -86,21 +86,64 @@ var (
        },
     },
     danmtypes.TenantConfig {
-      ObjectMeta: meta_v1.ObjectMeta {Name: "manual-alloc"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      ObjectMeta: meta_v1.ObjectMeta {Name: "manual-alloc-old"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
       HostDevices: []danmtypes.IfaceProfile {
         danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
-        danmtypes.IfaceProfile{Name: "ens5", VniType: "vxlan", VniRange: "700-710"},
        },
     },
     danmtypes.TenantConfig {
-      ObjectMeta: meta_v1.ObjectMeta {Name: "tconf"},
+      ObjectMeta: meta_v1.ObjectMeta {Name: "manual-alloc"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
       HostDevices: []danmtypes.IfaceProfile {
         danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
-        danmtypes.IfaceProfile{Name: "ens4", VniType: "vlan", VniRange: "200,500-510", Alloc: utils.AllocFor5k},
-        danmtypes.IfaceProfile{Name: "ens6", VniType: "vxlan", VniRange: "1200-1300", Alloc: utils.AllocFor5k},
-        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vlan", VniRange: "1500-1550", Alloc: utils.AllocFor5k},
-        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vxlan", VniRange: "1600-1650", Alloc: utils.AllocFor5k},
-      },
+        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vlan", VniRange: "700-710"},
+       },
+    },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "nonetype"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      NetworkIds: map[string]string {
+        "": "asd",
+       },
+    },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "nonid"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      NetworkIds: map[string]string {
+        "flannel": "",
+       },
+    },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "longnid"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      NetworkIds: map[string]string {
+        "flannel": "abcdefghijkl",
+       },
+    },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "longnid-sriov"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      NetworkIds: map[string]string {
+        "flannel": "abcdefghijkl",
+        "sriov": "abcdefghijkl",
+       },
+    },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "shortnid"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      NetworkIds: map[string]string {
+        "flannel": "abcdefghijkl",
+        "sriov": "abcdefghijk",
+       },
+    },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "old-iface"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "900-4999,5000", Alloc: utils.AllocFor5k},
+       },
+    },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "new-iface"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "900-4999,5000", Alloc: utils.AllocFor5k},
+       },
+      NetworkIds: map[string]string {
+        "flannel": "flannel",
+       },
     },
   }
 )
@@ -111,21 +154,28 @@ var validateTconfTcs = []struct {
   newTconfName string
   opType v1beta1.Operation
   isErrorExpected bool
+  expectedPatches string
 }{
-  {"emptyRequest", "", "", "", true},
-  {"malformedOldObject", "malformed", "", "", true},
-  {"malformedNewObject", "", "malformed", "", true},
-  {"objectWithInvalidType", "", "invalid-type", "", true},
-  {"emptyCofig", "", "empty-config", "", true},
-  {"interfaceProfileWithoutName", "", "noname", "", true},
-  {"interfaceProfileWithoutVniRange", "", "norange", "", true},
-  {"interfaceProfileWithoutVniType", "", "notype", "", true},
-  {"interfaceProfileWithInvalidVniType", "", "invalid-vni-type", "", true},
-  {"interfaceProfileWithInvalidVniValue", "", "invalid-vni-value", "", true},
-  {"interfaceProfileWithInvalidVniRange", "", "invalid-vni-range", "", true},
-  {"interfaceProfileWithValidVniRange", "", "valid-vni-range", "", false},
-  {"interfaceProfileWithSetAlloc", "", "manual-alloc", v1beta1.Create, true},
-  {"interfaceProfileChangeWithAlloc", "", "manual-alloc", v1beta1.Update, false},
+  {"emptyRequest", "", "", "", true, "empty"},
+  {"malformedOldObject", "malformed", "", "", true, "empty"},
+  {"malformedNewObject", "", "malformed", "", true, "empty"},
+  {"objectWithInvalidType", "", "invalid-type", "", true, "empty"},
+  {"emptyCofig", "", "empty-config", "", true, "empty"},
+  {"interfaceProfileWithoutName", "", "noname", "", true, "empty"},
+  {"interfaceProfileWithoutVniRange", "", "norange", "", true, "empty"},
+  {"interfaceProfileWithoutVniType", "", "notype", "", true, "empty"},
+  {"interfaceProfileWithInvalidVniType", "", "invalid-vni-type", "", true, "empty"},
+  {"interfaceProfileWithInvalidVniValue", "", "invalid-vni-value", "", true, "empty"},
+  {"interfaceProfileWithInvalidVniRange", "", "invalid-vni-range", "", true, "empty"},
+  {"interfaceProfileWithValidVniRange", "", "valid-vni-range", "", false, "1"},
+  {"interfaceProfileWithSetAlloc", "", "manual-alloc", v1beta1.Create, true, "empty"},
+  {"interfaceProfileChangeWithAlloc", "manual-alloc-old", "manual-alloc", v1beta1.Update, false, "1"},
+  {"networkIdWithoutKey", "", "nonid", "", true, "empty"},
+  {"networkIdWithoutValue", "", "nonetype", "", true, "empty"},
+  {"longNidWithStaticNeType", "", "longnid", "", false, "empty"},
+  {"longNidWithDynamicNeType", "", "longnid-sriov", "", true, "empty"},
+  {"okayNids", "", "shortnid", "", false, "empty"},
+  {"noChangeInIfaces", "old-iface", "new-iface", v1beta1.Update, false, "empty"},
 }
 
 func TestValidateTenantConfig(t *testing.T) {
@@ -141,7 +191,7 @@ func TestValidateTenantConfig(t *testing.T) {
         return
       }
       validator.ValidateTenantConfig(writerStub, request)
-      err = validateHttpResponse(writerStub, tc.isErrorExpected)
+      err = validateHttpResponse(writerStub, tc.isErrorExpected, tc.expectedPatches)
       if err != nil {
         t.Errorf("Received HTTP Response did not match expectation, because:%v", err)
         return
@@ -186,7 +236,7 @@ func canItMalform(config *danmtypes.TenantConfig) []byte {
   return bytes
 }
 
-func validateHttpResponse(writer *httpstub.ResponseWriterStub, isErrorExpected bool) error {
+func validateHttpResponse(writer *httpstub.ResponseWriterStub, isErrorExpected bool, expectedPatches string) error {
   if writer.RespHeader.Get("Content-Type") != "application/json" {
     return errors.New("Content-Type is not set to application/json in the HTTP Header")
   }
@@ -198,7 +248,6 @@ func validateHttpResponse(writer *httpstub.ResponseWriterStub, isErrorExpected b
     if response.Allowed {
       return errors.New("request would have been admitted but we expected an error")
     }
-//    fmt.Printf("lofasz: %+v\n", response)
     if response.Result.Message == "" {
       return errors.New("a faulty response was sent without explanation")
     }
@@ -209,6 +258,27 @@ func validateHttpResponse(writer *httpstub.ResponseWriterStub, isErrorExpected b
     if response.Result != nil {
       return errors.New("an unnecessary Result message is put into a successful response")
     }
+  }
+  if expectedPatches != "" {
+     return validatePatches(response, expectedPatches)
+  }
+  return nil
+}
+
+func validatePatches(response *v1beta1.AdmissionResponse, expectedPatches string) error {
+  if expectedPatches == "empty" {
+    if response.Patch != nil {
+      return errors.New("did not expect any patches but some were included in the admission response")
+    }
+    return nil
+  }
+  var patches []admit.Patch
+  err := json.Unmarshal(response.Patch, &patches)
+  if err != nil {
+    return err
+  }
+  if len(patches) != 1 {
+    return errors.New("received number of patches was not the expected 1")
   }
   return nil
 }

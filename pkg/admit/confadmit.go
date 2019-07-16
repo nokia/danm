@@ -43,11 +43,7 @@ func (validator *Validator) ValidateTenantConfig(responseWriter http.ResponseWri
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
   }
-  err = mutateConfigManifest(newManifest)
-  if err != nil {
-    SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
-    return
-  }
+  mutateConfigManifest(newManifest)
   responseAdmissionReview := v1beta1.AdmissionReview {
     Response: CreateReviewResponseFromPatches(createPatchListFromConfigChanges(origNewManifest,newManifest)),
   }
@@ -88,7 +84,7 @@ func validateConfig(oldManifest, newManifest *danmtypes.TenantConfig, opType v1b
 func createPatchListFromConfigChanges(origConfig danmtypes.TenantConfig, changedConfig *danmtypes.TenantConfig) []Patch {
   patchList := make([]Patch, 0)
   var hostDevicesPatch string
-  if !reflect.DeepEqual(origConfig.HostDevices, changedConfig.HostDevices) {
+  if !reflect.DeepEqual(origConfig.HostDevices, changedConfig.HostDevices) && len(origConfig.HostDevices) != 0 && len(changedConfig.HostDevices) != 0 {
     hostDevicesPatch = `[`
     for ifaceIndex, ifaceConf := range changedConfig.HostDevices {
       if ifaceIndex != 0 {
@@ -105,17 +101,14 @@ func createPatchListFromConfigChanges(origConfig danmtypes.TenantConfig, changed
   return patchList
 }
 
-func mutateConfigManifest(tconf *danmtypes.TenantConfig) error {
+func mutateConfigManifest(tconf *danmtypes.TenantConfig) {
   for ifaceIndex, ifaceConf := range tconf.HostDevices {
     //We don't want to either re-init existing allocations, or unnecessarily create arrays for non-virtual networks
     if ifaceConf.Alloc != "" || ifaceConf.VniType == "" {
       continue
     }
-    bitArray, err := bitarray.NewBitArray(MaxAllowedVni)
-    if err != nil {
-      return err
-    }
+    bitArray, _ := bitarray.NewBitArray(MaxAllowedVni)
     tconf.HostDevices[ifaceIndex].Alloc = bitArray.Encode()
   }
-  return nil
+  return
 }

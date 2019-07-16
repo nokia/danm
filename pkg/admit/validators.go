@@ -166,7 +166,7 @@ func validateIfaceConfig(ifaceConf danmtypes.IfaceProfile, opType admissionv1.Op
     return errors.New("vniRange and vniType attributes must be provided together for interface:" + ifaceConf.Name)
   }
   if ifaceConf.VniType != "" && ifaceConf.VniType != "vlan" && ifaceConf.VniType != "vxlan" {
-    return errors.New(ifaceConf.VniType + "is not in allowed vniType values: {vlan,vxlan} for interface:" + ifaceConf.Name)
+    return errors.New(ifaceConf.VniType + " is not in allowed vniType values: {vlan,vxlan} for interface:" + ifaceConf.Name)
   }
   if opType == admissionv1.Create && ifaceConf.Alloc != "" {
     return errors.New("Allocation bitmask for interface: " + ifaceConf.Name + " shall not be manually defined upon creation!")
@@ -174,7 +174,7 @@ func validateIfaceConfig(ifaceConf danmtypes.IfaceProfile, opType admissionv1.Op
   //I know this type is for CPU sets, but isn't it just perfect for handling arbitrarily defined integer ranges?
   vniSet, err := cpuset.Parse(ifaceConf.VniRange)
   if err != nil {
-    return errors.New("vniRange for interface:" + ifaceConf.Name + " must be improperly formatted becuase its parsing fails with:" + err.Error())
+    return errors.New("vniRange for interface:" + ifaceConf.Name + " must be improperly formatted because its parsing fails with:" + err.Error())
   }
   filteredSet := vniSet.Filter(func(vni int) bool {
     return vni > MaxAllowedVni

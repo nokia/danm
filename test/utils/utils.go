@@ -75,4 +75,3 @@ func GetTconf(tconfName string, tconfSet []danmtypes.TenantConfig) *danmtypes.Te
   }
   return nil
 }
-

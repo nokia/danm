@@ -107,7 +107,7 @@ var expectedCniConfigs = []CniConf {
   {"sriov-l3", []byte(`{"cniexp":{"cnitype":"sriov","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name":"sriov-test","type":"sriov","master":"enp175s0f1","l2enable":false,"vlan":500,"deviceID":"0000:af:06.0","ipam":{"type":"fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
   {"sriov-l2", []byte(`{"cniexp":{"cnitype":"sriov","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name":"sriov-test","type":"sriov","master":"enp175s0f1","l2enable":true,"vlan":500,"deviceID":"0000:af:06.0"}}`)},
   {"deleteflannel", []byte(`{"cniexp":{"cnitype":"flannel","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"eth0"}},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
-  {"deletemacvlan", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"ens1f0"}},"cniconf":{"cniVersion":"0.3.1","master":"ens1f0","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam"}}}`)},
+  {"deletemacvlan", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"ens1f0"}},"cniconf":{"cniVersion":"0.3.1","master":"ens1f0","mode":"bridge","mtu":1500}}`)},
 }
 
 var testCniConfFiles = []CniConf {

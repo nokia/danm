@@ -33,11 +33,24 @@ var (
 
 //This function creates CNI configuration for all static-level backends
 //The CNI binary matching with NetowrkType is invoked with the CNI config file matching with NetworkID parameter
-func readCniConfigFile(cniconfDir string, netInfo *danmtypes.DanmNet) ([]byte, error) {
+func readCniConfigFile(cniconfDir string, netInfo *danmtypes.DanmNet, ipamOptions datastructs.IpamConfig) ([]byte, error) {
   cniConfig := netInfo.Spec.NetworkID
   rawConfig, err := ioutil.ReadFile(cniconfDir + "/" + cniConfig + ".conf")
   if err != nil {
     return nil, errors.New("Could not load CNI config file: " + cniConfig +".conf for plugin:" + netInfo.Spec.NetworkType + " from directory:" + cniconfDir)
+  }
+  //Only overwrite "ipam" of the static CNI config if user wants
+  if len(ipamOptions.Ips) > 0 {
+    genericCniConf := map[string]interface{}{}
+    err = json.Unmarshal(rawConfig, &genericCniConf)
+    if err != nil {
+      return nil, errors.New("could not Unmarshal CNI config file:" + cniConfig + ".conf for plugin: " + netInfo.Spec.NetworkType + ", because:" + err.Error())
+    }
+    ipamRaw,_ := json.Marshal(ipamOptions)
+    ipamInGenericFormat := map[string]interface{}{}
+    json.Unmarshal(ipamRaw, &ipamInGenericFormat)
+    genericCniConf["ipam"] = ipamInGenericFormat
+    rawConfig,_ = json.Marshal(genericCniConf)
   }
   return rawConfig, nil
 }
@@ -78,7 +91,9 @@ func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions datastructs.Ipa
   macvlanConfig.Master = danmep.DetermineHostDeviceName(netInfo)
   macvlanConfig.Mode   = "bridge" //TODO: make these params configurable if required
   macvlanConfig.MTU    = 1500
-  macvlanConfig.Ipam   = ipamOptions
+  if len(ipamOptions.Ips) > 0 {
+    macvlanConfig.Ipam   = ipamOptions
+  }
   rawConfig, err := json.Marshal(macvlanConfig)
   if err != nil {
     return nil, errors.New("Error putting together CNI config for MACVLAN plugin: " + err.Error())

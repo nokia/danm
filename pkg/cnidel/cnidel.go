@@ -3,6 +3,7 @@ package cnidel
 import (
   "errors"
   "log"
+  "net"
   "os"
   "strconv"
   "strings"
@@ -47,7 +48,7 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
     err error
     ipamOptions datastructs.IpamConfig
   )
-  if isIpamNeeded(netInfo.Spec.NetworkType) {
+  if isIpamNeeded(netInfo, ep) {
    ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6, _, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
       return nil, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
@@ -83,12 +84,16 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
   return cniResult, nil
 }
 
-func isIpamNeeded(cniType string) bool {
-  if cni, ok := SupportedNativeCnis[strings.ToLower(cniType)]; ok {
+func isIpamNeeded(netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) bool {
+  if cni, ok := SupportedNativeCnis[strings.ToLower(netInfo.Spec.NetworkType)]; ok {
     return cni.ipamNeeded
-  } else {
-    return false
   }
+  //For static delegates we should only overwrite the original IPAM if both the network is L3, and IP was requested from the Pod
+  if (ep.Spec.Iface.Address     != "" && netInfo.Spec.Options.Cidr != "" ) ||
+     (ep.Spec.Iface.AddressIPv6 != "" && netInfo.Spec.Options.Net6 != "" ) {
+    return true
+  }
+  return false
 }
 
 func IsDeviceNeeded(cniType string) bool {
@@ -101,9 +106,6 @@ func IsDeviceNeeded(cniType string) bool {
 
 func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (datastructs.IpamConfig, error) {
   var ipSlice = []datastructs.IpamIp{}
-  if ip4 == "" && ip6 == "" && netinfo.Spec.NetworkType != "sriov" {
-    return datastructs.IpamConfig{}, errors.New("unfortunetaly 3rd party CNI plugins usually don't support foregoing putting any IPs on an interface, so with heavy hearts but we need to fail this network delegation operation")
-  }
   if ip4 != "" {
     ipSlice = append(ipSlice, datastructs.IpamIp{
                                 IpCidr: ip4,
@@ -126,7 +128,7 @@ func getCniPluginConfig(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet
   if cni, ok := SupportedNativeCnis[strings.ToLower(netInfo.Spec.NetworkType)]; ok {
     return cni.readConfig(netInfo, ipamOptions, ep, cni.CNIVersion)
   } else {
-    return readCniConfigFile(netConf.CniConfigDir, netInfo)
+    return readCniConfigFile(netConf.CniConfigDir, netInfo, ipamOptions)
   }
 }
 
@@ -212,7 +214,11 @@ func freeDelegatedIp(danmClient danmclientset.Interface, netInfo *danmtypes.Danm
   if netInfo.Spec.NetworkType == "flannel" && ip != ""{
     flannelIpExhaustionWorkaround(ip)
   }
-  if isIpamNeeded(netInfo.Spec.NetworkType) && ip != "" {
+  _, v4Subnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
+  _, v6Subnet, _ := net.ParseCIDR(netInfo.Spec.Options.Net6)
+  parsedIp := net.ParseIP(ip)
+  //We only need to Free an IP if it was allocated by DANM IPAM, and it was allocated by DANM only if it falls into any of the defined subnets
+  if parsedIp != nil && ((v4Subnet != nil && v4Subnet.Contains(parsedIp)) || (v6Subnet != nil && v6Subnet.Contains(parsedIp))) {
     err := ipam.Free(danmClient, *netInfo, ip)
     if err != nil {
       return errors.New("cannot give back ip address: " + ip + " for network:" + netInfo.ObjectMeta.Name +

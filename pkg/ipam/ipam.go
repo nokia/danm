@@ -21,11 +21,16 @@ import (
 // The reserved IP address is represented by setting a bit in the network's BitArray type allocation matrix
 // The refreshed network object is modified in the K8s API server at the end
 func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4, req6 string) (string, string, string, error) {
+  origAlloc := netInfo.Spec.Options.Alloc
   tempNetSpec := netInfo
   for {
     ip4, ip6, macAddr, err := allocateIP(&tempNetSpec, req4, req6)
     if err != nil {
       return "", "", "", errors.New("failed to allocate IP address for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
+    }
+    //Right now we only store IPv4 allocations in the API. If this bitmask is unchanged, there is nothing to update in the API server
+    if tempNetSpec.Spec.Options.Alloc == origAlloc {
+      return ip4, ip6, macAddr, nil
     }
     retryNeeded, err, newNetSpec := updateIpAllocation(danmClient, tempNetSpec)
     if err != nil {
@@ -47,9 +52,14 @@ func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, ip stri
     // Nothing to return here: either network, or the interface is an L2
     return nil
   }
+  origAlloc := netInfo.Spec.Options.Alloc
   tempNetSpec := netInfo
   for {
     resetIP(&tempNetSpec, ip)
+    //Right now we only store IPv4 allocations in the API. If this bitmask is unchanged, there is nothing to update in the API server
+    if tempNetSpec.Spec.Options.Alloc == origAlloc {
+      return nil
+    }
     retryNeeded, err, newNetSpec := updateIpAllocation(danmClient, tempNetSpec)
     if err != nil {
       return err

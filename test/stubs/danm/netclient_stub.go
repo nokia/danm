@@ -17,12 +17,13 @@ const (
 )
 
 type NetClientStub struct{
-  testNets []danmtypes.DanmNet
-  reservedIpsList []ReservedIpsList
+  TestNets []danmtypes.DanmNet
+  ReservedIpsList []ReservedIpsList
+  TimesUpdateWasCalled int
 }
 
 func newNetClientStub(nets []danmtypes.DanmNet, ips []ReservedIpsList) *NetClientStub {
-  return &NetClientStub{testNets: nets, reservedIpsList: ips}
+  return &NetClientStub{TestNets: nets, ReservedIpsList: ips}
 }
 
 func (netClient *NetClientStub) Create(obj *danmtypes.DanmNet) (*danmtypes.DanmNet, error) {
@@ -30,7 +31,8 @@ func (netClient *NetClientStub) Create(obj *danmtypes.DanmNet) (*danmtypes.DanmN
 }
 
 func (netClient *NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmNet, error) {
-  for _, netReservation := range netClient.reservedIpsList {
+  netClient.TimesUpdateWasCalled++
+  for _, netReservation := range netClient.ReservedIpsList {
     if obj.Spec.NetworkID == netReservation.NetworkId {
       ba := bitarray.NewBitArrayFromBase64(obj.Spec.Options.Alloc)
       _, ipnet, _ := net.ParseCIDR(obj.Spec.Options.Cidr)
@@ -45,18 +47,18 @@ func (netClient *NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmN
           continue
         }
         if !ba.Get(uint32(ipInInt)) && reservation.Set {
-          return nil, errors.New("Reservation failure, IP:" + reservation.Ip + " must be reserved in DanmNet:" + obj.Spec.NetworkID)
+          return nil, errors.New("Reservation failure, IP:" + reservation.Ip + " should have been reserved in DanmNet:" + obj.Spec.NetworkID)
         }
         if ba.Get(uint32(ipInInt)) && !reservation.Set {
-          return nil, errors.New("Reservation failure, IP:" + reservation.Ip + " must be free in DanmNet:" + obj.Spec.NetworkID)
+          return nil, errors.New("Reservation failure, IP:" + reservation.Ip + " should have been free in DanmNet:" + obj.Spec.NetworkID)
         }
       }
     }
   }
   if strings.Contains(obj.Spec.NetworkID, "conflict") && obj.ObjectMeta.ResourceVersion != magicVersion {
-    for index, net := range netClient.testNets {
+    for index, net := range netClient.TestNets {
       if net.Spec.NetworkID == obj.Spec.NetworkID {
-        netClient.testNets[index].ObjectMeta.ResourceVersion = magicVersion
+        netClient.TestNets[index].ObjectMeta.ResourceVersion = magicVersion
       }
     }
     return nil, errors.New(datastructs.OptimisticLockErrorMsg)
@@ -79,7 +81,7 @@ func (netClient *NetClientStub) Get(netName string, options meta_v1.GetOptions) 
   if strings.Contains(netName, "error") {
     return nil, errors.New("fatal error, don't retry")
   }
-  for _, testNet := range netClient.testNets {
+  for _, testNet := range netClient.TestNets {
     if testNet.Spec.NetworkID == netName {
       return &testNet, nil
     }
@@ -101,5 +103,5 @@ func (netClient *NetClientStub) Patch(name string, pt types.PatchType, data []by
 }
 
 func (netClient *NetClientStub) AddReservedIpsList(reservedIps []ReservedIpsList) {
-  netClient.reservedIpsList = reservedIps
+  netClient.ReservedIpsList = reservedIps
 }

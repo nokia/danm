@@ -57,10 +57,7 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
    //Therefore, anyone wishing to further update the same network object later on will use an outdated representation as the input.
    //IPAM should be refactored to always pass back the up-to-date object.
    //I guess it is okay now because we only want to free IPs, and RV differences are resolved by the generated client code.
-    ipamOptions, err = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
-    if err != nil {
-      return nil, errors.New("IPAM config creation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
-    }
+    ipamOptions = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
   }
   rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamOptions, ep)
   if err != nil {
@@ -104,7 +101,7 @@ func IsDeviceNeeded(cniType string) bool {
   }
 }
 
-func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (datastructs.IpamConfig, error) {
+func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) datastructs.IpamConfig {
   var ipSlice = []datastructs.IpamIp{}
   if ip4 != "" {
     ipSlice = append(ipSlice, datastructs.IpamIp{
@@ -118,10 +115,10 @@ func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) (datastructs.
                                 Version: 6,
                               })
   }
-  return  datastructs.IpamConfig{
+  return  datastructs.IpamConfig {
             Type: ipamType,
             Ips: ipSlice,
-          }, nil
+          }
 }
 
 func getCniPluginConfig(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet, ipamOptions datastructs.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
@@ -217,6 +214,9 @@ func freeDelegatedIp(danmClient danmclientset.Interface, netInfo *danmtypes.Danm
   _, v4Subnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
   _, v6Subnet, _ := net.ParseCIDR(netInfo.Spec.Options.Net6)
   parsedIp := net.ParseIP(ip)
+  if parsedIp == nil {
+    parsedIp,_,_ = net.ParseCIDR(ip)
+  }
   //We only need to Free an IP if it was allocated by DANM IPAM, and it was allocated by DANM only if it falls into any of the defined subnets
   if parsedIp != nil && ((v4Subnet != nil && v4Subnet.Contains(parsedIp)) || (v6Subnet != nil && v6Subnet.Contains(parsedIp))) {
     err := ipam.Free(danmClient, *netInfo, ip)

@@ -6,15 +6,15 @@ import (
 )
 
 type ClientSetStub struct {
-  danmClient *ClientStub
+  DanmClient *ClientStub
 }
 
 func (c *ClientSetStub) DanmV1() danmv1.DanmV1Interface {
-  return c.danmClient
+  return c.DanmClient
 }
 
 func (c *ClientSetStub) Danm() danmv1.DanmV1Interface {
-  return c.danmClient
+  return c.DanmClient
 }
 
 func (c *ClientSetStub) Discovery() discovery.DiscoveryInterface {
@@ -23,6 +23,6 @@ func (c *ClientSetStub) Discovery() discovery.DiscoveryInterface {
 
 func NewClientSetStub(objects TestArtifacts) *ClientSetStub {
   var clientSet ClientSetStub
-  clientSet.danmClient = newClientStub(objects)
+  clientSet.DanmClient = newClientStub(objects)
   return &clientSet
 }

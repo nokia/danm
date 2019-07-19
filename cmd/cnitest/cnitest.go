@@ -123,17 +123,17 @@ func validateMacvlanConfig(receivedCniConfig, expectedCniConfig []byte, tcConf T
   var recMacvlanConf cnidel.MacvlanNet
   err := json.Unmarshal(receivedCniConfig, &recMacvlanConf)
   if err != nil {
-    return errors.New("Received MACVLAN config could not be unmarshalled, because:" + err.Error())
+    return errors.New("Received CNI config could not be unmarshalled, because:" + err.Error())
   }
-  log.Printf("Received MACVLAN config:%v",recMacvlanConf)
+  log.Printf("Received CNI config:%v",recMacvlanConf)
   var expMacvlanConf MacvlanCniTestConfig
   err = json.Unmarshal(expectedCniConfig, &expMacvlanConf)
   if err != nil {
-    return errors.New("Expected MACVLAN config could not be unmarshalled, because:" + err.Error())
+    return errors.New("Expected CNI config could not be unmarshalled, because:" + err.Error())
   }
   if tcConf.CniExpectations.Ip6 != "" {
     if recMacvlanConf.Ipam.Ips == nil {
-      return errors.New("Received MACVLAN CNI config does not contain IPv6 address under ipam section, but it shall!")
+      return errors.New("Received CNI config does not contain IPv6 address under ipam section, but it shall!")
     }
     newIpamConfig := datastructs.IpamConfig{Type: "fakeipam"}
     for _,ip := range recMacvlanConf.Ipam.Ips {
@@ -142,11 +142,11 @@ func validateMacvlanConfig(receivedCniConfig, expectedCniConfig []byte, tcConf T
       }
     }
     recMacvlanConf.Ipam = newIpamConfig
-    log.Printf("Received MACVLAN config after IPv6 adjustment:%v",recMacvlanConf)
+    log.Printf("Received config after IPv6 adjustment:%v",recMacvlanConf)
   }
-  log.Printf("Expected MACVLAN config:%v",expMacvlanConf.CniConf)
+  log.Printf("Expected config:%v",expMacvlanConf.CniConf)
   if !reflect.DeepEqual(recMacvlanConf, expMacvlanConf.CniConf) {
-    return errors.New("Received MACVLAN delegate configuration does not match with expected!")
+    return errors.New("Received delegate configuration does not match with expected!")
   }
   return nil
 }

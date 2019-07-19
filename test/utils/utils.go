@@ -7,6 +7,7 @@ import (
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/admit"
+  stubs "github.com/nokia/danm/test/stubs/danm"
 )
 
 const (
@@ -37,7 +38,7 @@ func SetupAllocationPools(nets []danmtypes.DanmNet) error {
       if dnet.Spec.Options.Pool.End == "" {
         dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(admit.GetBroadcastAddress(ipnet)) - 1)).String()
       }
-      if strings.HasPrefix(dnet.Spec.NetworkID, "full") {
+      if strings.HasPrefix(dnet.ObjectMeta.Name, "full") {
         exhaustNetwork(&dnet)
       }
       nets[index].Spec = dnet.Spec
@@ -53,6 +54,16 @@ func GetTestNet(netId string, testNets []danmtypes.DanmNet) *danmtypes.DanmNet {
     }
   }
   return nil
+}
+
+func CreateExpectedAllocationsList(ip string, isExpectedToBeSet bool, networkId string) []stubs.ReservedIpsList {
+  var ips []stubs.ReservedIpsList
+  if ip != "" {
+    reservation := stubs.Reservation {Ip: ip, Set: isExpectedToBeSet,}
+    expectedAllocation := stubs.ReservedIpsList{NetworkId: networkId, Reservations: []stubs.Reservation {reservation,},}
+    ips = append(ips, expectedAllocation)
+  }
+  return ips
 }
 
 func exhaustNetwork(netInfo *danmtypes.DanmNet) {

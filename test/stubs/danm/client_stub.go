@@ -25,10 +25,14 @@ type Reservation struct {
 
 type ClientStub struct {
   Objects TestArtifacts
+  NetClient *NetClientStub
 }
 
 func (client *ClientStub) DanmNets(namespace string) client.DanmNetInterface {
-  return newNetClientStub(client.Objects.TestNets, client.Objects.ReservedIps)
+  if client.NetClient == nil {
+    client.NetClient = newNetClientStub(client.Objects.TestNets, client.Objects.ReservedIps)
+  }
+  return client.NetClient 
 }
 
 func (client *ClientStub) DanmEps(namespace string) client.DanmEpInterface {

@@ -265,7 +265,7 @@ If you want you can even add all available APIs at the same time to see which me
 We advise new users, or users operating a single tenant Kubernetes cluster to start out with a streamlined, lightweight network management experience.
 In this "mode" DANM only recognizes one network management API, called **DanmNet**.
 Both administrators, and tenant users manage their networks through the same API. Everyone has the same level of access, and can configure all the parameters supported by DANM at their leisure.
-At the same time it is impossible to create networks, which can be used across tenants (disclaimer: we use the word "tenant" as a synonym to "Kubernetes namespace").
+At the same time it is impossible to create networks, which can be used across tenants (disclaimer: we use the word "tenant" as a synonym to "Kubernetes namespace" throughout the document).
 ##### Production-grade network management experience
 In a real, production-grade cluster the lightweight management paradigm does not suffice, because usually there are different users, with different roles interacting with each other.
 There are possibly multiple users using their own segment of the cloud -or should we say tenant?- at the same time; while there can be administrator(s) overseeing that everything is configured, and works as it should be.
@@ -283,7 +283,7 @@ Wonder how? Refer to chapter [Connecting TenantNetworks to TenantConfigs](#conne
 
 Interested user can find reference manifests showcasing the features of the new APIs under [DANM V4 example manifests](https://github.com/nokia/danm/tree/master/example/4_0_examples).
  ##### Network management in the practical sense
-Regardless which paradigm thrives in your cluster, network objects are managed the exact same way - you just might not be allowed to execute a specific provisioning operation in case you are trying to overstep your boundaries! Don't worry, as DANM will always explicitly and instantly tells you if this is the case.
+Regardless which paradigm thrives in your cluster, network objects are managed the exact same way - you just might not be allowed to execute a specific provisioning operation in case you are trying to overstep your boundaries! Don't worry, as DANM will always explicitly and instantly tell you if this is the case.
 Unless explicitly stated in the description of a specific feature, all API features are generally supported, and supported the same way regardless through which network management API type you use them.
 
 Network management always starts with the creation of Kubernetes API objects, logically representing the characteristics of a network Pods can connect to.
@@ -336,7 +336,7 @@ Sorry, but they made us do it :)
 **Note**: some CNI plugins try to be smart about this limitation on their own, and decided not to adhere to the CNI standard! An example of this behaviour can be found in Flannel.
 It is the user's responsibility to put the network connection of such boneheaded backends to the first place in the Pod's annotation!
 
-However, DANM also supports both explicit, and implicit interface naming schemes for all NetworkTypes to help you flexibly name the other -and CNI standard- interfaces!
+Besides making sure the first interface is always named correctly, DANM also supports both explicit, and implicit interface naming schemes for all NetworkTypes to help you flexibly name the other -and CNI standard- interfaces!
 An interface connected to a network containing the container_prefix attribute is always named accordingly. You can use this API to explicitly set descriptive, unique names to NICs connecting to this network.
 In case container_prefix is not set in an interface's network descriptor, DANM automatically uses the "eth" as the prefix when naming the interface.
 Regardless which prefix is used, the interface name is also suffixed with an integer number corresponding to the sequence number of the network connection (e.g. the first interface defined in the annotation is called "eth0", second interface "eth1" etc.)
@@ -368,8 +368,10 @@ This way users can dynamically configure various networking solutions via the sa
 A generic framework supporting this method is built into DANM's code, but still this level of integration requires case-by-case implementation.
 As a result, DANM currently supports two integration levels:
 
- - **Dynamic integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be controlled on a per network level, taken directly from the CRD object
- - **Static integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be only configured via static CNI configuration files (Note: this is the default CNI configuration method)
+ - **Dynamic integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be controlled on a per network level, exclusively taken directly from the CRD object
+ - **Static integration level:** CNI-specific network attributes are by default configured via static CNI configuration files (Note: this is the default CNI configuration method); but certain parameters are influenced by the DANM API configuration values.
+
+Always refer to the schema descriptors for more details on which parameters are universally supported! 
 
 Our aim is to integrate all the popular CNIs into the DANM eco-system over time, but currently the following CNI's achieved dynamic integration level:
 
@@ -383,12 +385,12 @@ Our aim is to integrate all the popular CNIs into the DANM eco-system over time,
 No separate configuration needs to be provided to DANM when it connects Pods to networks, if the network is backed by a CNI plugin with dynamic integration level.
 Everything happens automatically purely based on the network manifest!
 
-When network management is delegated to CNI plugins with static integration level; DANM reads their configuration from the configured CNI config directory.
+When network management is delegated to CNI plugins with static integration level; DANM first reads their configuration from the configured CNI config directory.
 The directory can be configured via setting the "CNI_CONF_DIR" environment variable in DANM CNI's context (be it in the host namespace, or inside a Kubelet container). Default value is "/etc/cni/net.d".
 In case there are multiple configuration files present for the same backend, users can control which one is used in a specific network provisioning operation via the NetworkID parameter.
 
 So, all in all: a Pod connecting to a network with "NetworkType" set to "bridge", and "NetworkID" set to "example_network" gets an interface provisioned by the <CONFIGURED_CNI_PATH_IN_KUBELET>/bridge binary based on the <CNI_CONF_DIR>/example_network.conf file!
-In addition to simply delegating the interface creation operation, generally supported DANM API-based features -such as static and dynamic IP route provisioning, flexible interface naming- are also configured by DANM.
+In addition to simply delegating the interface creation operation, the universally supported features of the DANM management APIs -such as static and dynamic IP route provisioning, flexible interface naming, or centralized IPAM- are also configured either before, or after the delegation took place.
 ##### Connecting Pods to specific networks
 Pods can request network connections to networks by defining one or more network connections in the annotation of their (template) spec field, according to the schema described in the **schema/network_attach.yaml** file.
 
@@ -396,8 +398,8 @@ For each connection defined in such a manner DANM provisions exactly one interfa
 In case you have added more than one network management APIs to your cluster, it is possible to connect the same Pod to different networks of different APIs. But please note, that physical network interfaces are 1:1 mapped to logical networks.
 
 In addition to simply invoking other CNI libraries to set-up network connections, Pod's can even influence the way their interfaces are created to a certain extent.
-For example Pods can ask DANM to provision L3 IP addresses to their IPVLAN, MACVLAN or SR-IOV interfaces dynamically, statically, or not at all!
-Or, as described earlier; creation of policy-based L3 IP routes into their network namespace is also a supported by the solution.
+For example Pods can ask DANM to provision L3 IP addresses to their network interfaces dynamically, statically, or not at all!
+Or, as described earlier; creation of policy-based L3 IP routes into their network namespace is also universally supported by the solution.
 ##### Defining default networks
 If the Pod annotation is empty (no explicit connections are defined), DANM tries to fall back to a configured default network.
 In the lightweight network management paradigm default networks can be only configured on a per namespace level, by creating one DanmNet object with ObjectMeta.Name field set to "default" in the Pod's namespace.
@@ -414,9 +416,9 @@ DANM waits for the CNI result of all executors before converting, and merging th
 If any executor reported an error, or hasn't finished its job even after 10 seconds; the result of the whole operation will be an error.
 DANM reports all errors towards kubelet in case multiple CNI plugins failed to do their job.
 #### DANM IPAM
-DANM includes a fully generic and very flexible IPAM module in-built into the solution. The usage of this module is seamlessly integrated together with the natively supported CNI plugins, that is, DANM's IPVLAN, Intel's SR-IOV, and the CNI project's reference MACVLAN plugins.
+DANM includes a fully generic and very flexible IPAM module in-built into the solution. The usage of this module is seamlessly integrated together with all the natively supported CNI plugins (DANM's IPVLAN, Intel's SR-IOV, and the CNI project's reference MACVLAN plugins); as well as with any other CNI backend fully adhering to the v0.3.1 CNI standard!
 
-That is because just like the above CNIs, configuration of DANM's IPAM is also integrated into the DANM's network management APIs through the attributes called "cidr", "allocation_pool", and "net6". Therefore users of the module can easily configure all aspects of network management by manipulating solely dynamic Kubernetes API objects!
+The main feature of DANM's IPAM is that it's fully integrated into DANM's network management APIs through the attributes called "cidr", "allocation_pool", and "net6". Therefore users of the module can easily configure all aspects of network management by manipulating solely dynamic Kubernetes API objects!
 
 This native integration also enables a very tempting possibility. **As IP allocations belonging to a network are dynamically tracked *within the same API object***, it becomes possible to define:
 * discontinuous subnets 1:1 mapped to a logical network
@@ -426,6 +428,13 @@ Network administrators can simply put the CIDR, and the allocation pool into the
 
 The flexible IPAM module also allows Pods to define the IP allocation scheme best suited for them. Pods can ask dynamically allocated IPs from the defined allocation pool, or can ask for one, specific, static address.
 The application can even ask DANM to forego the allocation of any IPs to their interface in case a L2 network interface is required.
+##### Using IPAM with static backends
+While using the DANM IPAM with dynamic backends is mandatory, netadmins can freely choose if they want their static CNI backends to be also integrated to DANM's IPAM; or they would prefer these interfaces to be statically configured by another IPAM module.
+By default the "ipam" section of a static delegate is always configured from the CNI configuration file identified by the network's NetworkID parameter.
+However, users can overwrite this inflexible -and most of the time host-local- option by defining "cidr", and/or "net6" in their network manifest just as they would with a dynamic backend.
+When a Pod connects to a network with static NetworkType but containing allocation subnets, and explicitly asks for an "ip", and/or "ip6" address from DANM in its annotation; DANM overwrites the "ipam" section coming from the static config with its own, dynamically allocated address.
+If a Pod does not ask DANM to allocate an IP, or the network does not define the necessary parameters; the delegation automatically falls back to the "ipam" defined in the static config file.
+**Note**: DANM can only integrate static backends to its flexible IPAM if the CNI itself is fully compliant to the standard, i.e. uses the plugin defined in the "ipam" section of its configuration. It is the administrator's responsibility to configure the DANM management APIs according to the capabilities of every CNI!
 ##### IPv6 and dual-stack support
 DANM's IPAM module, and its integration to dynamic backends -IPVLAN, MACVLAN, and SR-IOV CNIs- support both IPv6, and dual-stack (one IPv4, and one IPv6 address provisioned to the same interface) addresses!
 To configure an IPv6 CIDR for a network, network administrators shall configure the "net6" attribute. Additionally, IP routes for IPv6 subnets can be configured via "routes6".
@@ -438,6 +447,8 @@ That being said, network administrators using IPv6, or dual-stack features need 
 * the smallest supported IPv6 subnet is /64
 * allocation pools cannot be defined for IPv6 subnets
 
+This feature is generally supported the same way even for static CNI backends! However guaranteeing that every specific backend is compabile and comfortable with both IPv6, and dual IPs allocated by an IPAM cannot be guaranteed by DANM.
+Therefore, it is the administrator's responsibility to configure the DANM management APIs according to the capabilities of every CNI!
 #### DANM IPVLAN CNI
 DANM's IPVLAN CNI uses the Linux kernel's IPVLAN module to provision high-speed, low-latency network interfaces for applications which need better performance than a bridge (or any other overlay technology) can provide.
 

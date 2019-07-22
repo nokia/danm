@@ -23,8 +23,6 @@ spec:
       # DANM shall be driven with networking related requirements stated in this JSON formatted field.
       # Each entry listed in danm.k8s.io/interfaces annotation results in a network interface provisioned into every Pod's network namespace created based on this template.
       # The interface is provisioned via the backend specified in the referenced network object (or with DANM's in-built IPVLAN CNI by default).
-      # Please note, that some provisioning options are only relevant for specific dynamic level backends.
-      # For CNIs with only static integration level, Pod-level overwrite options are ignored even if present.
       # MANDATORY - LIST OF REQUIRED NETWORK INTERFACES
       #   One network connection can have the following attributes:
       #   EXACTLY ONE OF THE FOLLOWING NETWORK IDENTIFIER OPTIONS:
@@ -32,15 +30,17 @@ spec:
       #   OPTION2: "tenantNetwork": Name of the TenantNetwork (i.e. ObjectMeta.Name) to which the interface should be connected to.
       #   OPTION3: "clusterNetwork": Name of the ClusterNetwork (i.e. ObjectMeta.Name) to which the interface should be connected to.
       #   "ip": desired IPv4 address assigment scheme.
-      #     Ignored for non-dynamic NetworkTypes.
-      #     OPTIONAL PARAMETER - but either "ip" or "ip6" needs to be present. Presence of either "ip" or "ip6" is MANDATORY
+      #     Mandatory for connecting to networks with dynamic NetowrkTypes, such as IPVLAN, MACVLAN, or SR-IOV.
+      #     Optional for static NetworkTypes. When "ip" is defined for a static network also having Spec.Options.Cidr set, the "ipam" section of its static CNI config file is overwritten by DANM.
+      #     OPTIONAL PARAMETER
       #     Possible values:
       #     - "dynamic": the first free IPv4 address is dynamically allocated from the referenced network's allocation pool
       #     - "## DESIRED_STATIC_IPV4_ADDR_FROM_ALLOCATION_POOL (e.g. "10.10.0.101/24") ##"
       #     - "none": no IPv4 is allocated to the interface
       #   "ip6": desired IPv6 address assigment scheme.
-      #     Ignored for non-dynamic NetworkTypes.
-      #     OPTIONAL PARAMETER - but either "ip" or "ip6" needs to be present. Presence of either "ip" or "ip6" is MANDATORY
+      #     Mandatory for connecting to networks with dynamic NetowrkTypes, such as IPVLAN, MACVLAN, or SR-IOV.
+      #     Optional for static NetworkTypes. When "ip6" is defined for a static network also having Spec.Options.Net6 set, the "ipam" section of its static CNI config file is overwritten by DANM.
+      #     OPTIONAL PARAMETER
       #     Possible values:
       #     - "dynamic": a random, free IPv6 address is dynamically allocated from the referenced network's net6 CIDR
       #     - "## DESIRED_STATIC_IPV6_ADDR_FROM_NET6 ##"

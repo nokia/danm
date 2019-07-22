@@ -13,29 +13,28 @@ metadata:
 spec:
   # This parameter provides a second identifier for DanmNets, and can be used to control a number of API features.
   # For static delegates, the parameter configures which CNI configuration file is to be used if NetworkType points to a static-level CNI backend.
-  # For dynamic delegates, VxLAN host interfaces are suffixed, while VLAN host interfaces are prefixed with the NetworkID.
+  # VxLAN host interfaces are suffixed, while VLAN host interfaces are prefixed with the NetworkID.
   # This allows deployment administrators to separate their own interfaces from others' in a multi-tenant environment, i.e. by setting NetworkID to "name_namespace" value.
-  # OPTIONAL - STRING, MAXIMUM 12 CHARACTERS
+  # OPTIONAL - STRING, MAXIMUM 11 CHARACTERS
   NetworkID: ## NETWORK_ID  ##
   # This parameter, denotes which backend is used to provision the container interface connected to this network.
   # Currently supported values with dynamic integration level are IPVLAN (default), SRIOV, or MACVLAN.
   # - IPVLAN option results in an IPVLAN sub-interface provisioned in L2 mode, and connected to the designated host device
   # - SRIOV option pushes a pre-allocated Virtual Function of the configured host device to the container's netns
   # - MACVLAN option results in a MACVLAN sub-interface provisioned in bridge mode, and connected to the designated host device
-  # Setting this option to another value results in delegating the network provisioning operation to the named backend with static configuration (i.e. most Options are ignored).
+  # Setting this option to another value results in delegating the network provisioning operation to the named backend with static configuration (i.e. coming from a standard CNI config file).
   # The default IPVLAN backend is used when this parameter is not specified.
   # OPTIONAL - ONE OF {ipvlan,sriov,macvlan,<NAME_OF_ANY_STATIC_LEVEL_CNI_COMPLIANT_BINARY>}
   # DEFAULT VALUE: ipvlan
   NetworkType: ## BACKEND_TYPE ##
   # Specific extra configuration options can be passed to the network provisioning backends.
-  # Most of the parameters are only supported for dynamic level backends, such as IPVLAN, MACVLAN, and SRIOV.
-  # Other network interfaces are always provisioned based on their associated static CNI configuration files.
-  # The exceptional attributes are "rt_tables", "container_prefix", and "routes/6". DANM universally supports the features related to these parameters for all CNI backends.
+  # Most of the parameters are generally supported for all network types.
+  # Options only supported for dynamic level backends, such as IPVLAN, MACVLAN, and SRIOV are explicitly noted.
   Options:
     # Name of the parent host device (i.e. physical host NIC).
     # Sub-interfaces are connected to this NIC in case NetworkType is set to IPVLAN, or MACVLAN.
     # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
-    # Also ignored for SR-IOV, as the pre-allocated Virtual Functions belonging to the configured Kubernetes Device pool are pushed into the connecting Pod's network namespace, regardless which Physical Funtion they belong to.
+    # Also ignored for SR-IOV, as the pre-allocated Virtual Functions belonging to a configured Kubernetes Device pool are pushed into the connecting Pod's network namespace, regardless which Physical Funtion they belong to.
     # OPTIONAL - STRING
     host_device: ## PARENT_DEVICE_NAME ##
     # Name of a network Device Plugin resource pool
@@ -44,13 +43,11 @@ spec:
     # OPTIONAL - STRING
     device_pool: ## DEVICE_PLUGIN_RESOURCE_POOL_MAME ##
     # The IPv4 CIDR notation of the subnet associated with the network.
-    # Pods connecting to this network will get their IPv4 IP from this subnet, if defined.
-    # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
+    # Pods connecting to this network get an IPv4 address to their interface from this subnet.
     # OPTIONAL - IPv4 CIDR FORMAT (e.g. "10.0.0.0/24")
     cidr: ## SUBNET_CIDR ##
     # IPv4 allocation will be done according to the narrowed down allocation pool parameter, if defined.
     # Allocation pool must be provided together with "cidr", and shall be included in the subnet range.
-    # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
     # If CIDR is provided without defining an allocation pool, it is automatically calculated for the whole netmask (minus the first, and the last IP).
     # The gateway IPs of all the configured IP routes are also automatically reserved from the allocation pool when it is generated.
     # When the network administrator sets the allocation pool, DANM assumes the non-usable IPs (e.g. broadcast IP, gateway IPs etc.) were already discounted.
@@ -59,7 +56,6 @@ spec:
       end: ## LAST_ASSIGNABLE_IP ##
     # The IPv6 CIDR notation of the subnet associated with the network.
     # Pods connecting to this network will get their IPv6s from this subnet, if defined.
-    # Only has an effect with dynamically integrated backends. Ignored for other NetworkTypes.
     # OPTIONAL - IPv6 CIDR FORMAT (e.g. "2001:db8::/45"). Netmask of the subnet cannot be higher than /64 (i.e. /65 and upwards).
     net6: ## SUBNET_CIDR ##
     # Interfaces connected to this network are renamed inside the Pod's network namespace to a string starting with "container_prefix".

@@ -11,18 +11,20 @@ import (
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/ipam"
+  "github.com/nokia/danm/test/utils"
 )
+
 const (
   magicVersion = "42"
 )
 
 type NetClientStub struct{
   TestNets []danmtypes.DanmNet
-  ReservedIpsList []ReservedIpsList
+  ReservedIpsList []utils.ReservedIpsList
   TimesUpdateWasCalled int
 }
 
-func newNetClientStub(nets []danmtypes.DanmNet, ips []ReservedIpsList) *NetClientStub {
+func newNetClientStub(nets []danmtypes.DanmNet, ips []utils.ReservedIpsList) *NetClientStub {
   return &NetClientStub{TestNets: nets, ReservedIpsList: ips}
 }
 
@@ -102,6 +104,6 @@ func (netClient *NetClientStub) Patch(name string, pt types.PatchType, data []by
   return nil, nil
 }
 
-func (netClient *NetClientStub) AddReservedIpsList(reservedIps []ReservedIpsList) {
+func (netClient *NetClientStub) AddReservedIpsList(reservedIps []utils.ReservedIpsList) {
   netClient.ReservedIpsList = reservedIps
 }

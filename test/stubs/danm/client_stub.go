@@ -2,37 +2,21 @@ package danm
 
 import (
   client "github.com/nokia/danm/crd/client/clientset/versioned/typed/danm/v1"
-  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  "github.com/nokia/danm/test/utils"
   rest "k8s.io/client-go/rest"
 )
 
-type TestArtifacts struct {
-  TestNets []danmtypes.DanmNet
-  TestEps []danmtypes.DanmEp
-  ReservedIps []ReservedIpsList
-  TestTconfs []danmtypes.TenantConfig
-}
-
-type ReservedIpsList struct {
-  NetworkId string
-  Reservations []Reservation
-}
-
-type Reservation struct {
-  Ip string
-  Set bool
-}
-
 type ClientStub struct {
-  Objects TestArtifacts
+  Objects utils.TestArtifacts
   NetClient *NetClientStub
+  TconfClient *TconfClientStub
 }
 
 func (client *ClientStub) DanmNets(namespace string) client.DanmNetInterface {
   if client.NetClient == nil {
     client.NetClient = newNetClientStub(client.Objects.TestNets, client.Objects.ReservedIps)
   }
-  return client.NetClient 
+  return client.NetClient
 }
 
 func (client *ClientStub) DanmEps(namespace string) client.DanmEpInterface {
@@ -40,7 +24,10 @@ func (client *ClientStub) DanmEps(namespace string) client.DanmEpInterface {
 }
 
 func (client *ClientStub) TenantConfigs() client.TenantConfigInterface {
-  return newTconfClientStub(client.Objects.TestTconfs)
+  if client.TconfClient == nil {
+    client.TconfClient = newTconfClientStub(client.Objects.TestTconfs, client.Objects.ReservedVnis)
+  }
+  return client.TconfClient
 }
 
 func (client *ClientStub) TenantNetworks(namespace string) client.TenantNetworkInterface {
@@ -55,7 +42,7 @@ func (c *ClientStub) RESTClient() rest.Interface {
   return nil
 }
 
-func newClientStub(ta TestArtifacts) *ClientStub {
+func newClientStub(ta utils.TestArtifacts) *ClientStub {
   return &ClientStub {
     Objects: ta,
   }

@@ -3,6 +3,7 @@ package danm
 import (
   discovery "k8s.io/client-go/discovery"
   danmv1 "github.com/nokia/danm/crd/client/clientset/versioned/typed/danm/v1"
+  "github.com/nokia/danm/test/utils"
 )
 
 type ClientSetStub struct {
@@ -21,7 +22,7 @@ func (c *ClientSetStub) Discovery() discovery.DiscoveryInterface {
   return nil
 }
 
-func NewClientSetStub(objects TestArtifacts) *ClientSetStub {
+func NewClientSetStub(objects utils.TestArtifacts) *ClientSetStub {
   var clientSet ClientSetStub
   clientSet.DanmClient = newClientStub(objects)
   return &clientSet

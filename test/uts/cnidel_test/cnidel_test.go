@@ -345,7 +345,7 @@ func TestDelegateInterfaceSetup(t *testing.T) {
   if err != nil {
     t.Errorf("Test suite could not be set-up because:%s", err.Error())
   }
-  testArtifacts := stubs.TestArtifacts{TestNets: testNets}
+  testArtifacts := utils.TestArtifacts{TestNets: testNets}
   netClientStub := stubs.NewClientSetStub(testArtifacts)
   for _, tc := range delSetupTcs {
     t.Run(tc.tcName, func(t *testing.T) {
@@ -397,7 +397,7 @@ func TestDelegateInterfaceDelete(t *testing.T) {
       testEp := getTestEp(tc.epName)
       testNet := utils.GetTestNet(tc.netName, testNets)
       ips := utils.CreateExpectedAllocationsList(testEp.Spec.Iface.Address,false,testNet.Spec.NetworkID)
-      testArtifacts := stubs.TestArtifacts{TestNets: testNets, ReservedIps: ips}
+      testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
       netClientStub := stubs.NewClientSetStub(testArtifacts)
       err = setupDelTestTc(tc.cniConfName)
       if err != nil {

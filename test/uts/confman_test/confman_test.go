@@ -145,7 +145,7 @@ func TestGetTenantConfig(t *testing.T) {
   for _, tc := range getTconfTcs {
     t.Run(tc.tcName, func(t *testing.T) {
       tconfSet := getTconfSet(tc.tcName, tc.tconfSets.sets)
-      testArtifacts := stubs.TestArtifacts{TestTconfs: tconfSet}
+      testArtifacts := utils.TestArtifacts{TestTconfs: tconfSet}
       tconfClientStub := stubs.NewClientSetStub(testArtifacts)
       tconf, err := confman.GetTenantConfig(tconfClientStub)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
@@ -167,7 +167,7 @@ func TestReserve(t *testing.T) {
       if tc.reserveVnis != nil {
         reserveVnis(&iface,tc.reserveVnis)
       }
-      testArtifacts := stubs.TestArtifacts{TestTconfs: reserveConfs}
+      testArtifacts := utils.TestArtifacts{TestTconfs: reserveConfs}
       tconfClientStub := stubs.NewClientSetStub(testArtifacts)
       vni, err := confman.Reserve(tconfClientStub, tconf, iface)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
@@ -199,7 +199,7 @@ func TestFree(t *testing.T) {
         reserveVnis(&iface,[]int{0,4999})
         tconf.HostDevices[index] = iface
       }
-      testArtifacts := stubs.TestArtifacts{TestTconfs: reserveConfs, TestNets: testNets}
+      testArtifacts := utils.TestArtifacts{TestTconfs: reserveConfs, TestNets: testNets}
       tconfClientStub := stubs.NewClientSetStub(testArtifacts)
       err := confman.Free(tconfClientStub, tconf, dnet)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {

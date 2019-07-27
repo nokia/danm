@@ -1,13 +1,19 @@
 package utils
 
 import (
+  "bytes"
+  "errors"
   "net"
   "strings"
+  "encoding/json"
+  "io/ioutil"
+  "net/http"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/admit"
-  stubs "github.com/nokia/danm/test/stubs/danm"
+  httpstub "github.com/nokia/danm/test/stubs/http"
+  "k8s.io/api/admission/v1beta1"
 )
 
 const (
@@ -20,6 +26,43 @@ const (
                 "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
                 "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
 )
+
+var (
+  ExhaustedAllocFor5k = exhaustAlloc(AllocFor5k)
+)
+
+type TestArtifacts struct {
+  TestNets []danmtypes.DanmNet
+  TestEps []danmtypes.DanmEp
+  ReservedIps []ReservedIpsList
+  TestTconfs []danmtypes.TenantConfig
+  ReservedVnis []ReservedVnisList
+}
+
+type ReservedIpsList struct {
+  NetworkId string
+  Reservations []Reservation
+}
+
+type Reservation struct {
+  Ip string
+  Set bool
+}
+
+type ReservedVnisList struct {
+  ProfileName string
+  VniType string
+  Reservations []VniReservation
+}
+
+type VniReservation struct {
+  Vni int
+  Set bool
+}
+
+type MalformedObject struct {
+  ExtraField string `json:"extraField,omitempty"`
+}
 
 func SetupAllocationPools(nets []danmtypes.DanmNet) error {
   for index, dnet := range nets {
@@ -56,14 +99,24 @@ func GetTestNet(netId string, testNets []danmtypes.DanmNet) *danmtypes.DanmNet {
   return nil
 }
 
-func CreateExpectedAllocationsList(ip string, isExpectedToBeSet bool, networkId string) []stubs.ReservedIpsList {
-  var ips []stubs.ReservedIpsList
+func CreateExpectedAllocationsList(ip string, isExpectedToBeSet bool, networkId string) []ReservedIpsList {
+  var ips []ReservedIpsList
   if ip != "" {
-    reservation := stubs.Reservation {Ip: ip, Set: isExpectedToBeSet,}
-    expectedAllocation := stubs.ReservedIpsList{NetworkId: networkId, Reservations: []stubs.Reservation {reservation,},}
+    reservation := Reservation {Ip: ip, Set: isExpectedToBeSet,}
+    expectedAllocation := ReservedIpsList{NetworkId: networkId, Reservations: []Reservation {reservation,},}
     ips = append(ips, expectedAllocation)
   }
   return ips
+}
+
+func CreateExpectedVniAllocationsList(vni int, vniType, ifaceName string, isExpectedToBeSet bool) []ReservedVnisList {
+  var vnis []ReservedVnisList
+  if vni != 0 {
+    reservation := VniReservation {Vni: vni, Set: isExpectedToBeSet,}
+    expectedAllocation := ReservedVnisList{ProfileName: ifaceName, VniType: vniType, Reservations: []VniReservation {reservation,},}
+    vnis = append(vnis, expectedAllocation)
+  }
+  return vnis
 }
 
 func exhaustNetwork(netInfo *danmtypes.DanmNet) {
@@ -85,4 +138,92 @@ func GetTconf(tconfName string, tconfSet []danmtypes.TenantConfig) *danmtypes.Te
     }
   }
   return nil
+}
+
+func CreateHttpRequest(oldObj, newObj []byte, isOldMalformed, isNewMalformed bool, opType v1beta1.Operation) (*http.Request, error) {
+  request := v1beta1.AdmissionRequest{}
+  review := v1beta1.AdmissionReview{Request: &request}
+  if opType != "" {
+    review.Request.Operation = opType
+  }
+  var err error
+  if oldObj != nil  {
+    review.Request.OldObject.Raw = canItMalform(oldObj, isOldMalformed)
+  }
+  if newObj != nil {
+    review.Request.Object.Raw = canItMalform(newObj, isNewMalformed)
+  }
+  httpRequest := http.Request{}
+  if oldObj != nil || newObj != nil {
+    rawReview, err := json.Marshal(review)
+    if err != nil {
+      errors.New("AdmissionReview couldn't be marshalled because:" + err.Error())
+    }
+    reader := bytes.NewReader(rawReview)
+    httpRequest.Body = ioutil.NopCloser(reader)
+  }
+  return &httpRequest, err
+}
+
+func canItMalform(obj []byte, shouldBeMalformed bool) []byte {
+  if shouldBeMalformed {
+    malformedObj := MalformedObject{ExtraField: "blupp"}
+    obj, _ = json.Marshal(malformedObj)
+  }
+  return obj
+}
+
+func ValidateHttpResponse(writer *httpstub.ResponseWriterStub, isErrorExpected bool, expectedPatches string) error {
+  if writer.RespHeader.Get("Content-Type") != "application/json" {
+    return errors.New("Content-Type is not set to application/json in the HTTP Header")
+  }
+  response, err := writer.GetAdmissionResponse()
+  if err != nil {
+    return err
+  }
+  if isErrorExpected {
+    if response.Allowed {
+      return errors.New("request would have been admitted but we expected an error")
+    }
+    if response.Result.Message == "" {
+      return errors.New("a faulty response was sent without explanation")
+    }
+  } else {
+    if !response.Allowed {
+      return errors.New("request would have been denied but we expected it to pass through validation")
+    }
+    if response.Result != nil {
+      return errors.New("an unnecessary Result message is put into a successful response")
+    }
+  }
+  if expectedPatches != "" {
+     return validatePatches(response, expectedPatches)
+  }
+  return nil
+}
+
+func validatePatches(response *v1beta1.AdmissionResponse, expectedPatches string) error {
+  if expectedPatches == "empty" {
+    if response.Patch != nil {
+      return errors.New("did not expect any patches but some were included in the admission response")
+    }
+    return nil
+  }
+  var patches []admit.Patch
+  err := json.Unmarshal(response.Patch, &patches)
+  if err != nil {
+    return err
+  }
+  if len(patches) != 1 {
+    return errors.New("received number of patches was not the expected 1")
+  }
+  return nil
+}
+
+func exhaustAlloc(alloc string) string {
+  ba := bitarray.NewBitArrayFromBase64(alloc)
+  for i:=0; i<ba.Len(); i++ {
+        ba.Set(uint32(i))
+  }
+  return ba.Encode()
 }

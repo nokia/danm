@@ -106,7 +106,7 @@ func TestReserve(t *testing.T) {
   for _, tc := range reserveTcs {
     t.Run(tc.netName, func(t *testing.T) {
       ips := utils.CreateExpectedAllocationsList(tc.expectedIp4,true,testNets[tc.netIndex].Spec.NetworkID)
-      testArtifacts := stubs.TestArtifacts{TestNets: testNets, ReservedIps: ips}
+      testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
       netClientStub := stubs.NewClientSetStub(testArtifacts)
       ip4, ip6, mac, err := ipam.Reserve(netClientStub, testNets[tc.netIndex], tc.requestedIp4, tc.requestedIp6)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
@@ -143,7 +143,7 @@ func TestFree(t *testing.T) {
   for _, tc := range freeTcs {
     t.Run(tc.netName, func(t *testing.T) {
       ips := utils.CreateExpectedAllocationsList(tc.allocatedIp,false,testNets[tc.netIndex].Spec.NetworkID)
-      testArtifacts := stubs.TestArtifacts{TestNets: testNets, ReservedIps: ips}
+      testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
       netClientStub := stubs.NewClientSetStub(testArtifacts)
       err := ipam.Free(netClientStub, testNets[tc.netIndex], tc.allocatedIp)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
@@ -169,7 +169,7 @@ func TestGarbageCollectIps(t *testing.T) {
   for _, tc := range gcTcs {
     t.Run(tc.netName, func(t *testing.T) {
       ips := utils.CreateExpectedAllocationsList(tc.allocatedIp4,false,testNets[tc.netIndex].Spec.NetworkID)
-      testArtifacts := stubs.TestArtifacts{TestNets: testNets, ReservedIps: ips}
+      testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
       netClientStub := stubs.NewClientSetStub(testArtifacts)
       ipam.GarbageCollectIps(netClientStub, &testNets[tc.netIndex], tc.allocatedIp4, tc.allocatedIp6)
     })

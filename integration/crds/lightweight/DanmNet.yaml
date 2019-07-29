@@ -13,6 +13,8 @@ spec:
     shortNames:
     - dn
     - dnet
+    categories:
+    - all
   validation:
     openAPIV3Schema:
       properties:

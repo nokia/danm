@@ -13,6 +13,8 @@ spec:
     shortNames:
     - tn
     - tnet
+    categories:
+    - all
   validation:
     openAPIV3Schema:
       properties:

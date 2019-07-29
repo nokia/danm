@@ -17,7 +17,7 @@ const (
 
 var (
   DanmNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateAbsenceOfAllowedTenants,validateNeType}
-  ClusterNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNeType,validateNetworkId}
+  ClusterNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateNeType}
   TenantNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateAbsenceOfAllowedTenants,validateTenantNetRules,validateNeType}
   danmValidationConfig = map[string]ValidatorMapping {
     "DanmNet": DanmNetMapping,
@@ -67,10 +67,7 @@ func validateAllocationPool(oldManifest, newManifest *danmtypes.DanmNet, opType 
     }
     return nil
   }
-  _, ipnet, err := net.ParseCIDR(cidr)
-  if err != nil {
-    return errors.New("Invalid CIDR parameter: " + cidr)
-  }
+  _, ipnet, _ := net.ParseCIDR(cidr)
   if newManifest.Spec.Options.Pool.Start == "" {
     newManifest.Spec.Options.Pool.Start = (ipam.Int2ip(ipam.Ip2int(ipnet.IP) + 1)).String()
   }
@@ -188,10 +185,10 @@ func validateIfaceConfig(ifaceConf danmtypes.IfaceProfile, opType admissionv1.Op
 func validateNeType(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
   if newManifest.Spec.NetworkType == "sriov" {
     if newManifest.Spec.Options.DevicePool == "" || newManifest.Spec.Options.Device != "" {
-      return errors.New("DevicePool must, and host_device cannot be provided for SR-IOV networks!")
+      return errors.New("Spec.Options.device_pool must, and Spec.Options.host_device cannot be provided for SR-IOV networks!")
     }
   } else if newManifest.Spec.Options.Device != "" && newManifest.Spec.Options.DevicePool != "" {
-    return errors.New("DevicePool and host_device cannot be provided together!")
+    return errors.New("Spec.Options.device_pool and Spec.Options.host_device cannot be provided together!")
   }
   return nil
 }

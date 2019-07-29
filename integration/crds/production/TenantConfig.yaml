@@ -13,3 +13,5 @@ spec:
     shortNames:
     - tc
     - tconf
+    categories:
+    - all

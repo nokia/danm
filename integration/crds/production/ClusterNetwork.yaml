@@ -13,6 +13,8 @@ spec:
     shortNames:
     - cn
     - cnet
+    categories:
+    - all
   validation:
     openAPIV3Schema:
       properties:

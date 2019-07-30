@@ -73,6 +73,27 @@ var validateNetworkTcs = []struct {
   {"IpvlanWithDevicePlusDpDNet", "", "ipvlan-with-dp-and-device", DnetType, "", nil, true, "empty", 0},
   {"IpvlanWithDevicePlusDpTNet", "", "ipvlan-with-dp-and-device", TnetType, "", nil, true, "empty", 0},
   {"IpvlanWithDevicePlusDpCNet", "", "ipvlan-with-dp-and-device", CnetType, "", nil, true, "empty", 0},
+  {"AllocDuringCreateDNet", "", "alloc-without-cidr", DnetType, v1beta1.Create, nil, true, "empty", 0},
+  {"AllocDuringCreateTNet", "", "alloc-without-cidr", TnetType, v1beta1.Create, nil, true, "empty", 0},
+  {"AllocDuringCreateCNet", "", "alloc-without-cidr", CnetType, v1beta1.Create, nil, true, "empty", 0},
+  {"AllocationPoolWithoutCidrDNet", "", "alloc-without-cidr", DnetType, v1beta1.Update, nil, true, "empty", 0},
+  {"AllocationPoolWithoutCidrTNet", "", "alloc-without-cidr", TnetType, v1beta1.Update, nil, true, "empty", 0},
+  {"AllocationPoolWithoutCidrCNet", "", "alloc-without-cidr", CnetType, v1beta1.Update, nil, true, "empty", 0},
+  {"AllocationPoolStartOutsideCidrDNet", "", "allocstart-outside-cidr", DnetType, "", nil, true, "empty", 0},
+  {"AllocationPoolStartOutsideCidrTNet", "", "allocstart-outside-cidr", TnetType, "", nil, true, "empty", 0},
+  {"AllocationPoolStartOutsideCidrCNet", "", "allocstart-outside-cidr", CnetType, "", nil, true, "empty", 0},
+  {"AllocationPoolEndOutsideCidrDNet", "", "allocend-outside-cidr", DnetType, "", nil, true, "empty", 0},
+  {"AllocationPoolEndOutsideCidrTNet", "", "allocend-outside-cidr", TnetType, "", nil, true, "empty", 0},
+  {"AllocationPoolEndOutsideCidrCNet", "", "allocend-outside-cidr", CnetType, "", nil, true, "empty", 0},
+  {"AllocationPoolWithoutAnyIpDNet", "", "no-free-ip", DnetType, "", nil, true, "empty", 0},
+  {"AllocationPoolWithoutAnyIpTNet", "", "no-free-ip", TnetType, "", nil, true, "empty", 0},
+  {"AllocationPoolWithoutAnyIpCNet", "", "no-free-ip", CnetType, "", nil, true, "empty", 0},
+  {"CreateWithVlanTNet", "", "tnet-vlan", TnetType, v1beta1.Create, nil, true, "empty", 0},
+  {"CreateWithVxlanTNet", "", "tnet-vxlan", TnetType, v1beta1.Create, nil, true, "empty", 0},
+  {"UpdateWithVlanTNet", "", "tnet-vlan", TnetType, v1beta1.Update, nil, true, "empty", 0},
+  {"UpdateWithVxlanTNet", "", "tnet-vxlan", TnetType, v1beta1.Update, nil, true, "empty", 0},
+  {"UpdateWithDeviceTNet", "", "tnet-device", TnetType, v1beta1.Update, nil, true, "empty", 0},
+  {"UpdateWithDevicePoolTNet", "", "tnet-dp", TnetType, v1beta1.Update, nil, true, "empty", 0},
 }
 
 var (
@@ -139,6 +160,38 @@ var (
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "ipvlan-with-dp-and-device"},
       Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f1", Device: "ens1f1"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "alloc-without-cidr"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Alloc: "gAAAAAAAAAAAAAAE", Pool: danmtypes.IP4Pool{Start: "192.168.1.1"}}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "allocstart-outside-cidr"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IP4Pool{Start: "192.168.1.63"}, Cidr: "192.168.1.64/26"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "allocend-outside-cidr"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IP4Pool{End: "192.168.1.128"}, Cidr: "192.168.1.64/26"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "no-free-ip"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IP4Pool{Start: "192.168.1.127", End: "192.168.1.127"}, Cidr: "192.168.1.64/26"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-vlan"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Vlan: 50}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-vxlan"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Vxlan: 50}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-device"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens3"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-dp"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f0"}},
     },
   }
 )

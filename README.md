@@ -467,7 +467,7 @@ The CNI provisions IPVLAN interfaces in L2 mode, and supports the following extr
 DANM provides general support to CNIs which interwork with Kubernetes' Device Plugin mechanism such as SR-IOV CNI.
 When a properly configured Network Device Plugin runs, the allocatable resource list for the node should be updated with resource discovered by the plugin.
 ##### Using Intel SR-IOV CNI
-SR-IOV Network Device Plugin allows to create a list of *netdevice* type resource definitions with *sriovMode*, where each resource definition can have one or more assigned *rootDevice* (Physical Function). The plugin looks for Virtual Functions (VF) for each configured Physical Function (PF) and adds all discovered VF to the allocatable resource's list of the given Kubernetes Node. The Device Plugin resource name will be the device pool name on the Node. These device pools can be referred in Pod definition's resource request part on the usual way.
+SR-IOV Network Device Plugin allows to create a list of *netdevice* type resource definitions with *sriovMode*, where each resource definition can have one or more assigned *rootDevice* (Physical Function). The plugin looks for Virtual Functions (VF) for each configured Physical Function (PF) and adds all discovered VFs to the allocatable resource's list of the given Kubernetes Node. The Device Plugin resource name will be the device pool name on the Node. These device pools can be referred in Pod definition's resource request part on the usual way.
 
 In the following example, the "nokia.k8s.io/sriov_ens1f0" device pool name consists of the "nokia.k8s.io" prefix and "sriov_ens1f0" resourceName.
 ```
@@ -486,6 +486,7 @@ kubectl get nodes 172.30.101.104 -o json | jq '.status.allocatable'
 All network management APIs contain an optional **device_pool** field where a specific device pool can be assigned to the given network.
 **Note: device_pool and host_device parameters are mutually exclusive!**
 Before DANM invokes a CNI which expects a given resource to be attached to the Pod, it gathers all the Kubelet assigned device IDs belonging to device pool defined in the Pod's network, and passes one ID from the list to the CNI.
+**Note: Pods connecting to networks depending on a device_pool must declare their respective resource requests through their Pod.Spec.Resources API!**
 
 The following example network definition shows how to configure device_pool parameter for sriov network type.
 ```

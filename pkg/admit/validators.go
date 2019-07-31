@@ -127,7 +127,7 @@ func validateTenantNetRules(oldManifest, newManifest *danmtypes.DanmNet, opType 
      newManifest.Spec.Options.DevicePool  != oldManifest.Spec.Options.DevicePool  ||
      newManifest.Spec.Options.Vxlan   != oldManifest.Spec.Options.Vxlan   ||
      newManifest.Spec.Options.Vlan    != oldManifest.Spec.Options.Vlan) {
-    return errors.New("Manually changing any one of Spec.Options. host_device, devie_pool, vlan, or vxlan attributes is not allowed for TenantNetworks!")
+    return errors.New("Manually changing any one of Spec.Options. host_device, device_pool, vlan, or vxlan attributes is not allowed for TenantNetworks!")
   }
   return nil
 }

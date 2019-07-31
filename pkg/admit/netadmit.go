@@ -120,10 +120,7 @@ func mutateNetManifest(danmClient danmclientset.Interface, dnet *danmtypes.DanmN
   var err error
   //L3, freshly added network
   if dnet.Spec.Options.Cidr != "" && dnet.Spec.Options.Alloc == "" {
-    err = CreateAllocationArray(dnet)
-    if err != nil {
-      return err
-    }
+    CreateAllocationArray(dnet)
   }
   if dnet.TypeMeta.Kind == "TenantNetwork" {
     err = addTenantSpecificDetails(danmClient, dnet)
@@ -139,15 +136,12 @@ func postValidateManifest(dnet *danmtypes.DanmNet) error {
   return validateNetworkId(nil, dnet, "")
 }
 
-func CreateAllocationArray(dnet *danmtypes.DanmNet) error {
+func CreateAllocationArray(dnet *danmtypes.DanmNet) {
   _,ipnet,_ := net.ParseCIDR(dnet.Spec.Options.Cidr)
-  bitArray, err := bitarray.CreateBitArrayFromIpnet(ipnet)
-  if err != nil {
-    return err
-  }
+  bitArray,_ := bitarray.CreateBitArrayFromIpnet(ipnet)
   reserveGatewayIps(dnet.Spec.Options.Routes, bitArray, ipnet)
   dnet.Spec.Options.Alloc = bitArray.Encode()
-  return nil
+  return
 }
 
 func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ipnet *net.IPNet) {

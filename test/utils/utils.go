@@ -4,6 +4,7 @@ import (
   "bytes"
   "errors"
   "net"
+  "strconv"
   "strings"
   "encoding/json"
   "io/ioutil"
@@ -67,10 +68,7 @@ type MalformedObject struct {
 func SetupAllocationPools(nets []danmtypes.DanmNet) error {
   for index, dnet := range nets {
     if dnet.Spec.Options.Cidr != "" {
-      err := admit.CreateAllocationArray(&dnet)
-      if err != nil {
-        return err
-      }
+      admit.CreateAllocationArray(&dnet)
       _, ipnet, err := net.ParseCIDR(dnet.Spec.Options.Cidr)
       if err != nil {
         return err
@@ -173,7 +171,7 @@ func canItMalform(obj []byte, shouldBeMalformed bool) []byte {
   return obj
 }
 
-func ValidateHttpResponse(writer *httpstub.ResponseWriterStub, isErrorExpected bool, expectedPatches string) error {
+func ValidateHttpResponse(writer *httpstub.ResponseWriterStub, isErrorExpected bool, expectedPatches []admit.Patch) error {
   if writer.RespHeader.Get("Content-Type") != "application/json" {
     return errors.New("Content-Type is not set to application/json in the HTTP Header")
   }
@@ -196,14 +194,11 @@ func ValidateHttpResponse(writer *httpstub.ResponseWriterStub, isErrorExpected b
       return errors.New("an unnecessary Result message is put into a successful response")
     }
   }
-  if expectedPatches != "" {
-     return validatePatches(response, expectedPatches)
-  }
-  return nil
+  return validatePatches(response, expectedPatches)
 }
 
-func validatePatches(response *v1beta1.AdmissionResponse, expectedPatches string) error {
-  if expectedPatches == "empty" {
+func validatePatches(response *v1beta1.AdmissionResponse, expectedPatches []admit.Patch) error {
+  if len(expectedPatches) == 0 {
     if response.Patch != nil {
       return errors.New("did not expect any patches but some were included in the admission response")
     }
@@ -214,8 +209,19 @@ func validatePatches(response *v1beta1.AdmissionResponse, expectedPatches string
   if err != nil {
     return err
   }
-  if len(patches) != 1 {
-    return errors.New("received number of patches was not the expected 1")
+  if len(patches) != len(expectedPatches) {
+    return errors.New("received number of patches:" + strconv.Itoa(len(patches)) + " was not what we expected:" + strconv.Itoa(len(expectedPatches)))
+  }
+  for _, expPatch := range expectedPatches {
+    var foundMatchingPatch bool
+    for _, recPatch := range patches {
+      if expPatch.Path == recPatch.Path {
+        foundMatchingPatch = true
+      }
+    }
+    if !foundMatchingPatch {
+      return errors.New("Patch expected to modify path:" + expPatch.Path + " was not included in the response")
+    }
   }
   return nil
 }

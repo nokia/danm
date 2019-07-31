@@ -144,29 +144,35 @@ var validateTconfTcs = []struct {
   newTconfName string
   opType v1beta1.Operation
   isErrorExpected bool
-  expectedPatches string
+  expectedPatches []admit.Patch
 }{
-  {"emptyRequest", "", "", "", true, "empty"},
-  {"malformedOldObject", "malformed", "", "", true, "empty"},
-  {"malformedNewObject", "", "malformed", "", true, "empty"},
-  {"objectWithInvalidType", "", "invalid-type", "", true, "empty"},
-  {"emptyCofig", "", "empty-config", "", true, "empty"},
-  {"interfaceProfileWithoutName", "", "noname", "", true, "empty"},
-  {"interfaceProfileWithoutVniRange", "", "norange", "", true, "empty"},
-  {"interfaceProfileWithoutVniType", "", "notype", "", true, "empty"},
-  {"interfaceProfileWithInvalidVniType", "", "invalid-vni-type", "", true, "empty"},
-  {"interfaceProfileWithInvalidVniValue", "", "invalid-vni-value", "", true, "empty"},
-  {"interfaceProfileWithInvalidVniRange", "", "invalid-vni-range", "", true, "empty"},
-  {"interfaceProfileWithValidVniRange", "", "valid-vni-range", "", false, "1"},
-  {"interfaceProfileWithSetAlloc", "", "manual-alloc", v1beta1.Create, true, "empty"},
-  {"interfaceProfileChangeWithAlloc", "manual-alloc-old", "manual-alloc", v1beta1.Update, false, "1"},
-  {"networkIdWithoutKey", "", "nonid", "", true, "empty"},
-  {"networkIdWithoutValue", "", "nonetype", "", true, "empty"},
-  {"longNidWithStaticNeType", "", "longnid", "", false, "empty"},
-  {"longNidWithDynamicNeType", "", "longnid-sriov", "", true, "empty"},
-  {"okayNids", "", "shortnid", "", false, "empty"},
-  {"noChangeInIfaces", "old-iface", "new-iface", v1beta1.Update, false, "empty"},
+  {"emptyRequest", "", "", "", true, nil},
+  {"malformedOldObject", "malformed", "", "", true, nil},
+  {"malformedNewObject", "", "malformed", "", true, nil},
+  {"objectWithInvalidType", "", "invalid-type", "", true, nil},
+  {"emptyCofig", "", "empty-config", "", true, nil},
+  {"interfaceProfileWithoutName", "", "noname", "", true, nil},
+  {"interfaceProfileWithoutVniRange", "", "norange", "", true, nil},
+  {"interfaceProfileWithoutVniType", "", "notype", "", true, nil},
+  {"interfaceProfileWithInvalidVniType", "", "invalid-vni-type", "", true, nil},
+  {"interfaceProfileWithInvalidVniValue", "", "invalid-vni-value", "", true, nil},
+  {"interfaceProfileWithInvalidVniRange", "", "invalid-vni-range", "", true, nil},
+  {"interfaceProfileWithValidVniRange", "", "valid-vni-range", "", false, expectedPatch},
+  {"interfaceProfileWithSetAlloc", "", "manual-alloc", v1beta1.Create, true, nil},
+  {"interfaceProfileChangeWithAlloc", "manual-alloc-old", "manual-alloc", v1beta1.Update, false, expectedPatch},
+  {"networkIdWithoutKey", "", "nonid", "", true, nil},
+  {"networkIdWithoutValue", "", "nonetype", "", true, nil},
+  {"longNidWithStaticNeType", "", "longnid", "", false, nil},
+  {"longNidWithDynamicNeType", "", "longnid-sriov", "", true, nil},
+  {"okayNids", "", "shortnid", "", false, nil},
+  {"noChangeInIfaces", "old-iface", "new-iface", v1beta1.Update, false, nil},
 }
+
+var (
+  expectedPatch = []admit.Patch {
+    admit.Patch {Path: "/hostDevices"},
+  }
+)
 
 func TestValidateTenantConfig(t *testing.T) {
   validator := admit.Validator{}

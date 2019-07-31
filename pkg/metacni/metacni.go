@@ -332,8 +332,11 @@ func isTenantAllowed(args *cniArgs, netInfo *danmtypes.DanmNet) bool {
 
 func getAllocatedDevices(args *cniArgs, checkpoint multus_types.ResourceClient, devicePool string)(*[]string, error){
   resourceMap, err := checkpoint.GetPodResourceMap(args.pod)
-  if err != nil || len(resourceMap) == 0 {
+  if err != nil {
     return nil, errors.New("failed to retrieve Pod info from checkpoint object due to:" + err.Error())
+  }
+  if len(resourceMap) == 0 {
+    return nil, errors.New("there were no Devices allocated for the Pod")
   }
   if _, ok := resourceMap[devicePool]; !ok {
     return nil, errors.New("failed to retrieve resources of DevicePool")

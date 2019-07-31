@@ -72,19 +72,19 @@ var deleteNetworkTcs = []struct {
   tconf []danmtypes.TenantConfig
   isErrorExpected bool
   shouldVniBeFreed bool
-  expectedPatches string
+  expectedPatches []admit.Patch
   timesUpdateShouldBeCalled int
 }{
-  {"emptyRequest", "", nil, true, false, "empty", 0},
-  {"malformedOldObject", "malformed", nil, true, false, "empty", 0},
-  {"objectWithInvalidType", "invalid-type", nil, false, false, "empty", 0},
-  {"staticNetwork", "flannel", nil, false, false, "empty", 0},
-  {"noTenantConfig", "ipvlan", nil, true, false, "empty", 0},
-  {"missingInterFaceProfile", "ipvlan", delConf, false, false, "empty", 0},
-  {"missingDeviceProfile", "sriov", delConf, false, false, "empty", 0},
-  {"errorUpdating", "ipvlan", errConf, true, true, "empty", 1},
-  {"freeDevice", "ipvlan", validConf, false, true, "empty", 1},
-  {"freeDevicePool", "sriov", validConf, false, true, "empty", 1},
+  {"emptyRequest", "", nil, true, false, nil, 0},
+  {"malformedOldObject", "malformed", nil, true, false, nil, 0},
+  {"objectWithInvalidType", "invalid-type", nil, false, false, nil, 0},
+  {"staticNetwork", "flannel", nil, false, false, nil, 0},
+  {"noTenantConfig", "ipvlan", nil, true, false, nil, 0},
+  {"missingInterFaceProfile", "ipvlan", delConf, false, false, nil, 0},
+  {"missingDeviceProfile", "sriov", delConf, false, false, nil, 0},
+  {"errorUpdating", "ipvlan", errConf, true, true, nil, 1},
+  {"freeDevice", "ipvlan", validConf, false, true, nil, 1},
+  {"freeDevicePool", "sriov", validConf, false, true, nil, 1},
 }
 
 func TestDeleteNetwork(t *testing.T) {

@@ -96,7 +96,21 @@ var validateNetworkTcs = []struct {
   {"UpdateWithDevicePoolTNet", "", "tnet-dp", TnetType, v1beta1.Update, nil, true, nil, 0},
   {"NoNeTypeCreateSuccess", "", "no-netype", DnetType, v1beta1.Create, nil, false, neTypeAndAlloc, 0},
   {"NoNeTypeUpdateSuccess", "", "no-netype-update", CnetType, v1beta1.Update, nil, false, onlyNeType, 0},
-  {"L2NoPatchSuccess", "", "l2", CnetType, v1beta1.Create, nil, false, nil, 0},
+  {"L2NoPatchSuccess", "", "l2-with-allowedtenants", CnetType, v1beta1.Create, nil, false, nil, 0},
+  {"NoTConfForTNet", "", "l2", TnetType, v1beta1.Create, nil, true, nil, 0},
+  {"DeviceNotAllowedForTnet", "", "l2", TnetType, v1beta1.Create, oneDev, true, nil, 0},
+  {"DevicePoolNotAllowedForTnet", "", "tnet-dp", TnetType, v1beta1.Create, oneDev, true, nil, 0},
+  {"NoDevicesForRandomTnets", "", "no-netype", TnetType, v1beta1.Create, oneDevPool, true, nil, 0},
+  {"NoFreeVnisForTnet", "", "tnet-device", TnetType, v1beta1.Create, oneDev, true, nil, 0},
+  {"DeviceAndVlanTnetSuccess", "", "tnet-ens3", TnetType, v1beta1.Create, twoDevs, false, allocAndVlan, 1},
+  {"DeviceAndVxlanTnetSuccess", "", "tnet-ens4", TnetType, v1beta1.Create, twoDevs, false, allocAndVxlan, 1},
+  {"DevicePoolAndVlanTnetSuccess", "", "tnet-ens1f0", TnetType, v1beta1.Create, twoDevPools, false, allocAndVlan, 1},
+  {"DevicePoolAndVxlanTnetSuccess", "", "tnet-ens1f1", TnetType, v1beta1.Create, twoDevPools, false, allocAndVxlan, 1},
+  {"RandomDeviceAndVxlanTnetSuccess", "", "tnet-random", TnetType, v1beta1.Create, randomDev, false, allocAndVxlanAndDevice, 1},
+  {"FlannelWithNidOverwriteTnetSuccess", "", "flannel-with-name", TnetType, v1beta1.Create, nidMappings, false, onlyNid, 0},
+  {"FlannelWithNidSettingTnetSuccess", "", "flannel-without-name", TnetType, v1beta1.Create, nidMappings, false, onlyNid, 0},
+  {"IpvlanWithNidSettingTnetSuccess", "", "ipvlan-without-name", TnetType, v1beta1.Create, nidMappings, false, deviceAndNidAndVxlan, 1},
+  {"CalicoWithoutNidTnet", "", "calico-without-name", TnetType, v1beta1.Create, nidMappings, true, nil, 0},
 }
 
 var (
@@ -190,7 +204,7 @@ var (
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-device"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens3"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens4"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-dp"},
@@ -206,7 +220,47 @@ var (
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "l2"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens4"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens3"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "l2-with-allowedtenants"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", AllowedTenants: []string{"tenant1","tenant2"}, Options: danmtypes.DanmNetOption{Device: "ens3"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-ens3"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens3", Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-ens4"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens4", Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-ens1f0"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "e2", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f0", Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-ens1f1"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "e2", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f1", Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-random"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "flannel-with-name"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "flannel", NetworkID: "hupak"},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "flannel-without-name"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "flannel"},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "ipvlan-without-name"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan"},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "calico-without-name"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "calico"},
     },
   }
 )
@@ -219,6 +273,84 @@ var (
   }
   onlyNeType = []admit.Patch {
     admit.Patch {Path: "/spec/NetworkType"},
+  }
+  allocAndVlan = []admit.Patch {
+    admit.Patch {Path: "/spec/Options/alloc"},
+    admit.Patch {Path: "/spec/Options/vlan"},
+  }
+  allocAndVxlan = []admit.Patch {
+    admit.Patch {Path: "/spec/Options/alloc"},
+    admit.Patch {Path: "/spec/Options/vxlan"},
+  }
+  allocAndVxlanAndDevice = []admit.Patch {
+    admit.Patch {Path: "/spec/Options/alloc"},
+    admit.Patch {Path: "/spec/Options/vxlan"},
+    admit.Patch {Path: "/spec/Options/host_device"},
+  }
+  onlyNid = []admit.Patch {
+    admit.Patch {Path: "/spec/NetworkID"},
+  }
+  deviceAndNidAndVxlan = []admit.Patch {
+    admit.Patch {Path: "/spec/NetworkID"},
+    admit.Patch {Path: "/spec/Options/host_device"},
+    admit.Patch {Path: "/spec/Options/vxlan"},
+  }
+)
+
+var (
+  oneDev = []danmtypes.TenantConfig {
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tconf"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "900-4999,5000", Alloc: utils.ExhaustedAllocFor5k},
+       },
+    },
+  }
+  oneDevPool = []danmtypes.TenantConfig {
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tconf"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f1", VniType: "vlan", VniRange: "900-4999,5000", Alloc: utils.ExhaustedAllocFor5k},
+       },
+    },
+  }
+  twoDevs = []danmtypes.TenantConfig {
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tconf"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "ens3", VniType: "vlan", VniRange: "900-4999,5000", Alloc: utils.AllocFor5k},
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "1000-4999,5000", Alloc: utils.AllocFor5k},
+       },
+    },
+  }
+  twoDevPools = []danmtypes.TenantConfig {
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tconf"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vlan", VniRange: "900-4999,5000", Alloc: utils.AllocFor5k},
+        danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f1", VniType: "vxlan", VniRange: "1000-4999,5000", Alloc: utils.AllocFor5k},
+       },
+    },
+  }
+  randomDev = []danmtypes.TenantConfig {
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tconf"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "900-4999,5000", Alloc: utils.AllocFor5k},
+       },
+    },
+  }
+  nidMappings = []danmtypes.TenantConfig {
+      danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "tconf"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "900-4999,5000", Alloc: utils.AllocFor5k},
+       },
+      NetworkIds: map[string]string {
+        "flannel": "flannel1234567",
+        "ipvlan": "ipvlan",
+       },
+    },
   }
 )
 

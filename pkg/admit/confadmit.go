@@ -107,7 +107,7 @@ func mutateConfigManifest(tconf *danmtypes.TenantConfig) {
     if ifaceConf.Alloc != "" || ifaceConf.VniType == "" {
       continue
     }
-    bitArray, _ := bitarray.NewBitArray(MaxAllowedVni)
+    bitArray, _ := bitarray.NewBitArray(MaxAllowedVni+1)
     tconf.HostDevices[ifaceIndex].Alloc = bitArray.Encode()
   }
   return

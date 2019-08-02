@@ -25,6 +25,9 @@ type LinkInfo struct {
 }
 
 func deleteNetworks(dnet *danmtypes.DanmNet) error {
+  if dnet.Spec.Options.Device == "" {
+    return nil
+  }
   var combinedErrorMessage string
   vxlanId := dnet.Spec.Options.Vxlan
   netId := dnet.Spec.NetworkID
@@ -59,6 +62,9 @@ func deleteHostInterface(ifId int, ifName string) error {
 }
 
 func setupHost(dnet *danmtypes.DanmNet) error {
+  if dnet.Spec.Options.Device == "" {
+    return nil
+  }
   netId := dnet.Spec.NetworkID
   hdev := dnet.Spec.Options.Device
   vxlanId := dnet.Spec.Options.Vxlan

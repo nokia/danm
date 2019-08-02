@@ -84,6 +84,7 @@ func (netWatcher *NetWatcher) createDnetInformer(dnetClient danmclientset.Interf
   dnetController := dnetInformerFactory.Danm().V1().DanmNets().Informer()
   dnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: AddDanmNet,
+      UpdateFunc: UpdateDanmNet,
       DeleteFunc: DeleteDanmNet,
   })
   netWatcher.Controllers[DanmNetKind] = dnetController
@@ -96,6 +97,7 @@ func (netWatcher *NetWatcher) createTnetInformer(tnetClient danmclientset.Interf
   tnetController := tnetInformerFactory.Danm().V1().TenantNetworks().Informer()
   tnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: AddTenantNetwork,
+      UpdateFunc: UpdateTenantNetwork,
       DeleteFunc: DeleteTenantNetwork,
   })
   netWatcher.Controllers[TenantNetworkKind] = tnetController
@@ -108,6 +110,7 @@ func (netWatcher *NetWatcher) createCnetInformer(cnetClient danmclientset.Interf
   cnetController := cnetInformerFactory.Danm().V1().ClusterNetworks().Informer()
   cnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: AddClusterNetwork,
+      UpdateFunc: UpdateClusterNetwork,
       DeleteFunc: DeleteClusterNetwork,
   })
   netWatcher.Controllers[ClusterNetworkKind] = cnetController
@@ -121,7 +124,29 @@ func AddDanmNet(obj interface{}) {
   }
   err := setupHost(dn)
   if err != nil {
-    log.Println("ERROR: Creating host interfaces for DanmNet:" + dn.ObjectMeta.Name + " failed with error:" + err.Error())
+    log.Println("INFO: Creating host interfaces for DanmNet:" + dn.ObjectMeta.Name + " failed with error:" + err.Error())
+  }
+}
+
+func UpdateDanmNet(oldObj, newObj interface{}) {
+  oldDn, isNetwork := oldObj.(*danmtypes.DanmNet)
+  if !isNetwork {
+    log.Println("ERROR: Can't update interfaces for DanmNet change, 'cause we have received an invalid old object from the K8s API server")
+    return
+  }
+  newdDn, isNetwork := newObj.(*danmtypes.DanmNet)
+  if !isNetwork {
+    log.Println("ERROR: Can't update interfaces for DanmNet change, 'cause we have received an invalid new object from the K8s API server")
+    return
+  }
+  zeroVnis(oldDn,newdDn)
+  err := deleteNetworks(oldDn)
+  if err != nil {
+    log.Println("INFO: Deletion of old host interfaces for DanmNet:" + oldDn.ObjectMeta.Name + " after update failed with error:" + err.Error())
+  }
+  err = setupHost(newdDn)
+  if err != nil {
+    log.Println("INFO: Creating host interfaces for new DanmNet:" + newdDn.ObjectMeta.Name + " after update failed with error:" + err.Error())
   }
 }
 
@@ -155,7 +180,31 @@ func AddTenantNetwork(obj interface{}) {
   dnet := ConvertTnetToDnet(tn)
   err := setupHost(dnet)
   if err != nil {
-    log.Println("ERROR: Creating host interfaces for TenantNetwork:" + dnet.ObjectMeta.Name + " failed with error:" + err.Error())
+    log.Println("INFO: Creating host interfaces for TenantNetwork:" + dnet.ObjectMeta.Name + " failed with error:" + err.Error())
+  }
+}
+
+func UpdateTenantNetwork(oldObj, newObj interface{}) {
+  oldTn, isNetwork := oldObj.(*danmtypes.TenantNetwork)
+  if !isNetwork {
+    log.Println("ERROR: Can't update interfaces for TenantNetwork change, 'cause we have received an invalid old object from the K8s API server")
+    return
+  }
+  newTn, isNetwork := newObj.(*danmtypes.TenantNetwork)
+  if !isNetwork {
+    log.Println("ERROR: Can't update interfaces for TenantNetwork change, 'cause we have received an invalid new object from the K8s API server")
+    return
+  }
+  oldDn := ConvertTnetToDnet(oldTn)
+  newdDn := ConvertTnetToDnet(newTn)
+  zeroVnis(oldDn,newdDn)
+  err := deleteNetworks(oldDn)
+  if err != nil {
+    log.Println("INFO: Deletion of old host interfaces for TenantNetwork:" + oldDn.ObjectMeta.Name + " after update failed with error:" + err.Error())
+  }
+  err = setupHost(newdDn)
+  if err != nil {
+    log.Println("INFO: Creating host interfaces for new TenantNetwork:" + newdDn.ObjectMeta.Name + " after update failed with error:" + err.Error())
   }
 }
 
@@ -190,7 +239,31 @@ func AddClusterNetwork(obj interface{}) {
   dnet := ConvertCnetToDnet(cn)
   err := setupHost(dnet)
   if err != nil {
-    log.Println("ERROR: Creating host interfaces for ClusterNetwork:" + dnet.ObjectMeta.Name + " failed with error:" + err.Error())
+    log.Println("INFO: Creating host interfaces for ClusterNetwork:" + dnet.ObjectMeta.Name + " failed with error:" + err.Error())
+  }
+}
+
+func UpdateClusterNetwork(oldObj, newObj interface{}) {
+  oldCn, isNetwork := oldObj.(*danmtypes.ClusterNetwork)
+  if !isNetwork {
+    log.Println("ERROR: Can't update interfaces for ClusterNetwork change, 'cause we have received an invalid old object from the K8s API server")
+    return
+  }
+  newCn, isNetwork := newObj.(*danmtypes.ClusterNetwork)
+  if !isNetwork {
+    log.Println("ERROR: Can't update interfaces for ClusterNetwork change, 'cause we have received an invalid new object from the K8s API server")
+    return
+  }
+  oldDn := ConvertCnetToDnet(oldCn)
+  newdDn := ConvertCnetToDnet(newCn)
+  zeroVnis(oldDn,newdDn)
+  err := deleteNetworks(oldDn)
+  if err != nil {
+    log.Println("INFO: Deletion of old host interfaces for ClusterNetwork:" + oldDn.ObjectMeta.Name + " after update failed with error:" + err.Error())
+  }
+  err = setupHost(newdDn)
+  if err != nil {
+    log.Println("INFO: Creating host interfaces for new ClusterNetwork:" + newdDn.ObjectMeta.Name + " after update failed with error:" + err.Error())
   }
 }
 
@@ -339,4 +412,17 @@ func RefreshNetwork(danmClient danmclientset.Interface, netInfo danmtypes.DanmNe
   if netInfo.TypeMeta.Kind == TenantNetworkKind  {dummyIface.TenantNetwork = netInfo.ObjectMeta.Name}
   if netInfo.TypeMeta.Kind == ClusterNetworkKind {dummyIface.ClusterNetwork = netInfo.ObjectMeta.Name}
   return GetNetworkFromInterface(danmClient, dummyIface, netInfo.ObjectMeta.Namespace)
+}
+
+//Little trickery: if there was no change in the VNI+host_device combo during the update we set it to 0 in the manifests.
+//Thus we avoid unnecessarily recreating host interfaces.
+func zeroVnis(oldDn, newDn *danmtypes.DanmNet) {
+  if oldDn.Spec.Options.Vlan == newDn.Spec.Options.Vlan && oldDn.Spec.Options.Device == newDn.Spec.Options.Device {
+    oldDn.Spec.Options.Vlan = 0
+    newDn.Spec.Options.Vlan = 0
+  }
+  if oldDn.Spec.Options.Vxlan == newDn.Spec.Options.Vxlan && oldDn.Spec.Options.Device == newDn.Spec.Options.Device {
+    oldDn.Spec.Options.Vxlan = 0
+    newDn.Spec.Options.Vxlan = 0
+  }
 }

@@ -62,7 +62,7 @@ func (validator *Validator) ValidateNetwork(responseWriter http.ResponseWriter, 
     return
   }
   origNewManifest := *newManifest
-  isManifestValid, err := validateNetworkByType(oldManifest, newManifest, admissionReview.Request.Operation)
+  isManifestValid, err := validateNetworkByType(oldManifest, newManifest, admissionReview.Request.Operation, validator.Client)
   if !isManifestValid {
     SendErroneousAdmissionResponse(responseWriter, admissionReview.Request, err)
     return
@@ -99,13 +99,13 @@ func getNetworkManifest(objectToReview []byte) (*danmtypes.DanmNet,error) {
   return &networkManifest, nil
 }
 
-func validateNetworkByType(oldManifest, newManifest *danmtypes.DanmNet, opType v1beta1.Operation) (bool,error) {
+func validateNetworkByType(oldManifest, newManifest *danmtypes.DanmNet, opType v1beta1.Operation, client danmclientset.Interface) (bool,error) {
   validatorMapping, isTypeHandled := danmValidationConfig[newManifest.TypeMeta.Kind]
   if !isTypeHandled {
     return false, errors.New("K8s API type:" + newManifest.TypeMeta.Kind + " is not handled by DANM webhook")
   }
   for _, validator := range validatorMapping {
-    err := validator(oldManifest,newManifest,opType)
+    err := validator(oldManifest,newManifest,opType,client)
     if err != nil {
       return false, err
     }
@@ -133,7 +133,7 @@ func mutateNetManifest(danmClient danmclientset.Interface, dnet *danmtypes.DanmN
 //Example is NetworkID related validations for TenantNetworks
 //TODO: make this also fancy when more post validation needs surface
 func postValidateManifest(dnet *danmtypes.DanmNet) error {
-  return validateNetworkId(nil, dnet, "")
+  return validateNetworkId(nil, dnet, "", nil)
 }
 
 func CreateAllocationArray(dnet *danmtypes.DanmNet) {

@@ -7,6 +7,8 @@ import (
   "encoding/binary"
   admissionv1 "k8s.io/api/admission/v1beta1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
+  "github.com/nokia/danm/pkg/danmep"
   "github.com/nokia/danm/pkg/ipam"
   "k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
@@ -16,8 +18,8 @@ const (
 )
 
 var (
-  DanmNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateAbsenceOfAllowedTenants,validateNeType}
-  ClusterNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateNeType}
+  DanmNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateAbsenceOfAllowedTenants,validateNeType,validateVniChange}
+  ClusterNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateVids,validateNetworkId,validateNeType,validateVniChange}
   TenantNetMapping = []ValidatorFunc{validateIpv4Fields,validateIpv6Fields,validateAllocationPool,validateAbsenceOfAllowedTenants,validateTenantNetRules,validateNeType}
   danmValidationConfig = map[string]ValidatorMapping {
     "DanmNet": DanmNetMapping,
@@ -26,14 +28,14 @@ var (
   }
 )
 
-type ValidatorFunc func(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error
+type ValidatorFunc func(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error
 type ValidatorMapping []ValidatorFunc
 
-func validateIpv4Fields(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
+func validateIpv4Fields(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {
   return validateIpFields(newManifest.Spec.Options.Cidr, newManifest.Spec.Options.Routes)
 }
 
-func validateIpv6Fields(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
+func validateIpv6Fields(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {
   return validateIpFields(newManifest.Spec.Options.Net6, newManifest.Spec.Options.Routes6)
 }
 
@@ -56,7 +58,7 @@ func validateIpFields(cidr string, routes map[string]string) error {
   return nil
 }
 
-func validateAllocationPool(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
+func validateAllocationPool(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {
   if opType == admissionv1.Create && newManifest.Spec.Options.Alloc != "" {
     return errors.New("Allocation bitmask shall not be manually defined upon creation!")
   }
@@ -90,7 +92,7 @@ func GetBroadcastAddress(subnet *net.IPNet) (net.IP) {
   return ip
 }
 
-func validateVids(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
+func validateVids(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {
   isVlanDefined := (newManifest.Spec.Options.Vlan!=0)
   isVxlanDefined := (newManifest.Spec.Options.Vxlan!=0)
   if isVlanDefined && isVxlanDefined {
@@ -99,7 +101,7 @@ func validateVids(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv
   return nil
 }
 
-func validateNetworkId(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
+func validateNetworkId(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {
   if newManifest.Spec.NetworkID == "" {
     return errors.New("Spec.NetworkID mandatory parameter is missing!")
   }
@@ -109,14 +111,14 @@ func validateNetworkId(oldManifest, newManifest *danmtypes.DanmNet, opType admis
   return nil
 }
 
-func validateAbsenceOfAllowedTenants(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
+func validateAbsenceOfAllowedTenants(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {
   if newManifest.Spec.AllowedTenants != nil {
     return errors.New("AllowedTenants attribute is only valid for the ClusterNetwork API!")
   }
   return nil
 }
 
-func validateTenantNetRules(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
+func validateTenantNetRules(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {
   if opType == admissionv1.Create &&
     (newManifest.Spec.Options.Vxlan  != 0  ||
      newManifest.Spec.Options.Vlan   != 0) {
@@ -182,13 +184,31 @@ func validateIfaceConfig(ifaceConf danmtypes.IfaceProfile, opType admissionv1.Op
   return nil
 }
 
-func validateNeType(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation) error {
+func validateNeType(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {
   if newManifest.Spec.NetworkType == "sriov" {
     if newManifest.Spec.Options.DevicePool == "" || newManifest.Spec.Options.Device != "" {
       return errors.New("Spec.Options.device_pool must, and Spec.Options.host_device cannot be provided for SR-IOV networks!")
     }
   } else if newManifest.Spec.Options.Device != "" && newManifest.Spec.Options.DevicePool != "" {
     return errors.New("Spec.Options.device_pool and Spec.Options.host_device cannot be provided together!")
+  }
+  return nil
+}
+
+func validateVniChange(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {
+  if opType != admissionv1.Update {
+    return nil
+  }
+  isAnyPodConnectedToNetwork, connectedEp, err := danmep.ArePodsConnectedToNetwork(client, newManifest)
+  if err != nil {
+    return errors.New("no way to tell if Pods are still using the network due to:" + err.Error())
+  }
+  if !isAnyPodConnectedToNetwork {
+    return nil
+  }
+  if (oldManifest.Spec.Options.Vlan  != 0 && (oldManifest.Spec.Options.Vlan  != newManifest.Spec.Options.Vlan  || oldManifest.Spec.Options.Device != newManifest.Spec.Options.Device)) ||
+     (oldManifest.Spec.Options.Vxlan != 0 && (oldManifest.Spec.Options.Vxlan != newManifest.Spec.Options.Vxlan || oldManifest.Spec.Options.Device != newManifest.Spec.Options.Device)) {
+    return errors.New("cannot change VNI/host_device of a network which having any Pods connected to it e.g. Pod:" + connectedEp.Spec.Pod + " in namespace:" + connectedEp.ObjectMeta.Namespace)   
   }
   return nil
 }

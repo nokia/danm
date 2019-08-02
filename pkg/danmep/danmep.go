@@ -50,11 +50,13 @@ func DeleteIpvlanInterface(ep danmtypes.DanmEp) (error) {
 func FindByCid(client danmclientset.Interface, cid string)([]danmtypes.DanmEp, error) {
   result, err := client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
   if err != nil {
-    log.Println("cannot get list of eps:" + err.Error())
-    return nil, err
+    return nil, errors.New("cannot list DanmEps because:" + err.Error())
+  }
+  ret := make([]danmtypes.DanmEp, 0)
+  if result == nil {
+    return ret, nil
   }
   eplist := result.Items
-  var ret = make([]danmtypes.DanmEp, 0)
   for _, ep := range eplist {
     if ep.Spec.CID == cid {
       ret = append(ret, ep)
@@ -68,11 +70,13 @@ func FindByCid(client danmclientset.Interface, cid string)([]danmtypes.DanmEp, e
 func CidsByHost(client danmclientset.Interface, host string)(map[string]danmtypes.DanmEp, error) {
   result, err := client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
   if err != nil {
-    log.Println("cannot get list of eps")
-    return nil, err
+    return nil, errors.New("cannot list DanmEps because:" + err.Error())
+  }
+  ret := make(map[string]danmtypes.DanmEp, 0)
+  if result == nil {
+    return ret, nil
   }
   eplist := result.Items
-  var ret = make(map[string]danmtypes.DanmEp, 0)
   for _, ep := range eplist {
     if ep.Spec.Host == host {
       ret[ep.Spec.CID] = ep
@@ -103,7 +107,7 @@ func DetermineHostDeviceName(dnet *danmtypes.DanmNet) string {
   return device
 }
 
-func CreateRoutesInNetNs(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, ) error {
+func CreateRoutesInNetNs(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   origNs, err := ns.GetCurrentNS()
@@ -195,4 +199,23 @@ func PutDanmEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp) error {
     time.Sleep(10 * time.Millisecond)
   }
   return errors.New("DanmEp creation was supposedly successful, but the object hasn't really appeared within 1 sec")
+}
+
+// ArePodsConnectedToNetwork checks if there are any Pods currently in the system using the particular network.
+// If there is at least, it returns true, and the spec of the first matching DanmEp.
+func ArePodsConnectedToNetwork(client danmclientset.Interface, dnet *danmtypes.DanmNet)(bool, danmtypes.DanmEp, error) {
+  result, err := client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
+  if err != nil {
+    return false, danmtypes.DanmEp{}, errors.New("cannot list DanmEps because:" + err.Error())
+  }
+  if result == nil {
+    return false, danmtypes.DanmEp{}, nil
+  }
+  eplist := result.Items
+  for _, ep := range eplist {
+    if ep.Spec.ApiType == dnet.TypeMeta.Kind && ep.Spec.NetworkName == dnet.ObjectMeta.Name {
+      return true, ep, nil
+    }
+  }
+  return false, danmtypes.DanmEp{}, nil
 }

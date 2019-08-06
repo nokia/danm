@@ -213,7 +213,8 @@ func ArePodsConnectedToNetwork(client danmclientset.Interface, dnet *danmtypes.D
   }
   eplist := result.Items
   for _, ep := range eplist {
-    if ep.Spec.ApiType == dnet.TypeMeta.Kind && ep.Spec.NetworkName == dnet.ObjectMeta.Name {
+    if (ep.Spec.ApiType == dnet.TypeMeta.Kind && ep.Spec.NetworkName == dnet.ObjectMeta.Name) &&
+       (dnet.TypeMeta.Kind == "ClusterNetwork" || ep.ObjectMeta.Namespace == dnet.ObjectMeta.Namespace ) {
       return true, ep, nil
     }
   }

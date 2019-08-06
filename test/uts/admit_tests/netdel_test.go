@@ -13,6 +13,31 @@ import (
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var deleteNetworkTcs = []struct {
+  tcName string
+  oldNetName string
+  tconf []danmtypes.TenantConfig
+  eps []danmtypes.DanmEp
+  isErrorExpected bool
+  shouldVniBeFreed bool
+  expectedPatches []admit.Patch
+  timesUpdateShouldBeCalled int
+}{
+  {"emptyRequest", "", nil, nil, true, false, nil, 0},
+  {"malformedOldObject", "malformed", nil, nil, true, false, nil, 0},
+  {"objectWithInvalidType", "invalid-type", nil, nil, false, false, nil, 0},
+  {"staticNetwork", "flannel", nil, nil, false, false, nil, 0},
+  {"noTenantConfig", "ipvlan", nil, nil, true, false, nil, 0},
+  {"missingInterFaceProfile", "ipvlan", delConf, nil, false, false, nil, 0},
+  {"missingDeviceProfile", "sriov", delConf, nil, false, false, nil, 0},
+  {"errorUpdating", "ipvlan", errConf, nil, true, true, nil, 1},
+  {"freeDevice", "ipvlan", validConf, nil, false, true, nil, 1},
+  {"freeDevicePool", "sriov", validConf, nil, false, true, nil, 1},
+  {"cannotDeleteDueToError", "ipvlan", validConf, errorEp, true, false, nil, 0},
+  {"cannotDeleteDueToConnectedPods", "ipvlan", validConf, existingPods, true, false, nil, 0},
+  {"noMatchingPods", "ipvlan", validConf, notMatchingPods, false, true, nil, 1},
+}
+
 var (
   delNets = []danmtypes.DanmNet {
     danmtypes.DanmNet {
@@ -66,26 +91,49 @@ var (
   }
 )
 
-var deleteNetworkTcs = []struct {
-  tcName string
-  oldNetName string
-  tconf []danmtypes.TenantConfig
-  isErrorExpected bool
-  shouldVniBeFreed bool
-  expectedPatches []admit.Patch
-  timesUpdateShouldBeCalled int
-}{
-  {"emptyRequest", "", nil, true, false, nil, 0},
-  {"malformedOldObject", "malformed", nil, true, false, nil, 0},
-  {"objectWithInvalidType", "invalid-type", nil, false, false, nil, 0},
-  {"staticNetwork", "flannel", nil, false, false, nil, 0},
-  {"noTenantConfig", "ipvlan", nil, true, false, nil, 0},
-  {"missingInterFaceProfile", "ipvlan", delConf, false, false, nil, 0},
-  {"missingDeviceProfile", "sriov", delConf, false, false, nil, 0},
-  {"errorUpdating", "ipvlan", errConf, true, true, nil, 1},
-  {"freeDevice", "ipvlan", validConf, false, true, nil, 1},
-  {"freeDevicePool", "sriov", validConf, false, true, nil, 1},
-}
+var (
+  errorEp = []danmtypes.DanmEp {
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "error"},
+    },
+  }
+  existingPods = []danmtypes.DanmEp {
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random1"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "ClusterNetwork", NetworkName: "management"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random2"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "TenantNetwork", NetworkName: "ipvlan", Pod: "blurp"},
+    },
+  }
+  notMatchingPods = []danmtypes.DanmEp {
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random1"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "ClusterNetwork", NetworkName: "ipvlan"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random2"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "DanmNet", NetworkName: "ipvlan"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random3"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "TenantNetwork", NetworkName: "ipvla"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random4"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "DanmNet", NetworkName: "pvlan"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random5"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "DanmNet", NetworkName: "ipVlan"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random6", Namespace: "sdm"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "TenantNetwork", NetworkName: "ipvlan"},
+    },
+  }
+)
 
 func TestDeleteNetwork(t *testing.T) {
   validator := admit.Validator{}
@@ -99,7 +147,7 @@ func TestDeleteNetwork(t *testing.T) {
         t.Errorf("Could not create test HTTP Request object, because:%v", err)
         return
       }
-      testArtifacts := utils.TestArtifacts{TestNets: delNets}
+      testArtifacts := utils.TestArtifacts{TestNets: delNets, TestEps: tc.eps}
       if tc.shouldVniBeFreed {
         testArtifacts.ReservedVnis = createVniReservation(dnet, false)
       } else {

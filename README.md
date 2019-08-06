@@ -599,6 +599,10 @@ Every CREATE, and PUT DanmNet operation is subject to the following validation r
  11. spec.NetworkID cannot be longer than 11 characters for dynamic backends
  12. spec.AllowedTenants is not a valid parameter for this API type
  13. spec.Options.Device_pool must be, and spec.Options.Host_device mustn't be provided for K8s Devices based networks (such as SR-IOV)
+ 14. Any of spec.Options.Device, spec.Options.Vlan, or spec.Options.Vxlan attributes cannot be changed if there are any Pods currently connected to the network
+ 
+ Every DELETE DanmNet operation is subject to the following validation rules:
+ 15. the network cannot be deleted if there are any Pods currently connected to the network
 
 Not complying with any of these rules results in the denial of the provisioning operation.
 ##### TenantNetwork
@@ -612,9 +616,14 @@ In addition TenantNetwork provisioning has the following extra rules:
  5. spec.Options.Host_device cannot be modified
  6. spec.Options.Device_pool cannot be modified
 
+Every DELETE TenantNetwork operation is subject to the DanmNet validation rule no.15.
+
 Not complying with any of these rules results in the denial of the provisioning operation.
 ##### ClusterNetwork
-Every CREATE, and PUT ClusterNetwork operation is subject to the DanmNet validation rules no. 1-11, 13.
+Every CREATE, and PUT ClusterNetwork operation is subject to the DanmNet validation rules no. 1-11, 13-14.
+
+Every DELETE ClusterNetwork operation is subject to the DanmNet validation rule no.15.
+
 Not complying with any of these rules results in the denial of the provisioning operation.
 ##### TenantConfig
 Every CREATE, and PUT TenantConfig operation is subject to the following validation rules:
@@ -631,8 +640,9 @@ It shall be running on all hosts where DANM CNI is the configured CNI plugin.
 
 The netwatcher component is responsible for dynamically managing (i.e. creation and deletion) VxLAN and VLAN interfaces on all the hosts based on the dynamic network management APIs.
 
-Whenever a network is created or deleted -any network, belonging to any of the supported API types- within the Kubernetes cluster, netwatcher will be triggered.
+Whenever a network is created, modified, or deleted -any network, belonging to any of the supported API types- within the Kubernetes cluster, netwatcher will be triggered.
 If the network in question contained either the "vxlan", or the "vlan" attributes; then netwatcher immediately creates, or deletes the VLAN or VxLAN host interface with the matching VID.
+If the Spec.Options.host_device, .vlan, or .vxlan attributes are modified netwatcher first deletes the old, and then creates the new host interface.
 
 This feature is the most beneficial when used together with a dynamic network provisioning backend supporting connecting Pod interfaces to virtual host devices (IPVLAN, MACVLAN, SR-IOV for VLANs). Whenever a Pod is connected to such a network containing a virtual network identifier, the CNI component automatically connects the created interface to the VxLAN or VLAN host interface created by the netwatcher; instead of directly connecting it to the configured host device.
 ### Usage of DANM's Svcwatcher component

@@ -7,7 +7,6 @@ import (
   "encoding/json"
   "github.com/containernetworking/cni/pkg/skel"
   "github.com/containernetworking/cni/pkg/types/current"
-  "github.com/containernetworking/cni/pkg/version"
   "github.com/nokia/danm/pkg/datastructs"
 )
 
@@ -63,6 +62,10 @@ func freeIp(args *skel.CmdArgs) error {
   return nil
 }
 
+func checkIp(args *skel.CmdArgs) error {
+  return nil
+}
+
 func main() {
-  skel.PluginMain(reserveIp, freeIp, version.All)
+  skel.PluginMain(reserveIp, checkIp, freeIp, datastructs.SupportedCniVersions, "")
 }

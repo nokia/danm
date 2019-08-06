@@ -14,9 +14,9 @@ import:
 - package: k8s.io/client-go
   version: kubernetes-1.11.10
 - package: github.com/containernetworking/cni
-  version: v0.6.0
+  version: v0.7.1
 - package: github.com/containernetworking/plugins
-  version: v0.8.0
+  version: v0.8.1
 - package: github.com/intel/multus-cni
   version: e723aabca8792ddd181167660e252a127a81b073
 - package: github.com/intel/sriov-cni

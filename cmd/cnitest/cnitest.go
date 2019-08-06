@@ -12,7 +12,6 @@ import (
   "github.com/containernetworking/cni/pkg/types/020"
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/skel"
-  "github.com/containernetworking/cni/pkg/version"
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/metacni"
@@ -227,6 +226,10 @@ func testDelete(args *skel.CmdArgs) error {
   return err
 }
 
+func testCheck(args *skel.CmdArgs) error {
+  return nil
+}
+
 func main() {
   var err error
   f, err := os.OpenFile("/var/log/cnitest.log", os.O_RDWR | os.O_CREATE | os.O_APPEND , 0666)
@@ -234,5 +237,5 @@ func main() {
     log.SetOutput(f)
     defer f.Close()
   }
-  skel.PluginMain(testSetup, testDelete, version.All)
+  skel.PluginMain(testSetup, testCheck, testDelete, datastructs.SupportedCniVersions, "")
 }

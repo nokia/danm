@@ -1,6 +1,8 @@
 package danm
 
 import (
+  "errors"
+  "strings"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   types "k8s.io/apimachinery/pkg/types"
@@ -8,11 +10,11 @@ import (
 )
   
 type EpClientStub struct{
-  testEps []danmtypes.DanmEp
+  TestEps []danmtypes.DanmEp
 }
 
 func newEpClientStub(eps []danmtypes.DanmEp) EpClientStub {
-  return EpClientStub{testEps: eps}
+  return EpClientStub{TestEps: eps}
 }
   
 func (epClient EpClientStub) Create(obj *danmtypes.DanmEp) (*danmtypes.DanmEp, error) {
@@ -32,7 +34,7 @@ func (epClient EpClientStub) DeleteCollection(options *meta_v1.DeleteOptions, li
 }
 
 func (epClient EpClientStub) Get(epName string, options meta_v1.GetOptions) (*danmtypes.DanmEp, error) {
-  for _, testNet := range epClient.testEps {
+  for _, testNet := range epClient.TestEps {
     if testNet.Spec.NetworkName == epName {
       return &testNet, nil
     }
@@ -46,7 +48,16 @@ func (epClient EpClientStub) Watch(opts meta_v1.ListOptions) (watch.Interface, e
 }
 
 func (epClient EpClientStub) List(opts meta_v1.ListOptions) (*danmtypes.DanmEpList, error) {
-  return nil, nil
+  if epClient.TestEps == nil {
+    return nil, nil
+  }
+  for _, ep := range epClient.TestEps {
+    if strings.HasPrefix(ep.ObjectMeta.Name,"error") {
+      return nil, errors.New("error happened")
+    }
+  }
+  epList := danmtypes.DanmEpList{Items: epClient.TestEps}
+  return &epList, nil
 }
 
 func (epClient EpClientStub) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *danmtypes.DanmEp, err error) {

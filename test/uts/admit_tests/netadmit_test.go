@@ -27,90 +27,101 @@ var validateNetworkTcs = []struct {
   neType string
   opType v1beta1.Operation
   tconf []danmtypes.TenantConfig
+  eps []danmtypes.DanmEp
   isErrorExpected bool
   expectedPatches []admit.Patch
   timesUpdateShouldBeCalled int
 }{
-  {"EmptyRequest", "", "", "", "", nil, true, nil, 0},
-  {"MalformedOldObject", "malformed", "", "", "", nil, true, nil, 0},
-  {"MalformedNewObject", "", "malformed", "", "", nil, true, nil, 0},
-  {"ObjectWithInvalidType", "", "invalid-type", "", "", nil, true, nil, 0},
-  {"Ipv4RouteWithoutCidrDNet", "", "no-cidr", DnetType, "", nil, true, nil, 0},
-  {"Ipv4RouteWithoutCidrTNet", "", "no-cidr", TnetType, "", nil, true, nil, 0},
-  {"Ipv4RouteWithoutCidrCNet", "", "no-cidr", CnetType, "", nil, true, nil, 0},
-  {"Ipv4InvalidCidrDNet", "", "invalid-cidr", DnetType, "", nil, true, nil, 0},
-  {"Ipv4InvalidCidrTNet", "", "invalid-cidr", TnetType, "", nil, true, nil, 0},
-  {"Ipv4InvalidCidrCNet", "", "invalid-cidr", CnetType, "", nil, true, nil, 0},
-  {"Ipv4GwOutsideCidrDNet", "", "gw-outside-cidr", DnetType, "", nil, true, nil, 0},
-  {"Ipv4GwOutsideCidrTNet", "", "gw-outside-cidr", TnetType, "", nil, true, nil, 0},
-  {"Ipv4GwOutsideCidrCNet", "", "gw-outside-cidr", CnetType, "", nil, true, nil, 0},
-  {"Ipv6RouteWithoutCidrDNet", "", "no-net6", DnetType, "", nil, true, nil, 0},
-  {"Ipv6RouteWithoutCidrTNet", "", "no-net6", TnetType, "", nil, true, nil, 0},
-  {"Ipv6RouteWithoutCidrCNet", "", "no-net6", CnetType, "", nil, true, nil, 0},
-  {"Ipv6InvalidCidrDNet", "", "invalid-net6", DnetType, "", nil, true, nil, 0},
-  {"Ipv6InvalidCidrTNet", "", "invalid-net6", TnetType, "", nil, true, nil, 0},
-  {"Ipv6InvalidCidrCNet", "", "invalid-net6", CnetType, "", nil, true, nil, 0},
-  {"Ipv6GwOutsideCidrDNet", "", "gw-outside-net6", DnetType, "", nil, true, nil, 0},
-  {"Ipv6GwOutsideCidrTNet", "", "gw-outside-net6", TnetType, "", nil, true, nil, 0},
-  {"Ipv6GwOutsideCidrCNet", "", "gw-outside-net6", CnetType, "", nil, true, nil, 0},
-  {"InvalidVidsDNet", "", "invalid-vids", DnetType, "", nil, true, nil, 0},
-  {"InvalidVidsCNet", "", "invalid-vids", CnetType, "", nil, true, nil, 0},
-  {"MissingNidDNet", "", "missing-nid", DnetType, "", nil, true, nil, 0},
-  {"MissingNidCNet", "", "missing-nid", CnetType, "", nil, true, nil, 0},
-  {"TooLongNidWithDynamicNeTypeDNet", "", "long-nid", DnetType, "", nil, true, nil, 0},
-  {"TooLongNidWithDynamicNeTypeCNet", "", "long-nid", CnetType, "", nil, true, nil, 0},
-  {"WithAllowedTenantsDefinedDNet", "", "with-allowed-tenants", DnetType, "", nil, true, nil, 0},
-  {"WithAllowedTenantsDefinedTNet", "", "with-allowed-tenants", TnetType, "", nil, true, nil, 0},
-  {"SriovWithoutDevicePoolDNet", "", "sriov-without-dp", DnetType, "", nil, true, nil, 0},
-  {"SriovWithoutDevicePoolTNet", "", "sriov-without-dp", TnetType, "", nil, true, nil, 0},
-  {"SriovWithoutDevicePoolCNet", "", "sriov-without-dp", CnetType, "", nil, true, nil, 0},
-  {"SriovWithDeviceDNet", "", "sriov-with-device", DnetType, "", nil, true, nil, 0},
-  {"SriovWithDeviceTNet", "", "sriov-with-device", TnetType, "", nil, true, nil, 0},
-  {"SriovWithDeviceCNet", "", "sriov-with-device", CnetType, "", nil, true, nil, 0},
-  {"SriovWithDevicePlusDpDNet", "", "sriov-with-dp-and-device", DnetType, "", nil, true, nil, 0},
-  {"SriovWithDevicePlusDpTNet", "", "sriov-with-dp-and-device", TnetType, "", nil, true, nil, 0},
-  {"SriovWithDevicePlusDpCNet", "", "sriov-with-dp-and-device", CnetType, "", nil, true, nil, 0},
-  {"IpvlanWithDevicePlusDpDNet", "", "ipvlan-with-dp-and-device", DnetType, "", nil, true, nil, 0},
-  {"IpvlanWithDevicePlusDpTNet", "", "ipvlan-with-dp-and-device", TnetType, "", nil, true, nil, 0},
-  {"IpvlanWithDevicePlusDpCNet", "", "ipvlan-with-dp-and-device", CnetType, "", nil, true, nil, 0},
-  {"AllocDuringCreateDNet", "", "alloc-without-cidr", DnetType, v1beta1.Create, nil, true, nil, 0},
-  {"AllocDuringCreateTNet", "", "alloc-without-cidr", TnetType, v1beta1.Create, nil, true, nil, 0},
-  {"AllocDuringCreateCNet", "", "alloc-without-cidr", CnetType, v1beta1.Create, nil, true, nil, 0},
-  {"AllocationPoolWithoutCidrDNet", "", "alloc-without-cidr", DnetType, v1beta1.Update, nil, true, nil, 0},
-  {"AllocationPoolWithoutCidrTNet", "", "alloc-without-cidr", TnetType, v1beta1.Update, nil, true, nil, 0},
-  {"AllocationPoolWithoutCidrCNet", "", "alloc-without-cidr", CnetType, v1beta1.Update, nil, true, nil, 0},
-  {"AllocationPoolStartOutsideCidrDNet", "", "allocstart-outside-cidr", DnetType, "", nil, true, nil, 0},
-  {"AllocationPoolStartOutsideCidrTNet", "", "allocstart-outside-cidr", TnetType, "", nil, true, nil, 0},
-  {"AllocationPoolStartOutsideCidrCNet", "", "allocstart-outside-cidr", CnetType, "", nil, true, nil, 0},
-  {"AllocationPoolEndOutsideCidrDNet", "", "allocend-outside-cidr", DnetType, "", nil, true, nil, 0},
-  {"AllocationPoolEndOutsideCidrTNet", "", "allocend-outside-cidr", TnetType, "", nil, true, nil, 0},
-  {"AllocationPoolEndOutsideCidrCNet", "", "allocend-outside-cidr", CnetType, "", nil, true, nil, 0},
-  {"AllocationPoolWithoutAnyIpDNet", "", "no-free-ip", DnetType, "", nil, true, nil, 0},
-  {"AllocationPoolWithoutAnyIpTNet", "", "no-free-ip", TnetType, "", nil, true, nil, 0},
-  {"AllocationPoolWithoutAnyIpCNet", "", "no-free-ip", CnetType, "", nil, true, nil, 0},
-  {"CreateWithVlanTNet", "", "tnet-vlan", TnetType, v1beta1.Create, nil, true, nil, 0},
-  {"CreateWithVxlanTNet", "", "tnet-vxlan", TnetType, v1beta1.Create, nil, true, nil, 0},
-  {"UpdateWithVlanTNet", "", "tnet-vlan", TnetType, v1beta1.Update, nil, true, nil, 0},
-  {"UpdateWithVxlanTNet", "", "tnet-vxlan", TnetType, v1beta1.Update, nil, true, nil, 0},
-  {"UpdateWithDeviceTNet", "", "tnet-device", TnetType, v1beta1.Update, nil, true, nil, 0},
-  {"UpdateWithDevicePoolTNet", "", "tnet-dp", TnetType, v1beta1.Update, nil, true, nil, 0},
-  {"NoNeTypeCreateSuccess", "", "no-netype", DnetType, v1beta1.Create, nil, false, neTypeAndAlloc, 0},
-  {"NoNeTypeUpdateSuccess", "", "no-netype-update", CnetType, v1beta1.Update, nil, false, onlyNeType, 0},
-  {"L2NoPatchSuccess", "", "l2-with-allowedtenants", CnetType, v1beta1.Create, nil, false, nil, 0},
-  {"NoTConfForTNet", "", "l2", TnetType, v1beta1.Create, nil, true, nil, 0},
-  {"DeviceNotAllowedForTnet", "", "l2", TnetType, v1beta1.Create, oneDev, true, nil, 0},
-  {"DevicePoolNotAllowedForTnet", "", "tnet-dp", TnetType, v1beta1.Create, oneDev, true, nil, 0},
-  {"NoDevicesForRandomTnets", "", "no-netype", TnetType, v1beta1.Create, oneDevPool, true, nil, 0},
-  {"NoFreeVnisForTnet", "", "tnet-device", TnetType, v1beta1.Create, oneDev, true, nil, 0},
-  {"DeviceAndVlanTnetSuccess", "", "tnet-ens3", TnetType, v1beta1.Create, twoDevs, false, allocAndVlan, 1},
-  {"DeviceAndVxlanTnetSuccess", "", "tnet-ens4", TnetType, v1beta1.Create, twoDevs, false, allocAndVxlan, 1},
-  {"DevicePoolAndVlanTnetSuccess", "", "tnet-ens1f0", TnetType, v1beta1.Create, twoDevPools, false, allocAndVlan, 1},
-  {"DevicePoolAndVxlanTnetSuccess", "", "tnet-ens1f1", TnetType, v1beta1.Create, twoDevPools, false, allocAndVxlan, 1},
-  {"RandomDeviceAndVxlanTnetSuccess", "", "tnet-random", TnetType, v1beta1.Create, randomDev, false, allocAndVxlanAndDevice, 1},
-  {"FlannelWithNidOverwriteTnetSuccess", "", "flannel-with-name", TnetType, v1beta1.Create, nidMappings, false, onlyNid, 0},
-  {"FlannelWithNidSettingTnetSuccess", "", "flannel-without-name", TnetType, v1beta1.Create, nidMappings, false, onlyNid, 0},
-  {"IpvlanWithNidSettingTnetSuccess", "", "ipvlan-without-name", TnetType, v1beta1.Create, nidMappings, false, deviceAndNidAndVxlan, 1},
-  {"CalicoWithoutNidTnet", "", "calico-without-name", TnetType, v1beta1.Create, nidMappings, true, nil, 0},
+  {"EmptyRequest", "", "", "", "", nil, nil, true, nil, 0},
+  {"MalformedOldObject", "malformed", "", "", "", nil, nil, true, nil, 0},
+  {"MalformedNewObject", "", "malformed", "", "", nil, nil, true, nil, 0},
+  {"ObjectWithInvalidType", "", "invalid-type", "", "", nil, nil, true, nil, 0},
+  {"Ipv4RouteWithoutCidrDNet", "", "no-cidr", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4RouteWithoutCidrTNet", "", "no-cidr", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4RouteWithoutCidrCNet", "", "no-cidr", CnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4InvalidCidrDNet", "", "invalid-cidr", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4InvalidCidrTNet", "", "invalid-cidr", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4InvalidCidrCNet", "", "invalid-cidr", CnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4GwOutsideCidrDNet", "", "gw-outside-cidr", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4GwOutsideCidrTNet", "", "gw-outside-cidr", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4GwOutsideCidrCNet", "", "gw-outside-cidr", CnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6RouteWithoutCidrDNet", "", "no-net6", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6RouteWithoutCidrTNet", "", "no-net6", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6RouteWithoutCidrCNet", "", "no-net6", CnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6InvalidCidrDNet", "", "invalid-net6", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6InvalidCidrTNet", "", "invalid-net6", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6InvalidCidrCNet", "", "invalid-net6", CnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6GwOutsideCidrDNet", "", "gw-outside-net6", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6GwOutsideCidrTNet", "", "gw-outside-net6", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6GwOutsideCidrCNet", "", "gw-outside-net6", CnetType, "", nil, nil, true, nil, 0},
+  {"InvalidVidsDNet", "", "invalid-vids", DnetType, "", nil, nil, true, nil, 0},
+  {"InvalidVidsCNet", "", "invalid-vids", CnetType, "", nil, nil, true, nil, 0},
+  {"MissingNidDNet", "", "missing-nid", DnetType, "", nil, nil, true, nil, 0},
+  {"MissingNidCNet", "", "missing-nid", CnetType, "", nil, nil, true, nil, 0},
+  {"TooLongNidWithDynamicNeTypeDNet", "", "long-nid", DnetType, "", nil, nil, true, nil, 0},
+  {"TooLongNidWithDynamicNeTypeCNet", "", "long-nid", CnetType, "", nil, nil, true, nil, 0},
+  {"WithAllowedTenantsDefinedDNet", "", "with-allowed-tenants", DnetType, "", nil, nil, true, nil, 0},
+  {"WithAllowedTenantsDefinedTNet", "", "with-allowed-tenants", TnetType, "", nil, nil, true, nil, 0},
+  {"SriovWithoutDevicePoolDNet", "", "sriov-without-dp", DnetType, "", nil, nil, true, nil, 0},
+  {"SriovWithoutDevicePoolTNet", "", "sriov-without-dp", TnetType, "", nil, nil, true, nil, 0},
+  {"SriovWithoutDevicePoolCNet", "", "sriov-without-dp", CnetType, "", nil, nil, true, nil, 0},
+  {"SriovWithDeviceDNet", "", "sriov-with-device", DnetType, "", nil, nil, true, nil, 0},
+  {"SriovWithDeviceTNet", "", "sriov-with-device", TnetType, "", nil, nil, true, nil, 0},
+  {"SriovWithDeviceCNet", "", "sriov-with-device", CnetType, "", nil, nil, true, nil, 0},
+  {"SriovWithDevicePlusDpDNet", "", "sriov-with-dp-and-device", DnetType, "", nil, nil, true, nil, 0},
+  {"SriovWithDevicePlusDpTNet", "", "sriov-with-dp-and-device", TnetType, "", nil, nil, true, nil, 0},
+  {"SriovWithDevicePlusDpCNet", "", "sriov-with-dp-and-device", CnetType, "", nil, nil, true, nil, 0},
+  {"IpvlanWithDevicePlusDpDNet", "", "ipvlan-with-dp-and-device", DnetType, "", nil, nil, true, nil, 0},
+  {"IpvlanWithDevicePlusDpTNet", "", "ipvlan-with-dp-and-device", TnetType, "", nil, nil, true, nil, 0},
+  {"IpvlanWithDevicePlusDpCNet", "", "ipvlan-with-dp-and-device", CnetType, "", nil, nil, true, nil, 0},
+  {"AllocDuringCreateDNet", "", "alloc-without-cidr", DnetType, v1beta1.Create, nil, nil, true, nil, 0},
+  {"AllocDuringCreateTNet", "", "alloc-without-cidr", TnetType, v1beta1.Create, nil, nil, true, nil, 0},
+  {"AllocDuringCreateCNet", "", "alloc-without-cidr", CnetType, v1beta1.Create, nil, nil, true, nil, 0},
+  {"AllocationPoolWithoutCidrDNet", "", "alloc-without-cidr", DnetType, v1beta1.Update, nil, nil, true, nil, 0},
+  {"AllocationPoolWithoutCidrTNet", "", "alloc-without-cidr", TnetType, v1beta1.Update, nil, nil, true, nil, 0},
+  {"AllocationPoolWithoutCidrCNet", "", "alloc-without-cidr", CnetType, v1beta1.Update, nil, nil, true, nil, 0},
+  {"AllocationPoolStartOutsideCidrDNet", "", "allocstart-outside-cidr", DnetType, "", nil, nil, true, nil, 0},
+  {"AllocationPoolStartOutsideCidrTNet", "", "allocstart-outside-cidr", TnetType, "", nil, nil, true, nil, 0},
+  {"AllocationPoolStartOutsideCidrCNet", "", "allocstart-outside-cidr", CnetType, "", nil, nil, true, nil, 0},
+  {"AllocationPoolEndOutsideCidrDNet", "", "allocend-outside-cidr", DnetType, "", nil, nil, true, nil, 0},
+  {"AllocationPoolEndOutsideCidrTNet", "", "allocend-outside-cidr", TnetType, "", nil, nil, true, nil, 0},
+  {"AllocationPoolEndOutsideCidrCNet", "", "allocend-outside-cidr", CnetType, "", nil, nil, true, nil, 0},
+  {"AllocationPoolWithoutAnyIpDNet", "", "no-free-ip", DnetType, "", nil, nil, true, nil, 0},
+  {"AllocationPoolWithoutAnyIpTNet", "", "no-free-ip", TnetType, "", nil, nil, true, nil, 0},
+  {"AllocationPoolWithoutAnyIpCNet", "", "no-free-ip", CnetType, "", nil, nil, true, nil, 0},
+  {"CreateWithVlanTNet", "", "tnet-vlan", TnetType, v1beta1.Create, nil, nil, true, nil, 0},
+  {"CreateWithVxlanTNet", "", "tnet-vxlan", TnetType, v1beta1.Create, nil, nil, true, nil, 0},
+  {"UpdateWithVlanTNet", "", "tnet-vlan", TnetType, v1beta1.Update, nil, nil, true, nil, 0},
+  {"UpdateWithVxlanTNet", "", "tnet-vxlan", TnetType, v1beta1.Update, nil, nil, true, nil, 0},
+  {"UpdateWithDeviceTNet", "", "tnet-device", TnetType, v1beta1.Update, nil, nil, true, nil, 0},
+  {"UpdateWithDevicePoolTNet", "", "tnet-dp", TnetType, v1beta1.Update, nil, nil, true, nil, 0},
+  {"NoNeTypeCreateSuccess", "", "no-netype", DnetType, v1beta1.Create, nil, nil, false, neTypeAndAlloc, 0},
+  {"NoNeTypeUpdateSuccess", "", "no-netype-update", CnetType, v1beta1.Update, nil, nil, false, onlyNeType, 0},
+  {"L2NoPatchSuccess", "", "l2-with-allowedtenants", CnetType, v1beta1.Create, nil, nil, false, nil, 0},
+  {"NoTConfForTNet", "", "l2", TnetType, v1beta1.Create, nil, nil, true, nil, 0},
+  {"DeviceNotAllowedForTnet", "", "l2", TnetType, v1beta1.Create, oneDev, nil, true, nil, 0},
+  {"DevicePoolNotAllowedForTnet", "", "tnet-dp", TnetType, v1beta1.Create, oneDev, nil, true, nil, 0},
+  {"NoDevicesForRandomTnets", "", "no-netype", TnetType, v1beta1.Create, oneDevPool, nil, true, nil, 0},
+  {"NoFreeVnisForTnet", "", "tnet-device", TnetType, v1beta1.Create, oneDev, nil, true, nil, 0},
+  {"DeviceAndVlanTnetSuccess", "", "tnet-ens3", TnetType, v1beta1.Create, twoDevs, nil, false, allocAndVlan, 1},
+  {"DeviceAndVxlanTnetSuccess", "", "tnet-ens4", TnetType, v1beta1.Create, twoDevs, nil, false, allocAndVxlan, 1},
+  {"DevicePoolAndVlanTnetSuccess", "", "tnet-ens1f0", TnetType, v1beta1.Create, twoDevPools, nil, false, allocAndVlan, 1},
+  {"DevicePoolAndVxlanTnetSuccess", "", "tnet-ens1f1", TnetType, v1beta1.Create, twoDevPools, nil, false, allocAndVxlan, 1},
+  {"RandomDeviceAndVxlanTnetSuccess", "", "tnet-random", TnetType, v1beta1.Create, randomDev, nil, false, allocAndVxlanAndDevice, 1},
+  {"FlannelWithNidOverwriteTnetSuccess", "", "flannel-with-name", TnetType, v1beta1.Create, nidMappings, nil, false, onlyNid, 0},
+  {"FlannelWithNidSettingTnetSuccess", "", "flannel-without-name", TnetType, v1beta1.Create, nidMappings, nil, false, onlyNid, 0},
+  {"IpvlanWithNidSettingTnetSuccess", "", "ipvlan-without-name", TnetType, v1beta1.Create, nidMappings, nil, false, deviceAndNidAndVxlan, 1},
+  {"CalicoWithoutNidTnet", "", "calico-without-name", TnetType, v1beta1.Create, nidMappings, nil, true, nil, 0},
+  {"CannotModifyDueToErrorDNet", "vniOld", "vniNew", DnetType, v1beta1.Update, nil, errEp, true, nil, 0},
+  {"CannotModifyDueToErrorCNet", "vniOld", "vniNew", CnetType, v1beta1.Update, nil, errEp, true, nil, 0},
+  {"OkayToModifyNoConnectionsDNet", "vniOld", "vniNew", DnetType, v1beta1.Update, nil, noMatchDnet, false, nil, 0},
+  {"NotOkayToModifyVlanDNet", "vniOld", "vniNew", DnetType, v1beta1.Update, nil, matchDnet, true, nil, 0},
+  {"NotOkayToModifyVlanCNet", "vniOld", "vniNew", CnetType, v1beta1.Update, nil, matchCnet, true, nil, 0},
+  {"NotOkayToModifyVxlanDNet", "vxlanOld", "vxlanNew", DnetType, v1beta1.Update, nil, matchDnet2, true, nil, 0},
+  {"NotOkayToModifyVxlanCNet", "vxlanOld", "vxlanNew", CnetType, v1beta1.Update, nil, matchCnet2, true, nil, 0},
+  {"NotOkayToModifyDeviceDNet", "vniOld", "deviceNew", DnetType, v1beta1.Update, nil, matchDnet, true, nil, 0},
+  {"NotOkayToModifyDeviceCNet", "vniOld", "deviceNew", CnetType, v1beta1.Update, nil, matchCnet, true, nil, 0},
+  {"OkayToModifyRandomChangeCNet", "vniOld", "nidNew", CnetType, v1beta1.Update, nil, matchCnet, false, nil, 0},
 }
 
 var (
@@ -262,6 +273,30 @@ var (
       ObjectMeta: meta_v1.ObjectMeta {Name: "calico-without-name"},
       Spec: danmtypes.DanmNetSpec{NetworkType: "calico"},
     },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "vniOld", Namespace: "vni-test"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens4", Vlan: 50}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "vniNew", Namespace: "vni-test"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens4", Vlan: 51}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "vxlanOld", Namespace: "vni-test"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens4", Vxlan: 50}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "vxlanNew", Namespace: "vni-test"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens4", Vxlan: 51}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "deviceNew", Namespace: "vni-test"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens5", Vlan: 50}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "nidNew", Namespace: "vni-test"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "e2", Options: danmtypes.DanmNetOption{Device: "ens4", Vlan: 50}},
+    },
   }
 )
 
@@ -354,6 +389,60 @@ var (
   }
 )
 
+var (
+  errEp = []danmtypes.DanmEp {
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "error"},
+    },
+  }
+  noMatchDnet = []danmtypes.DanmEp {
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random1", Namespace: "vni-test"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "TenantNetwork", NetworkName: "vniOld"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random2", Namespace: "vni-test"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "DanmNet", NetworkName: "vniOl"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random3", Namespace: "vni-test"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "DanmNet", NetworkName: "niOld"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random4", Namespace: "vni-test"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "DanmNet", NetworkName: "vniold"},
+    },
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random5", Namespace: "sdm"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "DanmNet", NetworkName: "vniOld"},
+    },
+  }
+  matchDnet = []danmtypes.DanmEp {
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random1", Namespace: "vni-test"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "DanmNet", NetworkName: "vniOld", Pod: "blurp"},
+    },
+  }
+  matchCnet = []danmtypes.DanmEp {
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random1"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "ClusterNetwork", NetworkName: "vniOld", Pod: "blurp"},
+    },
+  }
+  matchDnet2 = []danmtypes.DanmEp {
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random1", Namespace: "vni-test"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "DanmNet", NetworkName: "vxlanOld", Pod: "blurp"},
+    },
+  }
+  matchCnet2 = []danmtypes.DanmEp {
+    danmtypes.DanmEp{
+      ObjectMeta: meta_v1.ObjectMeta {Name: "random1"},
+      Spec: danmtypes.DanmEpSpec {ApiType: "ClusterNetwork", NetworkName: "vxlanOld", Pod: "blurp"},
+    },
+  }
+)
+
 func TestValidateNetwork(t *testing.T) {
   validator := admit.Validator{}
   for _, tc := range validateNetworkTcs {
@@ -366,7 +455,7 @@ func TestValidateNetwork(t *testing.T) {
         t.Errorf("Could not create test HTTP Request object, because:%v", err)
         return
       }
-      testArtifacts := utils.TestArtifacts{TestNets: valNets}
+      testArtifacts := utils.TestArtifacts{TestNets: valNets, TestEps: tc.eps}
       if tc.tconf != nil {
         testArtifacts.TestTconfs = tc.tconf
       }

@@ -199,7 +199,7 @@ func validateVniChange(oldManifest, newManifest *danmtypes.DanmNet, opType admis
   if opType != admissionv1.Update {
     return nil
   }
-  isAnyPodConnectedToNetwork, connectedEp, err := danmep.ArePodsConnectedToNetwork(client, newManifest)
+  isAnyPodConnectedToNetwork, connectedEp, err := danmep.ArePodsConnectedToNetwork(client, oldManifest)
   if err != nil {
     return errors.New("no way to tell if Pods are still using the network due to:" + err.Error())
   }

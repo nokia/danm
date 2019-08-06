@@ -1,6 +1,7 @@
 package cnidel
 
 import (
+  "context"
   "errors"
   "log"
   "net"
@@ -135,7 +136,7 @@ func execCniPlugin(cniType, cniOpType string, netInfo *danmtypes.DanmNet, rawCon
     return nil, errors.New("exec CNI params couldn't be gathered:" + err.Error())
   }
   exec := invoke.RawExec{Stderr: os.Stderr}
-  rawResult, err := exec.ExecPlugin(cniPath, rawConfig, cniArgs)
+  rawResult, err := exec.ExecPlugin(context.Background(), cniPath, rawConfig, cniArgs)
   if err != nil {
     return nil, errors.New("OS exec call failed:" + err.Error())
   }

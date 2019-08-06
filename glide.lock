@@ -1,12 +1,12 @@
-hash: db2cbe18e286a1fe2f90bb53d9504898c3d34ebde78ca40fbe1415c5e2221a4a
-updated: 2019-06-07T18:03:02.914179306+02:00
+hash: 1d7eea7c8fe94fb460fead10727227389ddead184b862425f9a6a913ec4b6e94
+updated: 2019-08-06T22:31:42.529643558+02:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
   subpackages:
   - cidr
 - name: github.com/containernetworking/cni
-  version: a7885cb6f8ab03fba07852ded351e4f5e7a112bf
+  version: 4cfb7b568922a3c79a23e438dc52fe537fc9687e
   subpackages:
   - libcni
   - pkg/invoke
@@ -16,7 +16,7 @@ imports:
   - pkg/types/current
   - pkg/version
 - name: github.com/containernetworking/plugins
-  version: 0950a3607bf5e8a57c6a655c7e573e6aab0dc650
+  version: fe60fcddb897079746ec1523fd1837ab05b1e689
   subpackages:
   - pkg/ns
   - pkg/utils/sysctl

@@ -4,7 +4,7 @@ import (
   "log"
   "os"
   "github.com/containernetworking/cni/pkg/skel"
-  "github.com/containernetworking/cni/pkg/version"
+  "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/metacni"
 )
 
@@ -15,5 +15,5 @@ func main() {
     log.SetOutput(f)
     defer f.Close()
   }
-  skel.PluginMain(metacni.CreateInterfaces, metacni.DeleteInterfaces, version.All)
+  skel.PluginMain(metacni.CreateInterfaces, metacni.GetInterfaces, metacni.DeleteInterfaces, datastructs.SupportedCniVersions, "")
 }

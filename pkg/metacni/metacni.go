@@ -572,3 +572,7 @@ func deleteDanmNet(danmClient danmclientset.Interface, ep danmtypes.DanmEp, netI
   ipam.GarbageCollectIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
   return danmep.DeleteIpvlanInterface(ep)
 }
+
+func GetInterfaces(args *skel.CmdArgs) error {
+  return nil
+}

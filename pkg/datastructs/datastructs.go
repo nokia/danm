@@ -2,10 +2,15 @@ package datastructs
 
 import (
   "github.com/containernetworking/cni/pkg/types"
+  "github.com/containernetworking/cni/pkg/version"
 )
 
 const (
   OptimisticLockErrorMsg = "the object has been modified; please apply your changes to the latest version and try again"
+)
+
+var (
+  SupportedCniVersions = version.PluginSupports("0.1.0", "0.2.0", "0.3.0", "0.3.1")
 )
 
 type NetConf struct {

@@ -87,6 +87,7 @@ func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions datastructs.Ipa
   var macvlanConfig MacvlanNet
   // initialize common fields of "github.com/containernetworking/cni/pkg/types".NetConf
   macvlanConfig.CNIVersion = cniVersion
+  macvlanConfig.Name       = netInfo.Spec.NetworkID
   // initialize MacvlanNet specific fields:
   macvlanConfig.Master = danmep.DetermineHostDeviceName(netInfo)
   macvlanConfig.Mode   = "bridge" //TODO: make these params configurable if required

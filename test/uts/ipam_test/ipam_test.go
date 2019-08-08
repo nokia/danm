@@ -24,6 +24,7 @@ var testNets = []danmtypes.DanmNet {
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "fullconflicterrorFree"},Spec: danmtypes.DanmNetSpec{NetworkID: "fullconflicterrorFree", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "fullerror"},Spec: danmtypes.DanmNetSpec{NetworkID: "error", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "error"},Spec: danmtypes.DanmNetSpec{NetworkID: "error", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "staticFirst"},Spec: danmtypes.DanmNetSpec{NetworkID: "cidr", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
 }
 
 var reserveTcs = []struct {
@@ -52,7 +53,7 @@ var reserveTcs = []struct {
   {"staticNetmaskMismatchIPv4", 2, "192.168.1.1/32", "", "", "", true, false, 0},
   {"staticAlreadyUsedIPv4", 2, "192.168.1.2/30", "", "", "", true, false, 0},
   {"staticSuccessLastIPv4", 1, "192.168.1.126/26", "", "192.168.1.126/26", "", false, true, 1},
-  {"staticSuccessFirstIPv4", 1, "192.168.1.65/26", "", "192.168.1.65/26", "", false, true, 1},
+  {"staticSuccessFirstIPv4", 11, "192.168.1.65/26", "", "192.168.1.65/26", "", false, true, 1},
   {"staticFailAfterLastIPv4", 1, "192.168.1.127/26", "", "", "", true, false, 0},
   {"staticFailBeforeFirstIPv4", 1, "192.168.1.64/26", "", "", "", true, false, 0},
   {"dynamicIPv6Success", 3, "", "dynamic", "", "2a00:8a00:a000:1193", false, true, 0},

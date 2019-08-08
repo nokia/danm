@@ -28,7 +28,7 @@ func reserveIp(args *skel.CmdArgs) error {
   cniRes,err := createCniResult(ipamConf)
   if err != nil {
     return err
-  }  
+  }
   return cniRes.Print()
 }
 

@@ -16,6 +16,7 @@ import (
   "github.com/nokia/danm/pkg/danmep"
   "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/ipam"
+  "github.com/nokia/danm/pkg/netcontrol"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
 )
@@ -50,14 +51,13 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
     ipamOptions datastructs.IpamConfig
   )
   if isIpamNeeded(netInfo, ep) {
-   ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6, _, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6, _, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
       return nil, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }
-   //TODO: as netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
-   //Therefore, anyone wishing to further update the same network object later on will use an outdated representation as the input.
-   //IPAM should be refactored to always pass back the up-to-date object.
-   //I guess it is okay now because we only want to free IPs, and RV differences are resolved by the generated client code.
+    //As netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
+    //Without re-reading the network body we risk leaking IPs if error happens later on within the same thread!
+    netInfo,_ = netcontrol.GetNetworkFromEp(danmClient, *ep)
     ipamOptions = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
   }
   rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamOptions, ep)
@@ -185,7 +185,15 @@ func setEpIfaceAddress(cniResult *current.Result, epIface *danmtypes.DanmEpIface
 // DelegateInterfaceDelete delegates Ks8 Pod network interface delete task to the input 3rd party CNI plugin
 // Returns an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
 func DelegateInterfaceDelete(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
-  rawConfig, err := getCniPluginConfig(netConf, netInfo, datastructs.IpamConfig{Type: ipamType}, ep)
+  var ip4, ip6 string
+  if wasIpAllocatedByDanm(ep.Spec.Iface.Address, netInfo.Spec.Options.Cidr) {
+    ip4 = ep.Spec.Iface.Address
+  }
+  if wasIpAllocatedByDanm(ep.Spec.Iface.AddressIPv6, netInfo.Spec.Options.Net6) {
+    ip6 = ep.Spec.Iface.AddressIPv6
+  }
+  ipamForDelete := getCniIpamConfig(netInfo, ip4, ip6)
+  rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamForDelete, ep)
   if err != nil {
     FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return err
@@ -212,14 +220,8 @@ func freeDelegatedIp(danmClient danmclientset.Interface, netInfo *danmtypes.Danm
   if netInfo.Spec.NetworkType == "flannel" && ip != ""{
     flannelIpExhaustionWorkaround(ip)
   }
-  _, v4Subnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-  _, v6Subnet, _ := net.ParseCIDR(netInfo.Spec.Options.Net6)
-  parsedIp := net.ParseIP(ip)
-  if parsedIp == nil {
-    parsedIp,_,_ = net.ParseCIDR(ip)
-  }
   //We only need to Free an IP if it was allocated by DANM IPAM, and it was allocated by DANM only if it falls into any of the defined subnets
-  if parsedIp != nil && ((v4Subnet != nil && v4Subnet.Contains(parsedIp)) || (v6Subnet != nil && v6Subnet.Contains(parsedIp))) {
+  if wasIpAllocatedByDanm(ip, netInfo.Spec.Options.Cidr) || wasIpAllocatedByDanm(ip, netInfo.Spec.Options.Net6) {
     err := ipam.Free(danmClient, *netInfo, ip)
     if err != nil {
       return errors.New("cannot give back ip address: " + ip + " for network:" + netInfo.ObjectMeta.Name +
@@ -227,6 +229,18 @@ func freeDelegatedIp(danmClient danmclientset.Interface, netInfo *danmtypes.Danm
     }
   }
   return nil
+}
+
+func wasIpAllocatedByDanm(ip, cidr string) bool {
+  _, subnet, _ := net.ParseCIDR(cidr)
+  parsedIp := net.ParseIP(ip)
+  if parsedIp == nil {
+    parsedIp,_,_ = net.ParseCIDR(ip)
+  }
+  if parsedIp != nil && (subnet != nil && subnet.Contains(parsedIp)) {
+    return true
+  }
+  return false
 }
 
 // Host-local IPAM management plugin uses disk-local Store by default.

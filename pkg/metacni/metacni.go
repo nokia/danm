@@ -393,6 +393,9 @@ func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Inte
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error()), nil)
     return
   }
+  //As netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
+  //Without re-reading the network body we risk leaking IPs if an error happens later on within the same thread!
+  netInfo,_ = netcontrol.GetNetworkFromInterface(danmClient, iface, netInfo.ObjectMeta.Namespace)
   epSpec := danmtypes.DanmEpIface {
     Name: cnidel.CalculateIfaceName(DanmConfig.NamingScheme, netInfo.Spec.Options.Prefix, iface.DefaultIfaceName, iface.SequenceId),
     Address:     ip4,

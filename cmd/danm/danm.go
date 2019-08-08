@@ -10,7 +10,7 @@ import (
 
 func main() {
   var err error
-  f, err := os.OpenFile("/var/log/plugin.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0640)
+  f, err := os.OpenFile("/var/log/danm.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0640)
   if err == nil {
     log.SetOutput(f)
     defer f.Close()

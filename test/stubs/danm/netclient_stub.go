@@ -57,17 +57,20 @@ func (netClient *NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmN
       }
     }
   }
-  if strings.Contains(obj.Spec.NetworkID, "conflict") && obj.ObjectMeta.ResourceVersion != magicVersion {
-    for index, net := range netClient.TestNets {
-      if net.Spec.NetworkID == obj.Spec.NetworkID {
-        netClient.TestNets[index].ObjectMeta.ResourceVersion = magicVersion
-      }
+  var netIndex int
+  for index, net := range netClient.TestNets {
+    if net.ObjectMeta.Name == obj.ObjectMeta.Name {
+      netIndex = index
     }
+  }
+  if strings.Contains(obj.Spec.NetworkID, "conflict") && obj.ObjectMeta.ResourceVersion != magicVersion {
+    netClient.TestNets[netIndex].ObjectMeta.ResourceVersion = magicVersion
     return nil, errors.New(datastructs.OptimisticLockErrorMsg)
   }
   if strings.Contains(obj.Spec.NetworkID, "error") {
     return nil, errors.New("fatal error, don't retry")
   }
+  netClient.TestNets[netIndex] = *obj
   return obj, nil
 }
 
@@ -84,7 +87,7 @@ func (netClient *NetClientStub) Get(netName string, options meta_v1.GetOptions) 
     return nil, errors.New("fatal error, don't retry")
   }
   for _, testNet := range netClient.TestNets {
-    if testNet.Spec.NetworkID == netName {
+    if testNet.ObjectMeta.Name == netName {
       return &testNet, nil
     }
   }

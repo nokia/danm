@@ -57,7 +57,8 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
     }
     //As netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
     //Without re-reading the network body we risk leaking IPs if error happens later on within the same thread!
-    netInfo,_ = netcontrol.GetNetworkFromEp(danmClient, *ep)
+    netInfo,err = netcontrol.GetNetworkFromEp(danmClient, *ep)
+    if err != nil {log.Println("lofasz:" + err.Error())}
     ipamOptions = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
   }
   rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamOptions, ep)

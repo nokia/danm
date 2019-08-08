@@ -76,15 +76,15 @@ var testNets = []danmtypes.DanmNet {
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-v4"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "ens1f0"}},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan-v4", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Device: "ens1f0"}},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-v6"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan-v6", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "macvlan-ds"},
-    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
+    Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "macvlan-ds", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Net6: "2a00:8a00:a000:1193::/64", Device: "ens1f1"}},
   },
   danmtypes.DanmNet {
     ObjectMeta: meta_v1.ObjectMeta {Name: "sriov-test"},
@@ -129,31 +129,32 @@ var testNets = []danmtypes.DanmNet {
 }
 
 var expectedCniConfigs = []CniConf {
-  {"flannel", []byte(`{"cniexp":{"cnitype":"flannel"},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
-  {"flannel-ip", []byte(`{"cniexp":{"cnitype":"flannel","ip":"10.244.10.30/24","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
-  {"macvlan-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f0"}},"cniconf":{"cniVersion":"0.3.1","name":"macvlan","master":"ens1f0","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
-  {"macvlan-ip6", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"}},"cniconf":{"cniVersion":"0.3.1","name":"macvlan","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam"}}}`)},
-  {"macvlan-dual-stack", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"}},"cniconf":{"cniVersion":"0.3.1","name":"macvlan","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
-  {"macvlan-ip4-type020", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f0"},"return":"020"},"cniconf":{"cniVersion":"0.3.1","name":"macvlan","master":"ens1f0","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
-  {"macvlan-ip6-type020", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"},"return":"020"},"cniconf":{"cniVersion":"0.3.1","name":"macvlan","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam"}}}`)},
+  {"flannel", []byte(`{"cniexp":{"cnitype":"flannel"},"cniconf":{"cniVersion":"0.3.1","name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
+  {"flannel-ip", []byte(`{"cniexp":{"cnitype":"flannel","ip":"10.244.10.30/24","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
+  {"macvlan-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f0"}},"cniconf":{"cniVersion":"0.3.1","name":"macvlan-v4","master":"ens1f0","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
+  {"macvlan-ip6", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"}},"cniconf":{"cniVersion":"0.3.1","name":"macvlan-v6","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam"}}}`)},
+  {"macvlan-dual-stack", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"}},"cniconf":{"cniVersion":"0.3.1","name":"macvlan-ds","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
+  {"macvlan-ip4-type020", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.66/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f0"},"return":"020"},"cniconf":{"cniVersion":"0.3.1","name":"macvlan-v4","master":"ens1f0","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam","ips":[{"ipcidr":"192.168.1.66/26","version":4}]}}}`)},
+  {"macvlan-ip6-type020", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"ens1f1"},"return":"020"},"cniconf":{"cniVersion":"0.3.1","name":"macvlan-v6","master":"ens1f1","mode":"bridge","mtu":1500,"ipam":{"type":"fakeipam"}}}`)},
   {"sriov-l3", []byte(`{"cniexp":{"cnitype":"sriov","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name":"sriov-test","type":"sriov","master":"enp175s0f1","l2enable":false,"vlan":500,"deviceID":"0000:af:06.0","ipam":{"type":"fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
   {"sriov-l2", []byte(`{"cniexp":{"cnitype":"sriov","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name":"sriov-test","type":"sriov","master":"enp175s0f1","l2enable":true,"vlan":500,"deviceID":"0000:af:06.0"}}`)},
-  {"deleteflannel", []byte(`{"cniexp":{"cnitype":"flannel","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"eth0"}},"cniconf":{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
-  {"deletemacvlan", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"ens1f0"}},"cniconf":{"cniVersion":"0.3.1","name":"full","master":"ens1f0","mode":"bridge","mtu":1500}}`)},
-  {"bridge-l3-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
-  {"bridge-l2-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name": "mynet","type": "bridge","bridge": "mynet0","ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
-  {"bridge-l3-orig", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "host-local","subnet": "10.10.0.0/16"}}}`)},
-  {"bridge-l2-orig", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name": "mynet","type": "bridge","bridge": "mynet0"}}`)},
-  {"bridge-l3-ip6", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "fakeipam"}}}`)},
-  {"bridge-l3-ds", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
-  {"deletebridge", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"eth0"}},"cniconf":{"name": "mynet","type": "bridge","bridge": "mynet0"}}`)},
+  {"deleteflannel", []byte(`{"cniexp":{"cnitype":"flannel","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}}`)},
+  {"deletemacvlan", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"ens1f0"}},"cniconf":{"cniVersion":"0.3.1","name":"full","master":"ens1f0","mode":"bridge","mtu":1500,"ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
+  {"bridge-l3-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
+  {"bridge-l2-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
+  {"bridge-l3-orig", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "host-local","subnet": "10.10.0.0/16"}}}`)},
+  {"bridge-l2-orig", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0"}}`)},
+  {"bridge-l3-ip6", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "fakeipam"}}}`)},
+  {"bridge-l3-ds", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
+  {"deletebridge", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
+  {"deletebridge-wo-ipam", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0"}}`)},
 }
 
 var testCniConfFiles = []CniConf {
-  {"flannel_conf.conf", []byte(`{"name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}`)},
-  {"bridge_l3.conf", []byte(`{"name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "host-local","subnet": "10.10.0.0/16"}}`)},
-  {"bridge_l2.conf", []byte(`{"name": "mynet","type": "bridge","bridge": "mynet0"}`)},
-  {"bridge_invalid.conf", []byte(`{"name": "mynet","type": "bridge","bridge": "myne`)},
+  {"flannel_conf.conf", []byte(`{"cniVersion":"0.3.1","name":"cbr0","type":"flannel","delegate":{"hairpinMode":true,"isDefaultGateway":true}}`)},
+  {"bridge_l3.conf", []byte(`{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "host-local","subnet": "10.10.0.0/16"}}`)},
+  {"bridge_l2.conf", []byte(`{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0"}`)},
+  {"bridge_invalid.conf", []byte(`{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "myne`)},
 }
 
 var testEps = []danmtypes.DanmEp {
@@ -239,29 +240,30 @@ var delSetupTcs = []struct {
   expectedIp string
   expectedIp6 string
   isErrorExpected bool
+  timesUpdateShouldBeCalled int
 }{
-  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", "", "", "", true},
-  {"emptyIpamconfigError", "ipamNeeded", "noIps", "", "", "", true},
-  {"staticCniSuccess", "flannel-test", "noIps", "flannel", "", "", false},
-  {"staticCniNoConfig", "no-conf", "noIps", "", "", "", true},
-  {"staticCniNoBinary", "no-binary", "noIps", "flannel", "", "", true},
-  {"staticCniWithIp", "flannel-test", "noIps", "flannel-ip", "10.244.10.30", "", false},
-  {"dynamicMacvlanIpv4", "macvlan-v4", "dynamicIpv4", "macvlan-ip4", "192.168.1.65", "", false},
-  {"dynamicMacvlanIpv6", "macvlan-v6", "dynamicIpv6", "macvlan-ip6", "", "2a00:8a00:a000:1193", false},
-  {"dynamicMacvlanDualStack", "macvlan-ds", "dynamicDual", "macvlan-dual-stack", "192.168.1.65", "2a00:8a00:a000:1193", false},
-  {"dynamicMacvlanIpv4Type020Result", "macvlan-v4", "dynamicIpv4", "macvlan-ip4-type020", "192.168.1.65", "", false},
-  {"dynamicMacvlanIpv6Type020Result", "macvlan-v6", "dynamicIpv6", "macvlan-ip6-type020", "", "2a00:8a00:a000:1193", false},
-  {"dynamicSriovNoDeviceId", "sriov-test", "dynamicIpv4", "", "", "", true},
-  {"dynamicSriovL3", "sriov-test", "dynamicIpv4WithDeviceId", "sriov-l3", "", "", false},
-  {"dynamicSriovL2", "sriov-test", "noneWithDeviceId", "sriov-l2", "", "", false},
-  {"bridgeWithV4Overwrite", "bridge-ipam-ipv4", "simpleIpv4", "bridge-l3-ip4", "", "", false},
-  {"bridgeWithV4Add", "bridge-ipam-l2", "simpleIpv4", "bridge-l2-ip4", "", "", false},
-  {"bridgeWithInvalidAdd", "bridge-invalid", "simpleIpv4", "", "", "", true},
-  {"bridgeL3OriginalNoCidr", "bridge-noipam", "simpleIpv4", "bridge-l3-orig", "", "", false},
-  {"bridgeL3OriginalNoIp", "bridge-ipam-ipv4", "noIps", "bridge-l3-orig", "", "", false},
-  {"bridgeL2OriginalNoCidr", "bridge-noipam-l2", "simpleIpv4", "bridge-l2-orig", "", "", false},
-  {"bridgeWithV6Overwrite", "bridge-ipam-ipv6", "simpleIpv6", "bridge-l3-ip6", "", "", false},
-  {"bridgeWithDsOverwrite", "bridge-ipam-ds", "simpleDs", "bridge-l3-ds", "", "", false},
+  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", "", "", "", true, 0},
+  {"emptyIpamconfigError", "ipamNeeded", "noIps", "", "", "", true, 0},
+  {"staticCniSuccess", "flannel-test", "noIps", "flannel", "", "", false, 0},
+  {"staticCniNoConfig", "no-conf", "noIps", "", "", "", true, 0},
+  {"staticCniNoBinary", "no-binary", "noIps", "flannel", "", "", true, 0},
+  {"staticCniWithIp", "flannel-test", "noIps", "flannel-ip", "10.244.10.30", "", false, 0},
+  {"dynamicMacvlanIpv4", "macvlan-v4", "dynamicIpv4", "macvlan-ip4", "192.168.1.65", "", false, 1},
+  {"dynamicMacvlanIpv6", "macvlan-v6", "dynamicIpv6", "macvlan-ip6", "", "2a00:8a00:a000:1193", false, 0},
+  {"dynamicMacvlanDualStack", "macvlan-ds", "dynamicDual", "macvlan-dual-stack", "192.168.1.65", "2a00:8a00:a000:1193", false, 1},
+  {"dynamicMacvlanIpv4Type020Result", "macvlan-v4", "dynamicIpv4", "macvlan-ip4-type020", "192.168.1.65", "", false, 1},
+  {"dynamicMacvlanIpv6Type020Result", "macvlan-v6", "dynamicIpv6", "macvlan-ip6-type020", "", "2a00:8a00:a000:1193", false, 0},
+  {"dynamicSriovNoDeviceId", "sriov-test", "dynamicIpv4", "", "", "", true, 2},
+  {"dynamicSriovL3", "sriov-test", "dynamicIpv4WithDeviceId", "sriov-l3", "", "", false, 1},
+  {"dynamicSriovL2", "sriov-test", "noneWithDeviceId", "sriov-l2", "", "", false, 0},
+  {"bridgeWithV4Overwrite", "bridge-ipam-ipv4", "simpleIpv4", "bridge-l3-ip4", "", "", false, 1},
+  {"bridgeWithV4Add", "bridge-ipam-l2", "simpleIpv4", "bridge-l2-ip4", "", "", false, 1},
+  {"bridgeWithInvalidAdd", "bridge-invalid", "simpleIpv4", "", "", "", true, 2},
+  {"bridgeL3OriginalNoCidr", "bridge-noipam", "simpleIpv4", "bridge-l3-orig", "", "", false, 0},
+  {"bridgeL3OriginalNoIp", "bridge-ipam-ipv4", "noIps", "bridge-l3-orig", "", "", false, 0},
+  {"bridgeL2OriginalNoCidr", "bridge-noipam-l2", "simpleIpv4", "bridge-l2-orig", "", "", false, 0},
+  {"bridgeWithV6Overwrite", "bridge-ipam-ipv6", "simpleIpv6", "bridge-l3-ip6", "", "", false, 0},
+  {"bridgeWithDsOverwrite", "bridge-ipam-ds", "simpleDs", "bridge-l3-ds", "", "", false, 1},
 }
 
 var delDeleteTcs = []struct {
@@ -275,7 +277,7 @@ var delDeleteTcs = []struct {
   {"flannel", "flannel-test", "deleteFlannel", "deleteflannel", false, 0},
   {"macvlan", "full-macvlan", "withAddress", "deletemacvlan", false, 1},
   {"bridgeWithDanmIpam", "full-bridge", "withAddressSimple", "deletebridge", false, 1},
-  {"bridgeWithExternalIpam", "full-bridge", "withForeignAddressSimple", "deletebridge", false, 0},
+  {"bridgeWithExternalIpam", "full-bridge", "withForeignAddressSimple", "deletebridge-wo-ipam", false, 0},
 }
 
 func TestIsDelegationRequired(t *testing.T) {
@@ -345,16 +347,17 @@ func TestDelegateInterfaceSetup(t *testing.T) {
   if err != nil {
     t.Errorf("Test suite could not be set-up because:%s", err.Error())
   }
-  testArtifacts := utils.TestArtifacts{TestNets: testNets}
-  netClientStub := stubs.NewClientSetStub(testArtifacts)
   for _, tc := range delSetupTcs {
     t.Run(tc.tcName, func(t *testing.T) {
       err = setupDelTestTc(tc.cniConfName)
       if err != nil {
         t.Errorf("TC could not be set-up because:%s", err.Error())
       }
+      testArtifacts := utils.TestArtifacts{TestNets: testNets}
+      netClientStub := stubs.NewClientSetStub(testArtifacts)
       testNet := utils.GetTestNet(tc.netName, testNets)
       testEp := getTestEp(tc.epName)
+      testEp.Spec.NetworkName = testNet.ObjectMeta.Name
       cniRes, err := cnidel.DelegateInterfaceSetup(&cniConf,netClientStub,testNet,testEp)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         var detailedErrorMessage string
@@ -378,6 +381,13 @@ func TestDelegateInterfaceSetup(t *testing.T) {
         if strings.HasPrefix(tc.expectedIp6, testEp.Spec.Iface.AddressIPv6) {
           t.Errorf("Expected IP:%s is not saved in DanmEp.Spec.Iface's respective address field:%s", tc.expectedIp6, testEp.Spec.Iface.AddressIPv6)
         }
+      }
+      var timesUpdateWasCalled int
+      if netClientStub.DanmClient.NetClient != nil {
+        timesUpdateWasCalled = netClientStub.DanmClient.NetClient.TimesUpdateWasCalled
+      }
+      if tc.timesUpdateShouldBeCalled != timesUpdateWasCalled {
+        t.Errorf("Network manifest should have been updated:" + strconv.Itoa(tc.timesUpdateShouldBeCalled) + " times, but it happened:" + strconv.Itoa(timesUpdateWasCalled) + " times instead")
       }
     })
   }

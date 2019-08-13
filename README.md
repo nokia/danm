@@ -8,7 +8,7 @@
 # Join our community!
 Want to hang-out with us? Join our Slack under https://danmws.slack.com/!
 
-Feel yourself officially invited by clicking on [this](https://join.slack.com/t/danmws/shared_invite/enQtNjc2MzA3MjU0NzEwLWVkZDQ3ZDA1ZTU2YTM2MjI3YzJmYWFhZjUzZjNmNTcwMTUwYmI0NDhhNzQzMzA3NWRkNmMzNTIxMTI0MDlmYjk) link!
+Feel yourself officially invited by clicking on [this](https://join.slack.com/t/danmws/shared_invite/enQtNzEzMTQ4NDM2NTMxLTA3MDM4NGM0YTRjYzlhNGRiMDVlZWRlMjdlNTkwNTBjNWUyNjM0ZDQ3Y2E4YjE3NjVhNTE1MmEyYzkyMDRlNWU) link!
 
 ## Table of Contents
 * [Table of Contents](#table-of-contents)

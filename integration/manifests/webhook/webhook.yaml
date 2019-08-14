@@ -13,6 +13,7 @@ rules:
   - danm.k8s.io
   resources:
   - tenantconfigs
+  - danmeps
   verbs: [ "*" ]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

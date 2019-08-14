@@ -75,7 +75,7 @@ webhooks:
       - operations: ["DELETE"]
         apiGroups: ["danm.k8s.io"]
         apiVersions: ["v1"]
-        resources: ["tenantnetworks"]
+        resources: ["danmnets","clusternetworks","tenantnetworks"]
     failurePolicy: Fail
 ---
 apiVersion: v1

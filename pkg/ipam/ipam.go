@@ -161,11 +161,16 @@ func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string) (error) 
     }
     _, ipnetFromNet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
     if !(ipnetFromNet.Contains(ip) && ipnetFromNet.Mask.String() == ipnet.Mask.String()) {
-      return errors.New("static ip is not part of network CIDR/allocation pool")
+      return errors.New("static ip is not part of network CIDR")
+    }
+    begin := Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start))
+    end := Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End))
+    requested := Ip2int(ip)
+    if requested < begin || requested > end {
+      return errors.New("static ip is not part of network allocation pool")
     }
     ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
     ipnetNum := Ip2int(ipnetFromNet.IP)
-    requested := Ip2int(ip)
     if ba.Get(requested - ipnetNum) {
       return errors.New("requested fix ip address is already in use")
     }

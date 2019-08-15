@@ -228,9 +228,11 @@ Note2: we assume RBAC is configured for the Kubernetes API, so the manifests inc
  Your bootstrap networking solution can be really anything you fancy!
  We use Flannel for the purpose in our environments, and connect Pods to it with such simple network descriptors like what you can find in **integration/bootstrap_networks**.
 
- **9. Create the webhook Deployment by executing the following command from the project's root directory:**
+ **9. Create the webhook Deployment and provide it with certificates by executing the following commands from the project's root directory:**
  ```
-kubectl create -f integration/manifests/webhook/
+./integration/manifests/webhook/webhook-create-signed-cert.sh
+cat ./integration/manifests/webhook/webhook.yaml | ./integration/manifests/webhook/webhook-patch-ca-bundle.sh > ./integration/manifests/webhook/webhook-ca-bundle.yaml
+kubectl create -f integration/manifests/webhook/webhook-ca-bundle.yaml
 ```
 **Disclaimer**: webhook already leverages DANM CNI to create its network interface. Don't forget to change the name of the network referenced in the example manifest file to your bootstrap network!
 We also assume RBAC is configured in your cluster.

@@ -4,7 +4,8 @@ metadata:
   name: management
   namespace: example-sriov
 spec:
-  NetworkID: management
+  #Change this to match the CNI config file name in your environment
+  NetworkID: flannel
   NetworkType: flannel
 ---
 apiVersion: danm.k8s.io/v1
@@ -16,10 +17,12 @@ spec:
   NetworkID: sriov-a
   NetworkType: sriov
   Options:
+    #Change this to the name of a valid SR-IOV Device Pool in your cluster
     device_pool: "nokia.k8s.io/sriov_ens1f0"
     container_prefix: first_path
     rt_tables: 250
-    vlan: 300
+    #Don't forget to change this to match your switch config!
+    vlan: 250
     cidr: 10.100.20.0/24
     allocation_pool:
       start: 10.100.20.10
@@ -34,10 +37,12 @@ spec:
   NetworkID: sriov-b
   NetworkType: sriov
   Options:
+    #Change this to the name of a valid SR-IOV Device Pool in your cluster
     device_pool: "nokia.k8s.io/sriov_ens1f1"
     container_prefix: second_path
-    rt_tables: 300
-    vlan: 300
+    rt_tables: 251
+    #Don't forget to change this to match your switch config!
+    vlan: 251
     cidr: 10.200.20.0/24
     allocation_pool:
       start: 10.200.20.10

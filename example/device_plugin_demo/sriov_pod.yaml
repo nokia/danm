@@ -16,6 +16,7 @@ spec:
   containers:
   - name: sriov-pod
     image: busybox:latest
+    imagePullPolicy: IfNotPresent
     args:
       - sleep
       - "1000"

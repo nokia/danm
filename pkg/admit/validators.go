@@ -15,6 +15,7 @@ import (
 
 const (
   MaxNidLength = 11
+  MaxNetMaskLength = 8
 )
 
 var (
@@ -49,6 +50,12 @@ func validateIpFields(cidr string, routes map[string]string) error {
   _, ipnet, err := net.ParseCIDR(cidr)
   if err != nil {
     return errors.New("Invalid CIDR: " + cidr)
+  }
+  if ipnet.IP.To4() != nil {
+    ones, _ := ipnet.Mask.Size()
+    if ones < MaxNetMaskLength {
+      return errors.New("Netmask of the IPv4 CIDR is bigger than the maximum allowed /"+ strconv.Itoa(MaxNetMaskLength))
+    }
   }
   for _, gw := range routes {
     if !ipnet.Contains(net.ParseIP(gw)) {
@@ -208,7 +215,7 @@ func validateVniChange(oldManifest, newManifest *danmtypes.DanmNet, opType admis
   }
   if (oldManifest.Spec.Options.Vlan  != 0 && (oldManifest.Spec.Options.Vlan  != newManifest.Spec.Options.Vlan  || oldManifest.Spec.Options.Device != newManifest.Spec.Options.Device)) ||
      (oldManifest.Spec.Options.Vxlan != 0 && (oldManifest.Spec.Options.Vxlan != newManifest.Spec.Options.Vxlan || oldManifest.Spec.Options.Device != newManifest.Spec.Options.Device)) {
-    return errors.New("cannot change VNI/host_device of a network which having any Pods connected to it e.g. Pod:" + connectedEp.Spec.Pod + " in namespace:" + connectedEp.ObjectMeta.Namespace)   
+    return errors.New("cannot change VNI/host_device of a network which having any Pods connected to it e.g. Pod:" + connectedEp.Spec.Pod + " in namespace:" + connectedEp.ObjectMeta.Namespace)
   }
   return nil
 }

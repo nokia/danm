@@ -42,6 +42,9 @@ var validateNetworkTcs = []struct {
   {"Ipv4InvalidCidrDNet", "", "invalid-cidr", DnetType, "", nil, nil, true, nil, 0},
   {"Ipv4InvalidCidrTNet", "", "invalid-cidr", TnetType, "", nil, nil, true, nil, 0},
   {"Ipv4InvalidCidrCNet", "", "invalid-cidr", CnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4TooBigCidrDNet", "", "long-cidr", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4TooBigCidrTNet", "", "long-cidr", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4TooBigCidrCNet", "", "long-cidr", CnetType, "", nil, nil, true, nil, 0},
   {"Ipv4GwOutsideCidrDNet", "", "gw-outside-cidr", DnetType, "", nil, nil, true, nil, 0},
   {"Ipv4GwOutsideCidrTNet", "", "gw-outside-cidr", TnetType, "", nil, nil, true, nil, 0},
   {"Ipv4GwOutsideCidrCNet", "", "gw-outside-cidr", CnetType, "", nil, nil, true, nil, 0},
@@ -140,6 +143,10 @@ var (
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "invalid-cidr"},
       Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.0/a4"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "long-cidr"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Cidr: "10.0.0.0/7"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "gw-outside-cidr"},

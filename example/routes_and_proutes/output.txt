@@ -1,0 +1,5 @@
+$ kubectl exec routed-deployment-7bb98d6f97-j7z7n ip r
+10.0.0.0/24 dev eth0 scope link  src 10.0.0.1
+10.0.1.0/24 via 10.0.0.65 dev eth0
+$ kubectl exec routed-deployment-7bb98d6f97-j7z7n ip route show table 10
+10.10.1.0/24 via 10.0.0.65 dev eth0

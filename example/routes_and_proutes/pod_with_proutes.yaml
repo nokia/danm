@@ -1,18 +1,17 @@
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: external-client
-  namespace: external-client
+  name: routed-deployment
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: external-client
+        app: routed
       annotations:
         danm.k8s.io/interfaces: |
           [
-            {"network":"external", "ip":"dynamic"}
+            {"clusterNetwork":"network-with-route", "ip":"dynamic", "proutes":{"10.10.1.0/24": "10.0.0.65"}}
           ]
     spec:
       containers:

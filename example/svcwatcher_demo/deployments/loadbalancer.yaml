@@ -20,6 +20,7 @@ spec:
     spec:
       containers:
       - name: busybox
+        imagePullPolicy: IfNotPresent
         image: busybox:latest
         args:
         - sleep

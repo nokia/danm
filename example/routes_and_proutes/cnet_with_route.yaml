@@ -1,0 +1,17 @@
+apiVersion: danm.k8s.io/v1 
+kind: ClusterNetwork
+metadata:
+  name: network-with-route
+spec:
+  NetworkID: routed-net
+  NetworkType: ipvlan
+  Options:
+    host_device: bond0
+    cidr: 10.0.0.0/24 
+    allocation_pool:
+      start: 10.0.0.1
+      end: 10.0.0.10
+    container_prefix: eth0
+    rt_tables: 10
+    routes:
+      10.0.1.0/24: 10.0.0.65

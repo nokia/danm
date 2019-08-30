@@ -48,11 +48,11 @@ spec:
       #   "proutes": list of policy-based IPv4 routes to be added to the configured routing table of this interface.
       #     Generally supported parameter, works with all NetworkTypes.
       #     OPTIONAL PARAMETER
-      #     possible value: {"DESTINATION_IPV4_CIDR1:IPV4_GW1","DESTINATION_IPV4_CIDR2:IPV4_GW2"...}
+      #     possible value: {"DESTINATION_IPV4_CIDR1":"IPV4_GW1","DESTINATION_IPV4_CIDR2":"IPV4_GW2"...}
       #   "proutes6": list of policy-based IPv6 routes to be added to the configured routing table of this interface.
       #     Generally supported parameter, works with all NetworkTypes.
       #     OPTIONAL PARAMETER
-      #     possible value: {"DESTINATION_IPV6_CIDR1:IPV6_GW1","DESTINATION_IPV6_CIDR2:IPV6_GW2"...}
+      #     possible value: {"DESTINATION_IPV6_CIDR1":"IPV6_GW1","DESTINATION_IPV6_CIDR2":"IPV6_GW2"...}
         danm.k8s.io/interfaces: |
           [
             {

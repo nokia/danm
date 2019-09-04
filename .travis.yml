@@ -8,7 +8,7 @@ env:
 
 language: go
 
-go: 1.12.x
+go: 1.12.9
   
 services: docker
 

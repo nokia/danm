@@ -109,7 +109,7 @@ It is important to state this, because the features DANM provides open up a coup
 
  We strongly feel that all such scenarios incompatible with the life-cycle of a standard CNI plugin firmly fall outside the responsibility of the core DANM project.
 That being said, tell us about your Kubernetes breaking ideas! We are open to accept such plugins into the wider umbrella of the existing eco-system: outside of the core project, but still loosely linked to suite as optional, external components.
-Just because something doesn't fit into DANM, it does not mean it can't fit into your cloud! 
+Just because something doesn't fit into DANM, it does not mean it can't fit into your cloud!
 ## Getting started
 ### Install an Akraino REC and get DANM for free!
 Just kidding as DANM is always free, but if you want to install a production grade, open-source Kubernetes-based bare metal CaaS infrastructure by default equipped with DANM **and** with a single click of a button nonetheless; just head over to Linux Foundation Akraino Radio Edge Cloud (REC) wiki for the [Akraino REC Architecture](https://wiki.akraino.org/display/AK/REC+Architecture+Document) and the [Akraino REC Installation Guide](https://wiki.akraino.org/display/AK/REC+Installation+Guide)
@@ -176,7 +176,7 @@ buildah bud -t webhook:latest integration/docker/webhook
 ```
 builds the respective containers. Afterwards these containers can be directly integrated into a running Kubernetes cluster!
 ## Deployment
-The method of deploying the whole DANM suite into a Kubernetes cluster is the following.
+The method of deploying the whole DANM suite into a Kubernetes cluster is the following.  
 **1A. Extend the Kubernetes API with the DanmNet and DanmEp CRD objects for a simplified network management experience by executing the following command from the project's root directory:**
 ```
 kubectl create -f integration/crds/lightweight
@@ -325,7 +325,7 @@ Spec:
 Events:                  <none>
 ```
 
-__BE WARNED: DANM stores pretty important information in these API objects. Under no circumstances shall a network be deleted, if there are any running Pods still referencing it!__
+__WARNING: DANM stores pretty important information in these API objects. Under no circumstances shall a network be deleted, if there are any running Pods still referencing it!__
 __Such action will undoubtedly lead to ruin and DANMation!__
 #### Generally supported DANM API features
 ##### Naming container interfaces
@@ -374,7 +374,7 @@ As a result, DANM currently supports two integration levels:
  - **Dynamic integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be controlled on a per network level, exclusively taken directly from the CRD object
  - **Static integration level:** CNI-specific network attributes are by default configured via static CNI configuration files (Note: this is the default CNI configuration method); but certain parameters are influenced by the DANM API configuration values.
 
-Always refer to the schema descriptors for more details on which parameters are universally supported! 
+Always refer to the schema descriptors for more details on which parameters are universally supported!
 
 Our aim is to integrate all the popular CNIs into the DANM eco-system over time, but currently the following CNI's achieved dynamic integration level:
 
@@ -602,7 +602,7 @@ Every CREATE, and PUT DanmNet operation is subject to the following validation r
  12. spec.AllowedTenants is not a valid parameter for this API type
  13. spec.Options.Device_pool must be, and spec.Options.Host_device mustn't be provided for K8s Devices based networks (such as SR-IOV)
  14. Any of spec.Options.Device, spec.Options.Vlan, or spec.Options.Vxlan attributes cannot be changed if there are any Pods currently connected to the network
- 
+
  Every DELETE DanmNet operation is subject to the following validation rules:
  15. the network cannot be deleted if there are any Pods currently connected to the network
 

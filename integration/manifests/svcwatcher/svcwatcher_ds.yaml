@@ -27,6 +27,7 @@ spec:
       containers:
         - name: svcwatcher
           image: svcwatcher
+          imagePullPolicy: IfNotPresent
           args:
             - "--logtostderr"
       tolerations:

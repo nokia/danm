@@ -176,7 +176,7 @@ buildah bud -t webhook:latest integration/docker/webhook
 ```
 builds the respective containers. Afterwards these containers can be directly integrated into a running Kubernetes cluster!
 ## Deployment
-The method of deploying the whole DANM suite into a Kubernetes cluster is the following.  
+The method of deploying the whole DANM suite into a Kubernetes cluster is the following.
 **1A. Extend the Kubernetes API with the DanmNet and DanmEp CRD objects for a simplified network management experience by executing the following command from the project's root directory:**
 ```
 kubectl create -f integration/crds/lightweight
@@ -586,7 +586,7 @@ Network administrators can configure NetworkType: NetworkID mappings into the Te
 Thus it becomes guaranteed that the tenant user's network will use the right CNI configuration file during Pod creation!
 #### List of validation rules
 ##### DanmNet
-Every CREATE, and PUT DanmNet operation is subject to the following validation rules:
+Every CREATE, and ~~PUT~~ (see [https://github.com/nokia/danm/issues/144](https://github.com/nokia/danm/issues/144)) DanmNet operation is subject to the following validation rules:
 
  1. spec.Options.Cidr must be supplied in a valid IPv4 CIDR notation
  2. all gateway addresses belonging to an entry of spec.Options.Routes  shall be in the defined IPv4 CIDR
@@ -608,7 +608,7 @@ Every CREATE, and PUT DanmNet operation is subject to the following validation r
 
 Not complying with any of these rules results in the denial of the provisioning operation.
 ##### TenantNetwork
-Every CREATE, and PUT TenantNetwork operation is subject to the DanmNet validation rules no. 1-9, 11, 12.
+Every CREATE, and ~~PUT~~ (see [https://github.com/nokia/danm/issues/144](https://github.com/nokia/danm/issues/144)) TenantNetwork operation is subject to the DanmNet validation rules no. 1-9, 11, 12.
 In addition TenantNetwork provisioning has the following extra rules:
 
  1. spec.Options.Vlan cannot be provided
@@ -622,7 +622,7 @@ Every DELETE TenantNetwork operation is subject to the DanmNet validation rule n
 
 Not complying with any of these rules results in the denial of the provisioning operation.
 ##### ClusterNetwork
-Every CREATE, and PUT ClusterNetwork operation is subject to the DanmNet validation rules no. 1-11, 13-14.
+Every CREATE, and ~~PUT~~ (see [https://github.com/nokia/danm/issues/144](https://github.com/nokia/danm/issues/144)) ClusterNetwork operation is subject to the DanmNet validation rules no. 1-11, 13-14.
 
 Every DELETE ClusterNetwork operation is subject to the DanmNet validation rule no.15.
 

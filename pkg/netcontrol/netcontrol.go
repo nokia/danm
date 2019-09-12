@@ -20,6 +20,7 @@ const(
   TenantNetworkKind = "TenantNetwork"
   ClusterNetworkKind = "ClusterNetwork"
 )
+
 // NetWatcher represents an object watching the K8s API for changes in all three network management API paths
 // Upon the reception of a notification it handles the related VxLAN/VLAN/RT creation/deletions on the host
 type NetWatcher struct {
@@ -342,7 +343,7 @@ func PutNetwork(danmClient danmclientset.Interface, dnet *danmtypes.DanmNet) (bo
     return wasResourceAlreadyUpdated, errors.New("can't refresh network object because it has an invalid type:" + dnet.TypeMeta.Kind)
   }
   if err != nil {
-    if strings.Contains(err.Error(),datastructs.OptimisticLockErrorMsg) {
+    if strings.Contains(err.Error(), datastructs.OptimisticLockErrorMsg) {
       wasResourceAlreadyUpdated = true
       return wasResourceAlreadyUpdated, nil
     }

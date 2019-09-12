@@ -7,8 +7,9 @@ import (
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/nokia/danm/pkg/syncher"
 )
+
 const (
-  timeout = 10
+  timeout = syncher.MaximumAllowedTime/100
 )
 
 type result struct {

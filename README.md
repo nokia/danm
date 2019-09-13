@@ -14,7 +14,7 @@ Feel yourself officially invited by clicking on [this](https://join.slack.com/t/
 * [Table of Contents](#table-of-contents)
 * [Introduction](#introduction)
 * [Our philosophy and motivation behind DANM](#our-philosophy-and-motivation-behind-danm)
-* [Note about boundaries](#note-about-boundaries)
+* [Scope of the project](#scope-of-the-project)
 * [Getting started](#getting-started)
      * [Install an Akraino REC and get DANM for free](#install-an-akraino-rec-and-get-danm-for-free)
      * [Prerequisites](#prerequisites)
@@ -83,6 +83,9 @@ It is:
 * a Kubernetes controller capable of centrally managing both VxLAN and VLAN interfaces of all Kubernetes hosts
 * another Kubernetes controller extending Kubernetes' Service-based service discovery concept to work over all network interfaces of a Pod
 * a standard Kubernetes Validating and Mutating Webhook responsible for making you adhere to the schemas, and also automating network resource management for tenant users in a production-grade environment
+### Install an Akraino REC and get DANM for free!
+Just kidding as DANM is always free, but if you want to install a production grade, open-source Kubernetes-based bare metal CaaS infrastructure by default equipped with DANM **and** with a single click of a button nonetheless; just head over to Linux Foundation Akraino Radio Edge Cloud (REC) wiki for the [Akraino REC Architecture](https://wiki.akraino.org/display/AK/REC+Architecture+Document) and the [Akraino REC Installation Guide](https://wiki.akraino.org/display/AK/REC+Installation+Guide)
+Not just for TelCo!
 
 The above functionalities are implemented by the following components:
 - **danm** is the CNI plugin which can be directly integrated with kubelet. Internally it consists of the CNI metaplugin, the CNI plugin responsible for managing IPVLAN interfaces, and the in-built IPAM plugin.
@@ -120,7 +123,7 @@ This is the historical reason why DANM's CRD based, abstract network management 
 This approach opens-up a plethora of possibilities, even with today's Kubernetes core code!
 
 The following chapters will guide you through the description of these features, and will show you how you can leverage them in your Kubernetes cluster.
-## Note about boundaries
+## Scope of the project
 You will see at the end of this README that we really went above and beyond what "networks" are in vanilla Kubernetes.
 
 But, DANM core project never did, and will break one core concept: DANM is first and foremost a run-time agnostic standard CNI system for Kubernetes, 100% adhering to the Kubernetes life-cycle management principles.
@@ -134,9 +137,6 @@ That being said, tell us about your Kubernetes breaking ideas! We are open to ac
 Just because something doesn't fit into DANM, it does not mean it can't fit into your cloud!
 
 ## Getting started
-### Install an Akraino REC and get DANM for free!
-Just kidding as DANM is always free, but if you want to install a production grade, open-source Kubernetes-based bare metal CaaS infrastructure by default equipped with DANM **and** with a single click of a button nonetheless; just head over to Linux Foundation Akraino Radio Edge Cloud (REC) wiki for the [Akraino REC Architecture](https://wiki.akraino.org/display/AK/REC+Architecture+Document) and the [Akraino REC Installation Guide](https://wiki.akraino.org/display/AK/REC+Installation+Guide)
-Not just for TelCo!
 ### Prerequisites
 Otherwise, you need to create your own Kubernetes cluster, and install DANM manually. We suggest to use any of the automated Kubernetes installing solutions (kubeadm, minikube etc.) for a painless experience.
 We currently test DANM with Kubernetes 1.15.X.
@@ -345,8 +345,6 @@ Generally speaking, you need to care about how the network interfaces of your Po
 The hard reality to keep in mind is that you shall always have an interface literally called "eth0" created within all your Kubernetes Pods, because Kubelet will always search for the existence of such an interface at the end of Pod instantiation.
 If such an interface does not exist after CNI is invoked (also having an IPv4 address), the state of the Pod will be considered "faulty", and it will be re-created in a loop.
 To be able to comply with this Kubernetes limitation, DANM always names the first container interface "eth0", regardless of your intention.
-
-Sorry, but they made us do it :)
 
 **Note**: some CNI plugins try to be smart about this limitation on their own, and decided not to adhere to the CNI standard! An example of this behaviour can be found in Flannel.
 It is the user's responsibility to put the network connection of such boneheaded backends to the first place in the Pod's annotation!

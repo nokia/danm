@@ -13,10 +13,10 @@ Feel yourself officially invited by clicking on [this](https://join.slack.com/t/
 ## Table of Contents
 * [Table of Contents](#table-of-contents)
 * [Introduction](#introduction)
+     * [Install an Akraino REC and get DANM for free](#install-an-akraino-rec-and-get-danm-for-free)
 * [Our philosophy and motivation behind DANM](#our-philosophy-and-motivation-behind-danm)
 * [Scope of the project](#scope-of-the-project)
 * [Getting started](#getting-started)
-     * [Install an Akraino REC and get DANM for free](#install-an-akraino-rec-and-get-danm-for-free)
      * [Prerequisites](#prerequisites)
      * [Building the binaries](#building-the-binaries)
      * [Building the containers](#building-the-containers)

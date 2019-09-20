@@ -10,6 +10,7 @@ import (
   "runtime"
   "strconv"
   "strings"
+  "time"
   "encoding/json"
   "github.com/satori/go.uuid"
   "github.com/containernetworking/cni/pkg/skel"
@@ -378,7 +379,14 @@ func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("DanmEp object could not be PUT to K8s due to error:" + err.Error()), nil)
     return
   }
-  err = danmep.SetDanmEpSysctls(ep)
+  for i:=0; i<3; i++ {
+    time.Sleep(100 * time.Millisecond)
+    err = danmep.SetDanmEpSysctls(ep)
+    if err == nil {
+      break
+    }
+    log.Println("WARNING: SysCtl setting try no." + strconv.Itoa(i) + " failed with error:" + err.Error())
+  }
   if err != nil {
     cnidel.FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("Sysctls could not be set due to error:" + err.Error()), nil)

@@ -84,6 +84,28 @@ It is:
 * another Kubernetes controller extending Kubernetes' Service-based service discovery concept to work over all network interfaces of a Pod
 * a standard Kubernetes Validating and Mutating Webhook responsible for making you adhere to the schemas, and also automating network resource management for tenant users in a production-grade environment
 
+The above functionalities are implemented by the following components:
+- **danm** is the CNI plugin which can be directly integrated with kubelet. Internally it consists of the CNI metaplugin, the CNI plugin responsible for managing IPVLAN interfaces, and the in-built IPAM plugin.
+Danm binary is integrated to kubelet as any other [CNI plugin](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/).
+
+- **fakeipam** is a little program used in natively integrating 3rd party CNI plugins into the DANM ecosystem. It is basically used to echo the result of DANM's in-built IPAM to CNIs DANM delegates operations to.
+Fakeipam binary should be placed into kubelet's configured CNI plugin directory, next to danm.
+Fakeipam is a temporary solution, the long-term aim is to separate DANM's IPAM component into a full-fledged, standalone IPAM solution.
+
+- **netwatcher** is a Kubernetes Controller watching the Kubernetes API for changes in the DANM related CRD network management APIs.
+This component is responsible for validating the semantics of network objects, and also for maintaining VxLAN and VLAN host interfaces of all Kubernetes nodes.
+Netwatcher binary is deployed in Kubernetes as a DaemonSet, running on all nodes.
+
+- **svcwatcher** is another Kubernetes Controller monitoring Pod, Service, Endpoint, and DanmEp API paths.
+This Controller is responsible for extending Kubernetes native Service Discovery to work even for the non-primary networks of the Pod.
+Svcwatcher binary is deployed in Kubernetes as a DaemonSet, running only on the Kubernetes master nodes in a clustered setup.
+
+- **webhook** is a standard Kubernetes Validating and Mutating Webhook. It has multiple, crucial responsibilities:
+
+ - it validates all DANM introduced CRD APIs both syntactically, and semantically both during creation, and modification
+ - it automatically mutates parameters only relevant to the internal implementation of DANM into the API objects
+ - it automatically assigns physical network resources to the logical networks of tenant users in a production-grade infrastructure
+
 ## Our philosophy and motivation behind DANM
 It is undeniable that TelCo products- even in containerized format- ***must*** own physically separated network interfaces, but we have always felt other projects put too much emphasis on this lone fact, and entirely ignored -or were afraid to tackle- the larger issue with Kubernetes.
 That is: capability to **provision** multiple network interfaces to Pods is a very limited enhancement if the cloud native feature of Kubernetes **cannot be used with those extra interfaces**.
@@ -110,6 +132,7 @@ It is important to state this, because the features DANM provides open up a coup
  We strongly feel that all such scenarios incompatible with the life-cycle of a standard CNI plugin firmly fall outside the responsibility of the core DANM project.
 That being said, tell us about your Kubernetes breaking ideas! We are open to accept such plugins into the wider umbrella of the existing eco-system: outside of the core project, but still loosely linked to suite as optional, external components.
 Just because something doesn't fit into DANM, it does not mean it can't fit into your cloud!
+
 ## Getting started
 ### Install an Akraino REC and get DANM for free!
 Just kidding as DANM is always free, but if you want to install a production grade, open-source Kubernetes-based bare metal CaaS infrastructure by default equipped with DANM **and** with a single click of a button nonetheless; just head over to Linux Foundation Akraino Radio Edge Cloud (REC) wiki for the [Akraino REC Architecture](https://wiki.akraino.org/display/AK/REC+Architecture+Document) and the [Akraino REC Installation Guide](https://wiki.akraino.org/display/AK/REC+Installation+Guide)
@@ -138,26 +161,15 @@ The builder container destroys itself once its purpose has been fulfilled.
 
 The result will be 6, statically linked binaries put into your $GOPATH/bin directory.
 
-**"danm"** is the CNI plugin which can be directly integrated with kubelet. Internally it consists of the CNI metaplugin, the CNI plugin responsible for managing IPVLAN interfaces, and the in-built IPAM plugin.
-Danm binary is integrated to kubelet as any other [CNI plugin](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/).
+- danm
 
-**"fakeipam"** is a little program used in natively integrating 3rd party CNI plugins into the DANM ecosystem. It is basically used to echo the result of DANM's in-built IPAM to CNIs DANM delegates operations to.
-Fakeipam binary should be placed into kubelet's configured CNI plugin directory, next to danm.
-Fakeipam is a temporary solution, the long-term aim is to separate DANM's IPAM component into a full-fledged, standalone IPAM solution.
+- fakeipam
 
-**"netwatcher"** is a Kubernetes Controller watching the Kubernetes API for changes in the DANM related CRD network management APIs.
-This component is responsible for validating the semantics of network objects, and also for maintaining VxLAN and VLAN host interfaces of all Kubernetes nodes.
-Netwatcher binary is deployed in Kubernetes as a DaemonSet, running on all nodes.
+- netwatcher
 
-**"svcwatcher"** is another Kubernetes Controller monitoring Pod, Service, Endpoint, and DanmEp API paths.
-This Controller is responsible for extending Kubernetes native Service Discovery to work even for the non-primary networks of the Pod.
-Svcwatcher binary is deployed in Kubernetes as a DaemonSet, running only on the Kubernetes master nodes in a clustered setup.
+- svcwatcher
 
-**"webhook"** is a standard Kubernetes Validating and Mutating Webhook. It has multiple, crucial responsibilities:
-
- - it validates all DANM introduced CRD APIs both syntactically, and semantically both during creation, and modification
- - it automatically mutates parameters only relevant to the internal implementation of DANM into the API objects
- - it automatically assigns physical network resources to the logical networks of tenant users in a production-grade infrastructure
+- webhook
 
 ### Building the containers
 Netwatcher, svcwatcher, and webhook binaries are built into their own containers.

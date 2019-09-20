@@ -346,6 +346,8 @@ The hard reality to keep in mind is that you shall always have an interface lite
 If such an interface does not exist after CNI is invoked (also having an IPv4 address), the state of the Pod will be considered "faulty", and it will be re-created in a loop.
 To be able to comply with this Kubernetes limitation, DANM always names the first container interface "eth0", regardless of your intention.
 
+Sorry, but they made us do it :)
+
 **Note**: some CNI plugins try to be smart about this limitation on their own, and decided not to adhere to the CNI standard! An example of this behaviour can be found in Flannel.
 It is the user's responsibility to put the network connection of such boneheaded backends to the first place in the Pod's annotation!
 

@@ -18,6 +18,7 @@ import (
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/plugins/pkg/ns"
   "github.com/containernetworking/plugins/pkg/utils/sysctl"
+  "github.com/vishvananda/netlink"
   core_v1 "k8s.io/api/core/v1"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   "k8s.io/client-go/rest"
@@ -379,18 +380,26 @@ func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("DanmEp object could not be PUT to K8s due to error:" + err.Error()), nil)
     return
   }
-  for i:=0; i<3; i++ {
+  log.Println("Setting config for interface:" + ep.Spec.Iface.Name)
+  for i:=0; i<100; i++ {
     time.Sleep(100 * time.Millisecond)
     err = danmep.SetDanmEpSysctls(ep)
     if err == nil {
       break
     }
     log.Println("WARNING: SysCtl setting try no." + strconv.Itoa(i) + " failed with error:" + err.Error())
+    links, err := netlink.LinkList()
+    if err != nil {log.Println("ERROR: can't list links  because:" + err.Error())}
+    for id,link := range links {
+      linkAttributes := link.Attrs()
+      if linkAttributes != nil {log.Println("Printing current link no." + strconv.Itoa(id) + " name:" + linkAttributes.Name)}
+    }
   }
   if err != nil {
-    cnidel.FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
-    syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("Sysctls could not be set due to error:" + err.Error()), nil)
-    return
+    log.Println("Giving up on sysctl setting")
+//    cnidel.FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+//    syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("Sysctls could not be set due to error:" + err.Error()), nil)
+//    return
   }
   syncher.PushResult(netInfo.ObjectMeta.Name, nil, delegatedResult)
 }

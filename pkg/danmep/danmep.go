@@ -12,6 +12,7 @@ import (
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
+    "github.com/vishvananda/netlink"
 )
 
 type sysctlFunction func(danmtypes.DanmEp) bool
@@ -132,7 +133,7 @@ func CreateRoutesInNetNs(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   return addIpRoutes(ep,dnet)
 }
 
-func SetDanmEpSysctls(ep danmtypes.DanmEp) error {
+func SetDanmEpSysctls(deps []danmtypes.DanmEp) error {
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   // save the current namespace
@@ -141,7 +142,7 @@ func SetDanmEpSysctls(ep danmtypes.DanmEp) error {
     return errors.New("failed to get current network namespace due to:" + err.Error())
   }
   // enter to the Pod's network namespace
-  podNs, err := ns.GetNS(ep.Spec.Netns)
+  podNs, err := ns.GetNS(deps[0].Spec.Netns)
   if err != nil {
     return errors.New("failed to get Pod's network namespace due to:" + err.Error())
   }
@@ -153,14 +154,29 @@ func SetDanmEpSysctls(ep danmtypes.DanmEp) error {
     podNs.Close()
     origNs.Set()
   }()
-  // set sysctls
-  for _, s := range sysctls {
-    if s.sysctlFunc(ep) {
-      for _, ss := range s.sysctlData {
-        sss := fmt.Sprintf(ss.sysctlName, ep.Spec.Iface.Name)
-        _, err = sysctl.Sysctl(sss, ss.sysctlValue)
-        if err != nil {
-          return errors.New("failed to set sysctl due to:" + err.Error())
+  for _, ep := range deps {
+    for _, s := range sysctls {
+      if s.sysctlFunc(ep) {
+        for _, ss := range s.sysctlData {
+          log.Println("Setting config for interface:" + ep.Spec.Iface.Name)
+          for i:=0; i<100; i++ {
+            time.Sleep(100 * time.Millisecond)
+            sss := fmt.Sprintf(ss.sysctlName, ep.Spec.Iface.Name)
+            _, err = sysctl.Sysctl(sss, ss.sysctlValue)
+            if err == nil {
+              break
+            }
+            log.Println("WARNING: SysCtl setting try no." + strconv.Itoa(i) + " failed with error:" + err.Error())
+            links, err := netlink.LinkList()
+            if err != nil {log.Println("ERROR: can't list links  because:" + err.Error())}
+            for id,link := range links {
+              linkAttributes := link.Attrs()
+              if linkAttributes != nil {log.Println("Printing current link no." + strconv.Itoa(id) + " name:" + linkAttributes.Name)}
+            }
+          }
+          if err != nil {
+            log.Println("Giving up on sysctl setting")
+          }
         }
       }
     }

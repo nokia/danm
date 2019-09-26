@@ -8,6 +8,7 @@ import (
   "sync"
   "time"
   "github.com/containernetworking/cni/pkg/types/current"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
 )
 
 const (
@@ -23,6 +24,7 @@ type cniOpResult struct {
 type Syncher struct {
   ExpectedNumOfResults int
   CniResults []cniOpResult
+  Deps []danmtypes.DanmEp
   mux sync.Mutex
 }
 
@@ -94,4 +96,10 @@ func (synch *Syncher) WasAnyOperationErroneous() bool {
     return false
   }
   return synch.wasAnyOperationErroneous()
+}
+
+func (synch *Syncher) SaveDanmEp(dep danmtypes.DanmEp) {
+  synch.mux.Lock()
+  defer synch.mux.Unlock()
+  synch.Deps = append(synch.Deps, dep)
 }

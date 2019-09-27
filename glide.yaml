@@ -19,6 +19,5 @@ import:
   version: v0.8.1
 - package: github.com/intel/multus-cni
   version: e723aabca8792ddd181167660e252a127a81b073
-- package: github.com/intel/sriov-cni
-  version: 9e4c973b2ac517c64867e33d61aee152d70dc330
-
+- package: github.com/intel/sriov-cni	
+  version: 365c8f8cc1204df84f3e976ea30f113e733ca665

@@ -10,6 +10,7 @@ import (
   "github.com/containernetworking/plugins/pkg/ns"
   "github.com/containernetworking/plugins/pkg/utils/sysctl"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+  sriov_utils "github.com/intel/sriov-cni/pkg/utils"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
 )
@@ -107,7 +108,12 @@ func DetermineHostDeviceName(dnet *danmtypes.DanmNet) string {
   return device
 }
 
-func CreateRoutesInNetNs(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
+func PostProcessInterface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
+  if ep.Spec.Iface.DeviceID == "" &&
+     len(ep.Spec.Iface.Proutes)    == 0 && len(ep.Spec.Iface.Proutes6)    == 0 &&
+     len(dnet.Spec.Options.Routes) == 0 && len(dnet.Spec.Options.Routes6) == 0 {
+    return nil
+  }
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   origNs, err := ns.GetCurrentNS()
@@ -127,7 +133,14 @@ func CreateRoutesInNetNs(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   }()
   err = hns.Set()
   if err != nil {
-    return errors.New("failed to enter network namespace of CID:"+ep.Spec.Netns+" with error:"+err.Error())
+    return errors.New("failed to enter network namespace of CID:" + ep.Spec.Netns + " with error:" + err.Error())
+  }
+  isVfAttachedToDpdkDriver,_ := sriov_utils.HasDpdkDriver(ep.Spec.Iface.DeviceID)
+  if isVfAttachedToDpdkDriver {
+    err = createDummyInterface(ep)
+    if err != nil {
+      return err
+    }
   }
   return addIpRoutes(ep,dnet)
 }
@@ -176,7 +189,8 @@ func isIPv6Needed(ep danmtypes.DanmEp) bool {
 }
 
 func isIPv6NotNeeded(ep danmtypes.DanmEp) bool {
-  if ep.Spec.Iface.AddressIPv6 == "" {
+  isVfAttachedToDpdkDriver,_ := sriov_utils.HasDpdkDriver(ep.Spec.Iface.DeviceID)
+  if !isVfAttachedToDpdkDriver && ep.Spec.Iface.AddressIPv6 == "" {
     return true
   }
   return false

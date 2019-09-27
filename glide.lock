@@ -1,5 +1,5 @@
-hash: 1d7eea7c8fe94fb460fead10727227389ddead184b862425f9a6a913ec4b6e94
-updated: 2019-08-06T22:31:42.529643558+02:00
+hash: aa386d47de4210547ee89573057b83178ae6f7f4b1dd1df33f0cde11cf69b228
+updated: 2019-09-27T17:53:22.774886331+02:00
 imports:
 - name: github.com/apparentlymart/go-cidr
   version: 2bd8b58cf4275aeb086ade613de226773e29e853
@@ -72,8 +72,9 @@ imports:
   - logging
   - types
 - name: github.com/intel/sriov-cni
-  version: 9e4c973b2ac517c64867e33d61aee152d70dc330
+  version: 365c8f8cc1204df84f3e976ea30f113e733ca665
   subpackages:
+  - pkg/types
   - pkg/utils
 - name: github.com/j-keck/arping
   version: 2cf9dc699c5640a7e2c81403a44127bf28033600

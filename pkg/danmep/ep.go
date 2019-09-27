@@ -29,12 +29,7 @@ func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
   return createContainerIface(ep, dnet, device)
 }
 
-// TODO: Refactor this, as cyclomatic complexity is too high
 func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device string) error {
-  var (
-    addr4, addr6 net.IP
-    pref4, pref6 *net.IPNet
-  )
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   origns, err := ns.GetCurrentNS()
@@ -87,42 +82,13 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
   if err != nil {
     return errors.New("cannot find IPVLAN interface in network namespace:" + err.Error())
   }
-  ip := ep.Spec.Iface.Address
-  if ip != "" {
-    addr4, pref4, err = net.ParseCIDR(ip)
-    if err != nil {
-      return errors.New("cannot parse ip4 address because:" + err.Error())
-    }
-    ipAddr := &netlink.Addr{IPNet: &net.IPNet{IP: addr4, Mask: pref4.Mask}}
-    err = netlink.AddrAdd(iface, ipAddr)
-    if err != nil {
-      return errors.New("Cannot add ip4 address to IPVLAN interface because:" + err.Error())
-    }
-  }
-  ip6 := ep.Spec.Iface.AddressIPv6
-  // TODO: Refactor, duplicate of 87-98
-  if ip6 != "" {
-    addr6, pref6, err = net.ParseCIDR(ip6)
-    if err != nil {
-      return errors.New("cannot parse ip6 address because:" + err.Error())
-    }
-    ipAddr6 := &netlink.Addr{IPNet: &net.IPNet{IP: addr6, Mask: pref6.Mask}}
-    err = netlink.AddrAdd(iface, ipAddr6)
-    if err != nil {
-      return errors.New("Cannot add ip6 address to IPVLAN interface because:" + err.Error())
-    }
-  }
-  dstPrefix := ep.Spec.Iface.Name
-  err = netlink.LinkSetName(iface, dstPrefix)
+  err = configureLink(iface, ep)
   if err != nil {
-    return errors.New("cannot rename IPVLAN interface because:" + err.Error())
+    return err
   }
-  err = netlink.LinkSetUp(iface)
-  if err != nil {
-    return errors.New("cannot set renamed IPVLAN interface to up because:" + err.Error())
-  }
-  if ip != "" {
-    err = arping.GratuitousArpOverIfaceByName(addr4, dstPrefix)
+  if ep.Spec.Iface.Address != "" {
+    addr,_,_ := net.ParseCIDR(ep.Spec.Iface.Address)
+    err = arping.GratuitousArpOverIfaceByName(addr, ep.Spec.Iface.Name)
     if err != nil {
       log.Println("WARNING: sending gARP failed with error:" + err.Error(), ", but we will ignore that for now!")
     }
@@ -130,6 +96,44 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
   err = addIpRoutes(ep, dnet)
   if err != nil {
     return errors.New("IP routes could not be provisioned, because:" + err.Error())
+  }
+  return nil
+}
+
+func configureLink(iface netlink.Link, ep danmtypes.DanmEp) error {
+  var err error
+  if ep.Spec.Iface.Address != "" {
+    err = addIpToLink(ep.Spec.Iface.Address, iface)
+    if err != nil {
+      return err
+    }
+  }
+  if ep.Spec.Iface.AddressIPv6 != "" {
+    err = addIpToLink(ep.Spec.Iface.AddressIPv6, iface)
+    if err != nil {
+      return err
+    }
+  }
+  err = netlink.LinkSetName(iface, ep.Spec.Iface.Name)
+  if err != nil {
+    return errors.New("cannot rename link:" + ep.Spec.Iface.Name + " because:" + err.Error())
+  }
+  err = netlink.LinkSetUp(iface)
+  if err != nil {
+    return errors.New("cannot set link:" + ep.Spec.Iface.Name + " UP because:" + err.Error())
+  }
+  return nil
+}
+
+func addIpToLink(ip string, iface netlink.Link) error {
+  addr, pref, err := net.ParseCIDR(ip)
+  if err != nil {
+    return errors.New("cannot parse IP address because:" + err.Error())
+  }
+  ipAddr := &netlink.Addr{IPNet: &net.IPNet{IP: addr, Mask: pref.Mask}}
+  err = netlink.AddrAdd(iface, ipAddr)
+  if err != nil {
+    return errors.New("cannot add IP address to link because:" + err.Error())
   }
   return nil
 }
@@ -212,7 +216,7 @@ func deleteContainerIface(ep danmtypes.DanmEp) error {
   defer runtime.UnlockOSThread()
   origns, err := ns.GetCurrentNS()
   if err != nil {
-    return errors.New("getting the current netNS failed")  
+    return errors.New("getting the current netNS failed")
   }
   hns, err := ns.GetNS(ep.Spec.Netns)
   if err != nil {
@@ -258,4 +262,21 @@ func deleteEp(ep danmtypes.DanmEp) error {
     return errors.New("Cannot find netns")
   }
   return deleteContainerIface(ep)
+}
+
+func createDummyInterface(ep danmtypes.DanmEp) error {
+  dummy := &netlink.Dummy {
+    LinkAttrs: netlink.LinkAttrs {
+      Name: ep.Spec.Iface.Name,
+    },
+  }
+  err := netlink.LinkAdd(dummy)
+  if err != nil {
+    return errors.New("cannot create dummy interface for DPDK because:" + err.Error())
+  }
+  iface, err := netlink.LinkByName(ep.Spec.Iface.Name)
+  if err != nil {
+    return errors.New("cannot find freshly created dummy interface because:" + err.Error())
+  }
+  return configureLink(iface, ep)
 }

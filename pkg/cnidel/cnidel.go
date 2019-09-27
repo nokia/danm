@@ -75,10 +75,9 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
   if cniResult != nil {
     setEpIfaceAddress(cniResult, &ep.Spec.Iface)
   }
-  err = danmep.CreateRoutesInNetNs(*ep, netInfo)
+  err = danmep.PostProcessInterface(*ep, netInfo)
   if err != nil {
-    // We don't consider this serious error, so we only log a warning about the issue.
-    log.Println("WARNING: Could not create IP routes for CNI:" + cniType + " because:" + err.Error())
+    return nil, errors.New("Post-processing failed for interface:" + ep.Spec.Iface.Name + " because:" + err.Error())
   }
   return cniResult, nil
 }

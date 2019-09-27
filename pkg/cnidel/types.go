@@ -2,6 +2,7 @@ package cnidel
 
 import (
   "github.com/containernetworking/cni/pkg/types"
+  sriov_types "github.com/intel/sriov-cni/pkg/types"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/datastructs"
 )
@@ -17,24 +18,9 @@ type cniBackendConfig struct {
 
 // sriovNet represent the configuration of sriov cni v1.0.0
 type SriovNet struct {
-  types.NetConf
-  // name of the PF since sriov cni v1.0.0
-  PfName string     `json:"master"`
-  // if true then add VF as L2 mode only, IPAM will not be executed
-  L2Mode bool       `json:"l2enable,omitEmpty"`
-  // VLAN ID to assign for the VF
-  Vlan   int        `json:"vlan,omitEmpty"`
+  sriov_types.NetConf
   // IPAM configuration to be used for this network
   Ipam   datastructs.IpamConfig `json:"ipam,omitEmpty"`
-  // Device PCI ID
-  DeviceID string `json:"deviceID"`
-}
-
-// VfInformation is a DeviceInfo descriptor expected by sriov cni v1.0.0
-type VfInformation struct {
-  PCIaddr string `json:"pci_addr"`
-  Pfname  string `json:"pfname"`
-  Vfid    int    `json:"vfid"`
 }
 
 type MacvlanNet struct {

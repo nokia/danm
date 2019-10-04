@@ -1,6 +1,6 @@
 
-#DANM Deployment Guide
-##Table of Contents
+# DANM Deployment Guide
+## Table of Contents
 * [Getting started](#getting-started)
      * [Prerequisites](#prerequisites)
      * [Building the binaries](#building-the-binaries)

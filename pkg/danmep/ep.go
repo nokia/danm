@@ -93,10 +93,6 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
       log.Println("WARNING: sending gARP failed with error:" + err.Error(), ", but we will ignore that for now!")
     }
   }
-  err = addIpRoutes(ep, dnet)
-  if err != nil {
-    return errors.New("IP routes could not be provisioned, because:" + err.Error())
-  }
   return nil
 }
 

@@ -109,11 +109,6 @@ func DetermineHostDeviceName(dnet *danmtypes.DanmNet) string {
 }
 
 func PostProcessInterface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
-  if ep.Spec.Iface.DeviceID == "" &&
-     len(ep.Spec.Iface.Proutes)    == 0 && len(ep.Spec.Iface.Proutes6)    == 0 &&
-     len(dnet.Spec.Options.Routes) == 0 && len(dnet.Spec.Options.Routes6) == 0 {
-    return nil
-  }
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   origNs, err := ns.GetCurrentNS()
@@ -139,34 +134,18 @@ func PostProcessInterface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   if isVfAttachedToDpdkDriver {
     err = createDummyInterface(ep)
     if err != nil {
-      return err
+      return errors.New("failed to create dummy kernel interface for " + ep.Spec.Iface.Name + " because:" + err.Error())
     }
+  }
+  err = setDanmEpSysctls(ep)
+  if err != nil {
+    return errors.New("failed to set kernel configs for interface" + ep.Spec.Iface.Name + " beause:" + err.Error())
   }
   return addIpRoutes(ep,dnet)
 }
 
-func SetDanmEpSysctls(ep danmtypes.DanmEp) error {
-  runtime.LockOSThread()
-  defer runtime.UnlockOSThread()
-  // save the current namespace
-  origNs, err := ns.GetCurrentNS()
-  if err != nil {
-    return errors.New("failed to get current network namespace due to:" + err.Error())
-  }
-  // enter to the Pod's network namespace
-  podNs, err := ns.GetNS(ep.Spec.Netns)
-  if err != nil {
-    return errors.New("failed to get Pod's network namespace due to:" + err.Error())
-  }
-  err = podNs.Set()
-  if err != nil {
-    return errors.New("failed to switch to Pod's network namespace due to:" + err.Error())
-  }
-  defer func() {
-    podNs.Close()
-    origNs.Set()
-  }()
-  // set sysctls
+func setDanmEpSysctls(ep danmtypes.DanmEp) error {
+  var err error
   for _, s := range sysctls {
     if s.sysctlFunc(ep) {
       for _, ss := range s.sysctlData {
@@ -189,8 +168,7 @@ func isIPv6Needed(ep danmtypes.DanmEp) bool {
 }
 
 func isIPv6NotNeeded(ep danmtypes.DanmEp) bool {
-  isVfAttachedToDpdkDriver,_ := sriov_utils.HasDpdkDriver(ep.Spec.Iface.DeviceID)
-  if !isVfAttachedToDpdkDriver && ep.Spec.Iface.AddressIPv6 == "" {
+  if ep.Spec.Iface.AddressIPv6 == "" {
     return true
   }
   return false

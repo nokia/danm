@@ -13,7 +13,6 @@ import (
   "github.com/containernetworking/cni/pkg/types"
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/cni/pkg/version"
-  "github.com/nokia/danm/pkg/danmep"
   "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/netcontrol"
@@ -58,26 +57,22 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
     //As netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
     //Without re-reading the network body we risk leaking IPs if error happens later on within the same thread!
     netInfo,err = netcontrol.GetNetworkFromEp(danmClient, *ep)
-    if err != nil {log.Println("lofasz:" + err.Error())}
+    if err != nil {
+      return nil, err
+    }
     ipamOptions = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
   }
   rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamOptions, ep)
   if err != nil {
-    FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, err
   }
   cniType := netInfo.Spec.NetworkType
   cniResult,err := execCniPlugin(cniType, CniAddOp, netInfo, rawConfig, ep)
   if err != nil {
-    FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return nil, errors.New("Error delegating ADD to CNI plugin:" + cniType + " because:" + err.Error())
   }
   if cniResult != nil {
     setEpIfaceAddress(cniResult, &ep.Spec.Iface)
-  }
-  err = danmep.PostProcessInterface(*ep, netInfo)
-  if err != nil {
-    return nil, errors.New("Post-processing failed for interface:" + ep.Spec.Iface.Name + " because:" + err.Error())
   }
   return cniResult, nil
 }

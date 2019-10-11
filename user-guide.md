@@ -23,6 +23,7 @@
   * [DANM IPVLAN CNI](#danm-ipvlan-cni)
   * [Device Plugin Support](#device-plugin-support)
     * [Using Intel SR-IOV CNI](#using-intel-sr-iov-cni)
+    * [DPDK support](#dpdk-support)
 * [Usage of DANM's Webhook component](#usage-of-danms-webhook-component)
    * [Responsibilities](#responsibilities)
    * [Connecting TenantNetworks to TenantConfigs](#connecting-tenantnetworks-to-tenantconfigs)
@@ -259,7 +260,8 @@ The CNI provisions IPVLAN interfaces in L2 mode, and supports the following extr
 * provisioning generic IP routes into a configured routing table inside the Pod's network namespace
 * Pod-level controlled provisioning of policy-based IP routes into Pod's network namespace
 #### Device Plugin support
-DANM provides general support to CNIs which interwork with Kubernetes' Device Plugin mechanism such as SR-IOV CNI.
+DANM provides general support for CNIs interworking with Kubernetes' Device Plugin mechanism.
+A practical example of such a network provisioner is the SR-IOV CNI.
 When a properly configured Network Device Plugin runs, the allocatable resource list for the node should be updated with resource discovered by the plugin.
 ##### Using Intel SR-IOV CNI
 SR-IOV Network Device Plugin allows to create a list of *netdevice* type resource definitions with *sriovMode*, where each resource definition can have one or more assigned *rootDevice* (Physical Function). The plugin looks for Virtual Functions (VF) for each configured Physical Function (PF) and adds all discovered VFs to the allocatable resource's list of the given Kubernetes Node. The Device Plugin resource name will be the device pool name on the Node. These device pools can be referred in Pod definition's resource request part on the usual way.
@@ -329,6 +331,17 @@ spec:
   nodeSelector:
     sriov: enabled
 ```
+##### DPDK support
+DANM's SR-IOV integration supports -and is tested with- both Intel, and Mellanox manufactured physical functions.
+Moreover Pods can use the allocated Virtual Functions for either kernel, or userspace networking.
+The only restriction to keep in mind is when a DPDK using application requests VFs from an Intel NIC for the purpose of userspace networking,
+those VFs shall be already bound to the vfio-pci kernel driver before the Pod is instantiated.
+To guarantee such VFs are always available on the Node the Pod is scheduled to, we strongly suggest advertising vfio-pci bound VFs as a separate Device Pool.
+When an already vfio bound function is mounted to an application, DANM also creates a dummy kernel interface in its stead in the Pod's network namespace.
+The dummy interface can be easily identified by the application, because it's named exactly as the VF would be.
+The dummy interface is used to communicate the IPAM details belonging to the non-kernel managed device, such as IP addresses, IP routes etc.
+Userspace applications can interrogate this information via the usual kernel APIs, and then configure the allocated resources into their own IP stack!
+
 ### Usage of DANM's Webhook component
 #### Responsibilities
 The Webhook component introduced in DANM V4 is responsible for three things:

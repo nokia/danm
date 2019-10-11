@@ -58,24 +58,28 @@ type MalformedObject struct {
 func SetupAllocationPools(nets []danmtypes.DanmNet) error {
   for index, dnet := range nets {
     if dnet.Spec.Options.Cidr != "" {
-      admit.CreateAllocationArray(&dnet)
-      _, ipnet, err := net.ParseCIDR(dnet.Spec.Options.Cidr)
-      if err != nil {
-        return err
-      }
-      if dnet.Spec.Options.Pool.Start == "" {
-        dnet.Spec.Options.Pool.Start = (ipam.Int2ip(ipam.Ip2int(ipnet.IP) + 1)).String()
-      }
-      if dnet.Spec.Options.Pool.End == "" {
-        dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(admit.GetBroadcastAddress(ipnet)) - 1)).String()
-      }
-      if strings.HasPrefix(dnet.ObjectMeta.Name, "full") {
-        exhaustNetwork(&dnet)
-      }
-      nets[index].Spec = dnet.Spec
+      nets[index].Spec = InitAllocPool(&dnet).Spec
     }
   }
   return nil
+}
+
+func InitAllocPool(dnet *danmtypes.DanmNet) *danmtypes.DanmNet {
+  if dnet.Spec.Options.Cidr == "" {
+    return dnet
+  }
+  admit.CreateAllocationArray(dnet)
+  _, ipnet, _ := net.ParseCIDR(dnet.Spec.Options.Cidr)
+  if dnet.Spec.Options.Pool.Start == "" {
+    dnet.Spec.Options.Pool.Start = (ipam.Int2ip(ipam.Ip2int(ipnet.IP) + 1)).String()
+  }
+  if dnet.Spec.Options.Pool.End == "" {
+    dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(admit.GetBroadcastAddress(ipnet)) - 1)).String()
+  }
+  if strings.HasPrefix(dnet.ObjectMeta.Name, "full") {
+    exhaustNetwork(dnet)
+  }
+  return dnet
 }
 
 func GetTestNet(netId string, testNets []danmtypes.DanmNet) *danmtypes.DanmNet {

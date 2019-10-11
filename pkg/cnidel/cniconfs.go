@@ -62,7 +62,6 @@ func getSriovCniConfig(netInfo *danmtypes.DanmNet, ipamOptions datastructs.IpamC
   sriovConfig.CNIVersion = cniVersion
   sriovConfig.Name       = netInfo.Spec.NetworkID
   sriovConfig.Type       = "sriov"
-  // initialize SriovNet specific fields:
   pfname, err := sriov_utils.GetPfName(ep.Spec.Iface.DeviceID)
   if err != nil {
     return nil, errors.New("failed to get the name of the sriov PF for device "+ ep.Spec.Iface.DeviceID +" due to:" + err.Error())

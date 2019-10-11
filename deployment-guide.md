@@ -1,4 +1,3 @@
-
 # DANM Deployment Guide
 ## Table of Contents
 * [Getting started](#getting-started)
@@ -45,7 +44,8 @@ The result will be 6, statically linked binaries put into your $GOPATH/bin direc
 ### Building the containers
 Netwatcher, svcwatcher, and webhook binaries are built into their own containers.
 The project contains example Dockerfiles for all of these components under the integration/docker directory.
-Copying the respective binary into the right folder (netwatcher into integration/docker/netwatcher, svcwatcher into integration/docker/svcwatcher, webhook into integration/docker/webhook), then executing:
+
+**Copy the respective binary into the right folder (netwatcher into integration/docker/netwatcher, svcwatcher into integration/docker/svcwatcher, webhook into integration/docker/webhook), then execute:**
 ```
 docker build -t netwatcher:latest integration/docker/netwatcher
 docker build -t svcwatcher:latest integration/docker/svcwatcher
@@ -57,9 +57,10 @@ buildah bud -t netwatcher:latest integration/docker/netwatcher
 buildah bud -t svcwatcher:latest integration/docker/svcwatcher
 buildah bud -t webhook:latest integration/docker/webhook
 ```
-builds the respective containers. Afterwards these containers can be directly integrated into a running Kubernetes cluster!
+This builds the respective containers. Afterwards, these containers can be directly integrated into a running Kubernetes cluster!
 ## Deployment
 The method of deploying the whole DANM suite into a Kubernetes cluster is the following.
+
 **1A. Extend the Kubernetes API with the DanmNet and DanmEp CRD objects for a simplified network management experience by executing the following command from the project's root directory:**
 ```
 kubectl create -f integration/crds/lightweight

@@ -34,7 +34,7 @@ var (
     danmtypes.TenantConfig{ObjectMeta: meta_v1.ObjectMeta {Name: "secondConf"}},
   }
   reserveConfs = []danmtypes.TenantConfig {
-    danmtypes.TenantConfig{
+    danmtypes.TenantConfig {
       ObjectMeta: meta_v1.ObjectMeta {Name: "tconf"},
       HostDevices: []danmtypes.IfaceProfile {
         danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
@@ -44,10 +44,16 @@ var (
         danmtypes.IfaceProfile{Name: "nokia.k8s.io/sriov_ens1f0", VniType: "vxlan", VniRange: "1600-1650", Alloc: utils.AllocFor5k},
       },
     },
-    danmtypes.TenantConfig{
+    danmtypes.TenantConfig {
       ObjectMeta: meta_v1.ObjectMeta {Name: "error"},
       HostDevices: []danmtypes.IfaceProfile {
         danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "800-810", Alloc: utils.AllocFor5k},
+      },
+    },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "corrupt"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "corrupt", VniType: "vxlan", VniRange: "700-710", Alloc: ""},
       },
     },
   }
@@ -56,6 +62,7 @@ var (
     danmtypes.IfaceProfile{Name: "ens4", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
     danmtypes.IfaceProfile{Name: "ens4", VniType: "vlan", VniRange: "200,500-510", Alloc: utils.AllocFor5k},
     danmtypes.IfaceProfile{Name: "hupak", VniType: "vlan", VniRange: "1000,1001", Alloc: utils.AllocFor5k},
+    danmtypes.IfaceProfile{Name: "corrupt", VniType: "vxlan", VniRange: "700-710", Alloc: ""},
   }
   tconfSets = []TconfSet {
     TconfSet{name: "emptyTcs", tconfs: emptyTconfs},
@@ -92,6 +99,10 @@ var (
       ObjectMeta: meta_v1.ObjectMeta {Name: "novni"},
       Spec: danmtypes.DanmNetSpec{NetworkID: "internal", NetworkType: "ipvlan", Options: danmtypes.DanmNetOption{Device: "ens4"}},
     },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "corrupt"},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "internal", NetworkType: "ipvlan", Options: danmtypes.DanmNetOption{Device: "corrupt", Vxlan: 700}},
+    },
   }
 )
 
@@ -120,6 +131,7 @@ var reserveTcs = []struct {
   {"noFreeVniInIface", "tconf", "ens4", "vlan", []int{200,510}, true, 0},
   {"errorUpdating", "error", "ens4", "vxlan", nil, true, 0},
   {"nonExistentProfile", "tconf", "hupak", "vlan", nil, true, 0},
+  {"corruptedVniAllocation", "corrupt", "corrupt", "", nil, true, 0},
 }
 
 var freeTcs = []struct {
@@ -139,6 +151,7 @@ var freeTcs = []struct {
   {"devicePoolWithVxlan", "tconf", "sriov_vxlan", "nokia.k8s.io/sriov_ens1f0", "vxlan", false, false},
   {"errorUpdating", "error", "ipvlan_vxlan", "ens4", "vxlan", false, true},
   {"noVnis", "tconf", "novni", "", "", false, false},
+  {"corruptedVniAllocation", "corrupt", "corrupt", "", "", false, true},
 }
 
 func TestGetTenantConfig(t *testing.T) {

@@ -24,6 +24,9 @@ func GetTenantConfig(danmClient danmclientset.Interface) (*danmtypes.TenantConfi
 
 func Reserve(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (int,error) {
   allocs := bitarray.NewBitArrayFromBase64(iface.Alloc)
+  if allocs.Len() == 0 {
+    return 0, errors.New("VNI allocations for interface:" + iface.Name + " is corrupt! Are you running without webhook?")
+  }
   vnis, err := cpuset.Parse(iface.VniRange)
   if err != nil {
     return 0, errors.New("vniRange for interface:" + iface.Name + " cannot be parsed because:" + err.Error())
@@ -84,10 +87,13 @@ func Free(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, dne
     " as the used network details (interface name, VNI type) doe not match any entries in TenantConfig. This means your APIs were possibly tampered with!")
     return nil
   }
-  allocs := bitarray.NewBitArrayFromBase64(tconf.HostDevices[index].Alloc)
   vni := dnet.Spec.Options.Vlan
   if dnet.Spec.Options.Vxlan != 0 {
     vni = dnet.Spec.Options.Vxlan
+  }
+  allocs := bitarray.NewBitArrayFromBase64(tconf.HostDevices[index].Alloc)
+  if allocs.Len() == 0 {
+    return errors.New("VNI allocations for interface:" + tconf.HostDevices[index].Name + " is corrupt! Are you running without webhook?")
   }
   allocs.Reset(uint32(vni))
   tconf.HostDevices[index].Alloc = allocs.Encode()

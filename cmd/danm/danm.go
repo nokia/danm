@@ -1,6 +1,7 @@
 package main
 
 import (
+  "flag"
   "log"
   "os"
   "github.com/containernetworking/cni/pkg/skel"
@@ -8,7 +9,18 @@ import (
   "github.com/nokia/danm/pkg/metacni"
 )
 
+var(
+  version, commitHash string
+)
+
 func main() {
+  printVersion := flag.Bool("version", false, "prints Git version information of the binary to standard out")
+  flag.Parse()
+  if *printVersion {
+    log.Println("DANM binary was built from release: " + version)
+    log.Println("DANM binary was built from commit: " + commitHash)
+    return
+  }
   var err error
   f, err := os.OpenFile("/var/log/danm.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0640)
   if err != nil {

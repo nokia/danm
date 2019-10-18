@@ -9,6 +9,10 @@ import (
   "github.com/nokia/danm/pkg/netcontrol"
 )
 
+var(
+  version, commitHash string
+)
+
 func getClientConfig(kubeConfig *string) (*rest.Config, error) {
   if kubeConfig != nil {
     return clientcmd.BuildConfigFromFlags("", *kubeConfig)
@@ -17,6 +21,13 @@ func getClientConfig(kubeConfig *string) (*rest.Config, error) {
 }
 
 func main() {
+  printVersion := flag.Bool("version", false, "prints Git version information of the binary to standard out")
+  flag.Parse()
+  if *printVersion {
+    log.Println("DANM binary was built from release: " + version)
+    log.Println("DANM binary was built from commit: " + commitHash)
+    return
+  }
   log.SetOutput(os.Stdout)
   log.Println("Starting DANM Watcher...")
   kubeConfig := flag.String("kubeconf", "", "Path to a kube config. Only required if out-of-cluster.")

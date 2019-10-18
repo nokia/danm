@@ -15,13 +15,12 @@
 
 **How to reproduce it**:
 
-
 **Anything else we need to know?**:
 
 **Environment**:
-- danm version
+- DANM version (use `danm -version`):
 - Kubernetes version (use `kubectl version`):
-- danm configuration:
+- DANM configuration (K8s manifests, kubeconfig files, CNI config file):
 - OS (e.g. from /etc/os-release):
 - Kernel (e.g. `uname -a`):
 - Others:

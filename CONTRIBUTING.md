@@ -26,10 +26,10 @@ Feel free to comment on existing issues, open new ones, or simply send your idea
 We promise that we will be always transparent when communicating with the community, and will respectfully hear each and every idea out!
 In exchange we expect the same behavior from our Contributors.
 
-However, please also note that DANM is already being used in many, vastly differing TelCo production cases. 
+However, please also note that DANM is already being used in many, vastly differing TelCo production cases.
 As a result, the maintainers of the project retain the right of refusing certain contributions, if these would not be compatible with an existing production use-case.
 
-Don't feel discouraged or offended if this would happen to you! 
+Don't feel discouraged or offended if this would happen to you!
 What we can promise is that we will always respectfully and truthfully explore and entertain your reasoning before making a decision, and will always openly and transparently share our own with you in case of a conflict!
 
 ### Getting started
@@ -39,7 +39,7 @@ Keep in mind that the project is:
 
  - written in Golang, so you will need a properly set-up Golang 1.9+  development environment
  - managed by Glide, so you will need to install it on your machine (for the time being)
- 
+
 Once you have the prerequisites, fork our project, code your changes, test your contribution, then start a normal GitHub review process.
 
 Pull requests will be only merged once at least one of the project maintainers approved them.
@@ -54,7 +54,7 @@ Not mandatory, *but highly appreciated:*
 
 When writing Unit Tests we prefer testing the packages through their public interfaces!
 
-We appreciate thorough and detailed commit messages. 
+We appreciate thorough and detailed commit messages.
 
 We are not allergic to the number of commits it took to create a contribution, you are not required to squash and amend your changes all the time.
 However, we require you to break-up big contributions into smaller, functionally coherent pieces. This approach greatly reduces both integration and review efforts!
@@ -64,18 +64,21 @@ The following topics are on our mind right now, so if you are looking for topic 
 We are aiming to adopt the go module style dependency management within our project.
 
 Being a new project, we have not yet integrated the repository to an automated CI system (like Travis).
- 
+
 Increasing UT coverage of existing code is alway appreciated.
 
-Extending the "reach" of the DANM ecosystem is our primary goal! 
-This includes both native, first-class integration of additional CNI plugin interfaces, and integrating more one-network Kubernetes features (e.g. NetworkPolicy) with our DanmNet API. 
+Extending the "reach" of the DANM ecosystem is our primary goal!
+This includes both native, first-class integration of additional CNI plugin interfaces, and integrating more one-network Kubernetes features (e.g. NetworkPolicy) with our DanmNet API.
 
 # Community
 ### Maintainers / core team
-Robert Springer (@rospring)
-Levente Kale (@Levovar)
+Róbert Springer (@rospring)
+Levente Kálé (@Levovar)
 ### Distinguished contributors
-Lengyel Krisztian (@klengyel)
+Lengyel Krisztián (@klengyel)
+Ferenc Tóth (@TothFerenc)
+### Honorable mentions
+@peterszilagyi, @libesz, @visnyei, @CsatariGergely, @clivez, @Fillamug, @janosi
 
 Please keep in mind we live in the CET/CEST timezone!
 

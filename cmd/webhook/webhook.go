@@ -10,12 +10,22 @@ import (
   "github.com/nokia/danm/pkg/admit"
 )
 
+var(
+  version, commitHash string
+)
+
 func main() {
-  cert := flag.String("tls-cert-bundle", "", "File containing the x509 Certificate for HTTPS. (CA cert, if any, concatenated after server cert).")
-  key := flag.String("tls-private-key-file", "", "File containing the x509 private key matching --tls-cert-bundle.")
-  port := flag.Int("bind-port", 8443, "The port on which to serve. Default is 8443.")
-  address := flag.String("bind-address", "", "The IP address on which to listen. Default is all interfaces.")
+  cert := flag.String("tls-cert-bundle", "", "file containing the x509 Certificate for HTTPS. (CA cert, if any, concatenated after server cert).")
+  key := flag.String("tls-private-key-file", "", "file containing the x509 private key matching --tls-cert-bundle.")
+  port := flag.Int("bind-port", 8443, "the port on which to serve. Default is 8443.")
+  address := flag.String("bind-address", "", "the IP address on which to listen. Default is all interfaces.")
+  printVersion := flag.Bool("version", false, "prints Git version information of the binary to standard out")
   flag.Parse()
+  if *printVersion {
+    log.Println("DANM binary was built from release: " + version)
+    log.Println("DANM binary was built from commit: " + commitHash)
+    return
+  }
   if cert == nil || key == nil {
     log.Println("ERROR: Configuring TLS is mandatory, --tls-cert-bundle and --tls-private-key-file cannot be empty!")
     return

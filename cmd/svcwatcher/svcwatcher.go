@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"time"
 	"os"
 	"fmt"
@@ -22,12 +23,18 @@ import (
 )
 
 var (
-	kubeconfig string
+	kubeconfig, version, commitHash string
 )
 
 func main() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	printVersion := flag.Bool("version", false, "prints Git version information of the binary to standard out")
 	flag.Parse()
-
+	if *printVersion {
+		log.Println("DANM binary was built from release: " + version)
+		log.Println("DANM binary was built from commit: " + commitHash)
+		return
+	}
 	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		glog.Fatalf("Error building kubeconfig: %s", err.Error())
@@ -103,8 +110,3 @@ func createRecorder(kubeClient *kubernetes.Clientset, comp string) record.EventR
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: v1core.New(kubeClient.CoreV1().RESTClient()).Events("kube-system")})
 	return eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: comp})
 }
-
-func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-}
-

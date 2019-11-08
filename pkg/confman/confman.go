@@ -3,9 +3,11 @@ package confman
 import (
   "errors"
   "log"
+  "strings"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   "github.com/nokia/danm/pkg/bitarray"
+  "github.com/nokia/danm/pkg/datastructs"
   metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   "k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
@@ -23,6 +25,24 @@ func GetTenantConfig(danmClient danmclientset.Interface) (*danmtypes.TenantConfi
 }
 
 func Reserve(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (int,error) {
+  for {
+    chosenVni, err := reserveVni(tconf, iface)
+    if err != nil {
+      return 0, err
+    }
+    _, err = danmClient.DanmV1().TenantConfigs().Update(tconf)
+    if err != nil && strings.Contains(err.Error(), datastructs.OptimisticLockErrorMsg) {
+      tconf, err = danmClient.DanmV1().TenantConfigs().Get(tconf.ObjectMeta.Name, metav1.GetOptions{})
+      if err != nil {
+        return 0, err
+      }
+      continue
+    }
+    return chosenVni, err
+  }
+}
+
+func reserveVni(tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (int,error) {
   allocs := bitarray.NewBitArrayFromBase64(iface.Alloc)
   if allocs.Len() == 0 {
     return 0, errors.New("VNI allocations for interface:" + iface.Name + " is corrupt! Are you running without webhook?")
@@ -50,11 +70,7 @@ func Reserve(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, 
     return 0, errors.New("VNI cannot be reserved because selected interface does not exist. You should call for a tech priest, and start praying to the Omnissiah immediately.")
   }
   tconf.HostDevices[index] = iface
-  //TODO: now, do we actually need to manually check for the OptimisticLockErrorMessage when we use a generated client,
-  //or that is actually dead code in ipam as well?
-  //Let's find out!
-  _, err = danmClient.DanmV1().TenantConfigs().Update(tconf)
-  return chosenVni, err
+  return chosenVni, nil
 }
 
 func getIfaceIndex(tconf *danmtypes.TenantConfig, name, vniType string) int {
@@ -87,6 +103,24 @@ func Free(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, dne
     " as the used network details (interface name, VNI type) doe not match any entries in TenantConfig. This means your APIs were possibly tampered with!")
     return nil
   }
+  for {
+    err := freeVni(tconf, dnet, index)
+    if err != nil {
+      return err
+    }
+    _, err = danmClient.DanmV1().TenantConfigs().Update(tconf)
+    if err != nil && strings.Contains(err.Error(), datastructs.OptimisticLockErrorMsg) {
+      tconf, err = danmClient.DanmV1().TenantConfigs().Get(tconf.ObjectMeta.Name, metav1.GetOptions{})
+      if err != nil {
+        return err
+      }
+      continue
+    }
+    return err
+  }
+}
+
+func freeVni(tconf *danmtypes.TenantConfig, dnet *danmtypes.DanmNet, index int) error {
   vni := dnet.Spec.Options.Vlan
   if dnet.Spec.Options.Vxlan != 0 {
     vni = dnet.Spec.Options.Vxlan
@@ -97,6 +131,5 @@ func Free(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, dne
   }
   allocs.Reset(uint32(vni))
   tconf.HostDevices[index].Alloc = allocs.Encode()
-  _, err := danmClient.DanmV1().TenantConfigs().Update(tconf)
-  return err
+  return nil
 }

@@ -36,6 +36,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ClusterNetworkList{},
 		&TenantNetwork{},
 		&TenantNetworkList{},
+		&TenantConfig{},
+		&TenantConfigList{},
 	)
 	meta_v1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

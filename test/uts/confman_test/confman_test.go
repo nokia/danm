@@ -1,6 +1,7 @@
 package confman_test
 
 import (
+  "strconv"
   "testing"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
@@ -56,6 +57,18 @@ var (
         danmtypes.IfaceProfile{Name: "corrupt", VniType: "vxlan", VniRange: "700-710", Alloc: ""},
       },
     },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "conflict"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "conflict", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
+      },
+    },
+    danmtypes.TenantConfig {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "conflicterror"},
+      HostDevices: []danmtypes.IfaceProfile {
+        danmtypes.IfaceProfile{Name: "conflict", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
+      },
+    },
   }
   reserveIfaces = []danmtypes.IfaceProfile {
     danmtypes.IfaceProfile{Name:"invalidVni", VniRange: "invalid"},
@@ -63,6 +76,7 @@ var (
     danmtypes.IfaceProfile{Name: "ens4", VniType: "vlan", VniRange: "200,500-510", Alloc: utils.AllocFor5k},
     danmtypes.IfaceProfile{Name: "hupak", VniType: "vlan", VniRange: "1000,1001", Alloc: utils.AllocFor5k},
     danmtypes.IfaceProfile{Name: "corrupt", VniType: "vxlan", VniRange: "700-710", Alloc: ""},
+    danmtypes.IfaceProfile{Name: "conflict", VniType: "vxlan", VniRange: "700-710", Alloc: utils.AllocFor5k},
   }
   tconfSets = []TconfSet {
     TconfSet{name: "emptyTcs", tconfs: emptyTconfs},
@@ -103,6 +117,10 @@ var (
       ObjectMeta: meta_v1.ObjectMeta {Name: "corrupt"},
       Spec: danmtypes.DanmNetSpec{NetworkID: "internal", NetworkType: "ipvlan", Options: danmtypes.DanmNetOption{Device: "corrupt", Vxlan: 700}},
     },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "conflict"},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "internal", NetworkType: "ipvlan", Options: danmtypes.DanmNetOption{Device: "conflict", Vxlan: 705}},
+    },
   }
 )
 
@@ -124,14 +142,17 @@ var reserveTcs = []struct {
   reserveVnis []int
   isErrorExpected bool
   expectedVni int
+  timesUpdateShouldBeCalled int
 }{
-  {"invalidVni", "tconf", "invalidVni", "", nil, true, 0},
-  {"reserveFirstFreeInEmptyIface", "tconf", "ens4", "vlan", nil, false, 200},
-  {"reserveLastFreeInIface", "tconf", "ens4", "vlan", []int{200,509}, false, 510},
-  {"noFreeVniInIface", "tconf", "ens4", "vlan", []int{200,510}, true, 0},
-  {"errorUpdating", "error", "ens4", "vxlan", nil, true, 0},
-  {"nonExistentProfile", "tconf", "hupak", "vlan", nil, true, 0},
-  {"corruptedVniAllocation", "corrupt", "corrupt", "", nil, true, 0},
+  {"invalidVni", "tconf", "invalidVni", "", nil, true, 0, 0},
+  {"reserveFirstFreeInEmptyIface", "tconf", "ens4", "vlan", nil, false, 200, 1},
+  {"reserveLastFreeInIface", "tconf", "ens4", "vlan", []int{200,509}, false, 510, 1},
+  {"noFreeVniInIface", "tconf", "ens4", "vlan", []int{200,510}, true, 0, 0},
+  {"errorUpdating", "error", "ens4", "vxlan", nil, true, 0, 1},
+  {"nonExistentProfile", "tconf", "hupak", "vlan", nil, true, 0, 0},
+  {"corruptedVniAllocation", "corrupt", "corrupt", "vxlan", nil, true, 0, 0},
+  {"conflictDuringFirstUpdate", "conflict", "conflict", "vxlan", []int{700,708}, false, 710, 2},
+  {"failsToRefreshAfterConflict", "conflicterror", "conflict", "vxlan", []int{700,708}, true, 0, 1},
 }
 
 var freeTcs = []struct {
@@ -142,16 +163,18 @@ var freeTcs = []struct {
   ifaceTypeToCheck string
   vniShouldBeSet bool
   isErrorExpected bool
+  timesUpdateShouldBeCalled int
 }{
-  {"invalidIface", "tconf", "ens5", "", "", false, false},
-  {"invalidVniType", "tconf", "ens6", "ens6", "vxlan", true, false},
-  {"hostDeviceWithVlan", "tconf", "ipvlan_vlan", "ens4", "vlan", false, false},
-  {"hostDeviceWithVxlan", "tconf", "ipvlan_vxlan", "ens4", "vxlan", false, false},
-  {"devicePoolWithVlan", "tconf", "sriov_vlan", "nokia.k8s.io/sriov_ens1f0", "vlan", false, false},
-  {"devicePoolWithVxlan", "tconf", "sriov_vxlan", "nokia.k8s.io/sriov_ens1f0", "vxlan", false, false},
-  {"errorUpdating", "error", "ipvlan_vxlan", "ens4", "vxlan", false, true},
-  {"noVnis", "tconf", "novni", "", "", false, false},
-  {"corruptedVniAllocation", "corrupt", "corrupt", "", "", false, true},
+  {"invalidIface", "tconf", "ens5", "", "", false, false, 0},
+  {"invalidVniType", "tconf", "ens6", "ens6", "vxlan", true, false, 0},
+  {"hostDeviceWithVlan", "tconf", "ipvlan_vlan", "ens4", "vlan", false, false, 1},
+  {"hostDeviceWithVxlan", "tconf", "ipvlan_vxlan", "ens4", "vxlan", false, false, 1},
+  {"devicePoolWithVlan", "tconf", "sriov_vlan", "nokia.k8s.io/sriov_ens1f0", "vlan", false, false, 1},
+  {"devicePoolWithVxlan", "tconf", "sriov_vxlan", "nokia.k8s.io/sriov_ens1f0", "vxlan", false, false, 1},
+  {"errorUpdating", "error", "ipvlan_vxlan", "ens4", "vxlan", false, true, 1},
+  {"noVnis", "tconf", "novni", "", "", false, false, 0},
+  {"corruptedVniAllocation", "corrupt", "corrupt", "", "", false, true, 0},
+  {"conflictDuringFree", "conflict", "conflict", "conflict", "vxlan", false, false, 2},
 }
 
 func TestGetTenantConfig(t *testing.T) {
@@ -177,12 +200,16 @@ func TestReserve(t *testing.T) {
     t.Run(tc.tcName, func(t *testing.T) {
       tconf := utils.GetTconf(tc.tconfName, reserveConfs)
       iface := getIface(tc.ifaceName, tc.vniType, reserveIfaces)
+      var exhaustAllocs []int
       if tc.reserveVnis != nil {
-        reserveVnis(&iface,tc.reserveVnis)
+        utils.ReserveVnis(&iface,tc.reserveVnis)
         index, _ := getIfaceFromTconf(tc.ifaceName, tc.vniType, tconf)
         tconf.HostDevices[index] = iface
+        exhaustAllocs = make([]int, 2)
+        exhaustAllocs[0] = tc.reserveVnis[0]
+        exhaustAllocs[1] = tc.reserveVnis[1]+1
       }
-      testArtifacts := utils.TestArtifacts{TestTconfs: reserveConfs}
+      testArtifacts := utils.TestArtifacts{TestTconfs: reserveConfs, ExhaustAllocs: exhaustAllocs}
       tconfClientStub := stubs.NewClientSetStub(testArtifacts)
       vni, err := confman.Reserve(tconfClientStub, tconf, iface)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
@@ -200,6 +227,13 @@ func TestReserve(t *testing.T) {
           return
         }
       }
+      var timesUpdateWasCalled int
+      if tconfClientStub.DanmClient.TconfClient != nil {
+        timesUpdateWasCalled = tconfClientStub.DanmClient.TconfClient.TimesUpdateWasCalled
+      }
+      if tc.timesUpdateShouldBeCalled != timesUpdateWasCalled {
+        t.Errorf("Tconf should have been updated:" + strconv.Itoa(tc.timesUpdateShouldBeCalled) + " times, but it happened:" + strconv.Itoa(timesUpdateWasCalled) + " times instead")
+      }
     })
   }
 }
@@ -209,12 +243,16 @@ func TestFree(t *testing.T) {
     t.Run(tc.tcName, func(t *testing.T) {
       tconf := utils.GetTconf(tc.tconfName, reserveConfs)
       dnet := utils.GetTestNet(tc.networkName, testNets)
+      var exhaustAllocs []int
       if tc.ifaceNameToCheck != "" {
         index, iface := getIfaceFromTconf(tc.ifaceNameToCheck, tc.ifaceTypeToCheck, tconf)
-        reserveVnis(&iface,[]int{0,4999})
+        utils.ReserveVnis(&iface,[]int{0,4999})
+        exhaustAllocs = make([]int, 2)
+        exhaustAllocs[0] = 0
+        exhaustAllocs[1] = 4999
         tconf.HostDevices[index] = iface
       }
-      testArtifacts := utils.TestArtifacts{TestTconfs: reserveConfs, TestNets: testNets}
+      testArtifacts := utils.TestArtifacts{TestTconfs: reserveConfs, TestNets: testNets, ExhaustAllocs: exhaustAllocs}
       tconfClientStub := stubs.NewClientSetStub(testArtifacts)
       err := confman.Free(tconfClientStub, tconf, dnet)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
@@ -232,6 +270,13 @@ func TestFree(t *testing.T) {
       } else if tc.ifaceNameToCheck != "" && !tc.vniShouldBeSet && isVniSet(ifaceAfter,vniToCheck) {
         t.Errorf("VNI:%d in interface profile:%s should not be set, but it is!", vniToCheck, tc.ifaceNameToCheck)
         return
+      }
+      var timesUpdateWasCalled int
+      if tconfClientStub.DanmClient.TconfClient != nil {
+        timesUpdateWasCalled = tconfClientStub.DanmClient.TconfClient.TimesUpdateWasCalled
+      }
+      if tc.timesUpdateShouldBeCalled != timesUpdateWasCalled {
+        t.Errorf("Tconf should have been updated:" + strconv.Itoa(tc.timesUpdateShouldBeCalled) + " times, but it happened:" + strconv.Itoa(timesUpdateWasCalled) + " times instead")
       }
     })
   }
@@ -261,14 +306,6 @@ func getIfaceFromTconf(ifaceName string, vniType string, tconf *danmtypes.Tenant
     }
   }
   return -1, danmtypes.IfaceProfile{}
-}
-
-func reserveVnis(iface *danmtypes.IfaceProfile, vniRange []int) {
-  allocs := bitarray.NewBitArrayFromBase64(iface.Alloc)
-  for i := vniRange[0]; i <= vniRange[1]; i++ {
-    allocs.Set(uint32(i))
-  }
-  iface.Alloc = allocs.Encode()
 }
 
 func isVniSet(iface danmtypes.IfaceProfile, vni int) bool {

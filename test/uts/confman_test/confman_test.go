@@ -179,6 +179,8 @@ func TestReserve(t *testing.T) {
       iface := getIface(tc.ifaceName, tc.vniType, reserveIfaces)
       if tc.reserveVnis != nil {
         reserveVnis(&iface,tc.reserveVnis)
+        index, _ := getIfaceFromTconf(tc.ifaceName, tc.vniType, tconf)
+        tconf.HostDevices[index] = iface
       }
       testArtifacts := utils.TestArtifacts{TestTconfs: reserveConfs}
       tconfClientStub := stubs.NewClientSetStub(testArtifacts)

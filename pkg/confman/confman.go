@@ -12,6 +12,10 @@ import (
   "k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
 
+const(
+  TenantConfigKind = "TenantConfig"
+)
+
 func GetTenantConfig(danmClient danmclientset.Interface) (*danmtypes.TenantConfig, error) {
   reply, err := danmClient.DanmV1().TenantConfigs().List(metav1.ListOptions{})
   if err != nil {
@@ -26,30 +30,35 @@ func GetTenantConfig(danmClient danmclientset.Interface) (*danmtypes.TenantConfi
 
 func Reserve(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (int,error) {
   for {
-    chosenVni, err := reserveVni(tconf, iface)
+    index := getIfaceIndex(tconf, iface.Name, iface.VniType)
+    if index == -1 {
+      return 0, errors.New("VNI cannot be reserved because selected interface does not exist. You should call for a tech priest, and start praying to the Omnissiah immediately.")
+    }   
+    chosenVni, newAlloc, err := reserveVni(tconf.HostDevices[index])
     if err != nil {
       return 0, err
     }
-    _, err = danmClient.DanmV1().TenantConfigs().Update(tconf)
-    if err != nil && strings.Contains(err.Error(), datastructs.OptimisticLockErrorMsg) {
-      tconf, err = danmClient.DanmV1().TenantConfigs().Get(tconf.ObjectMeta.Name, metav1.GetOptions{})
-      if err != nil {
-        return 0, err
-      }
+    tconf.HostDevices[index].Alloc = newAlloc
+    newConf, wasRefreshed, err := updateTenantConf(danmClient, tconf)
+    if err != nil {
+      return chosenVni, err
+    }
+    if wasRefreshed {
+      tconf = newConf
       continue
     }
-    return chosenVni, err
+    return chosenVni, nil
   }
 }
 
-func reserveVni(tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (int,error) {
+func reserveVni(iface danmtypes.IfaceProfile) (int,string,error) {
   allocs := bitarray.NewBitArrayFromBase64(iface.Alloc)
   if allocs.Len() == 0 {
-    return 0, errors.New("VNI allocations for interface:" + iface.Name + " is corrupt! Are you running without webhook?")
+    return 0, "", errors.New("VNI allocations for interface:" + iface.Name + " is corrupt! Are you running without webhook?")
   }
   vnis, err := cpuset.Parse(iface.VniRange)
   if err != nil {
-    return 0, errors.New("vniRange for interface:" + iface.Name + " cannot be parsed because:" + err.Error())
+    return 0, "", errors.New("vniRange for interface:" + iface.Name + " cannot be parsed because:" + err.Error())
   }
   chosenVni := -1
   vniSet := vnis.ToSlice()
@@ -58,19 +67,13 @@ func reserveVni(tconf *danmtypes.TenantConfig, iface danmtypes.IfaceProfile) (in
       continue
     }
     allocs.Set(uint32(vni))
-    iface.Alloc = allocs.Encode()
     chosenVni = vni
     break
   }
   if chosenVni == -1 {
-    return 0, errors.New("VNI cannot be allocated from interface profile:" + iface.Name + " because the whole range is already reserved")
+    return 0, "", errors.New("VNI cannot be allocated from interface profile:" + iface.Name + " because the whole range is already reserved")
   }
-  index := getIfaceIndex(tconf, iface.Name, iface.VniType)
-  if index == -1 {
-    return 0, errors.New("VNI cannot be reserved because selected interface does not exist. You should call for a tech priest, and start praying to the Omnissiah immediately.")
-  }
-  tconf.HostDevices[index] = iface
-  return chosenVni, nil
+  return chosenVni, allocs.Encode(), nil
 }
 
 func getIfaceIndex(tconf *danmtypes.TenantConfig, name, vniType string) int {
@@ -96,40 +99,56 @@ func Free(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, dne
   if dnet.Spec.Options.DevicePool != "" {
     ifaceName = dnet.Spec.Options.DevicePool
   }
-  index := getIfaceIndex(tconf,ifaceName,vniType)
-  if index < 0 {
-    log.Println("WARNING: There is a data incosistency between TenantNetwork:" + dnet.ObjectMeta.Name + " in namespace:" +
-    dnet.ObjectMeta.Namespace + " , and TenantConfig:" + tconf.ObjectMeta.Name +
-    " as the used network details (interface name, VNI type) doe not match any entries in TenantConfig. This means your APIs were possibly tampered with!")
-    return nil
-  }
   for {
-    err := freeVni(tconf, dnet, index)
+    index := getIfaceIndex(tconf,ifaceName,vniType)
+    if index < 0 {
+      log.Println("WARNING: There is a data incosistency between TenantNetwork:" + dnet.ObjectMeta.Name + " in namespace:" +
+      dnet.ObjectMeta.Namespace + " , and TenantConfig:" + tconf.ObjectMeta.Name +
+      " as the used network details (interface name, VNI type) doe not match any entries in TenantConfig. This means your APIs were possibly tampered with!")
+      return nil
+    }
+    newAlloc, err := freeVni(dnet, tconf.HostDevices[index])
     if err != nil {
       return err
     }
-    _, err = danmClient.DanmV1().TenantConfigs().Update(tconf)
-    if err != nil && strings.Contains(err.Error(), datastructs.OptimisticLockErrorMsg) {
-      tconf, err = danmClient.DanmV1().TenantConfigs().Get(tconf.ObjectMeta.Name, metav1.GetOptions{})
-      if err != nil {
-        return err
-      }
+    tconf.HostDevices[index].Alloc = newAlloc
+    newConf, wasRefreshed, err := updateTenantConf(danmClient, tconf)
+    if err != nil {
+      return err
+    }
+    if wasRefreshed {
+      tconf = newConf
       continue
     }
-    return err
+    return nil
   }
 }
 
-func freeVni(tconf *danmtypes.TenantConfig, dnet *danmtypes.DanmNet, index int) error {
+func freeVni(dnet *danmtypes.DanmNet, iface danmtypes.IfaceProfile) (string,error) {
   vni := dnet.Spec.Options.Vlan
   if dnet.Spec.Options.Vxlan != 0 {
     vni = dnet.Spec.Options.Vxlan
   }
-  allocs := bitarray.NewBitArrayFromBase64(tconf.HostDevices[index].Alloc)
+  allocs := bitarray.NewBitArrayFromBase64(iface.Alloc)
   if allocs.Len() == 0 {
-    return errors.New("VNI allocations for interface:" + tconf.HostDevices[index].Name + " is corrupt! Are you running without webhook?")
+    return "", errors.New("VNI allocations for interface:" + iface.Name + " is corrupt! Are you running without webhook?")
   }
   allocs.Reset(uint32(vni))
-  tconf.HostDevices[index].Alloc = allocs.Encode()
-  return nil
+  return allocs.Encode(), nil
+}
+
+func updateTenantConf(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig) (*danmtypes.TenantConfig,bool,error) {
+  var wasRefreshed bool
+  var newConf *danmtypes.TenantConfig
+  _, err := danmClient.DanmV1().TenantConfigs().Update(tconf)
+  if err != nil && strings.Contains(err.Error(), datastructs.OptimisticLockErrorMsg) {
+    newConf, err = danmClient.DanmV1().TenantConfigs().Get(tconf.ObjectMeta.Name, metav1.GetOptions{})
+    if err != nil {
+      return nil, wasRefreshed, err
+    }
+    //https://github.com/kubernetes/client-go/issues/308 rears its ugly head here as well
+    newConf.TypeMeta.Kind = TenantConfigKind
+    wasRefreshed = true
+  }
+  return newConf, wasRefreshed, err
 }

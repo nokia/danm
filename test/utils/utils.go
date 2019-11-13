@@ -28,6 +28,7 @@ type TestArtifacts struct {
   ReservedIps []ReservedIpsList
   TestTconfs []danmtypes.TenantConfig
   ReservedVnis []ReservedVnisList
+  ExhaustAllocs []int
 }
 
 type ReservedIpsList struct {
@@ -231,4 +232,12 @@ func exhaustAlloc(alloc string) string {
         ba.Set(uint32(i))
   }
   return ba.Encode()
+}
+
+func ReserveVnis(iface *danmtypes.IfaceProfile, vniRange []int) {
+  allocs := bitarray.NewBitArrayFromBase64(iface.Alloc)
+  for i := vniRange[0]; i <= vniRange[1]; i++ {
+    allocs.Set(uint32(i))
+  }
+  iface.Alloc = allocs.Encode()
 }

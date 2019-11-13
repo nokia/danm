@@ -25,7 +25,7 @@ func (client *ClientStub) DanmEps(namespace string) client.DanmEpInterface {
 
 func (client *ClientStub) TenantConfigs() client.TenantConfigInterface {
   if client.TconfClient == nil {
-    client.TconfClient = newTconfClientStub(client.Objects.TestTconfs, client.Objects.ReservedVnis)
+    client.TconfClient = newTconfClientStub(client.Objects.TestTconfs, client.Objects.ReservedVnis, client.Objects.ExhaustAllocs)
   }
   return client.TconfClient
 }

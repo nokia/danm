@@ -12,7 +12,7 @@ import (
   "k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
 )
 
-const(
+const (
   TenantConfigKind = "TenantConfig"
 )
 
@@ -33,7 +33,7 @@ func Reserve(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig, 
     index := getIfaceIndex(tconf, iface.Name, iface.VniType)
     if index == -1 {
       return 0, errors.New("VNI cannot be reserved because selected interface does not exist. You should call for a tech priest, and start praying to the Omnissiah immediately.")
-    }   
+    }
     chosenVni, newAlloc, err := reserveVni(tconf.HostDevices[index])
     if err != nil {
       return 0, err

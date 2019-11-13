@@ -7,6 +7,7 @@ import (
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
+  "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/test/utils"
   types "k8s.io/apimachinery/pkg/types"
   watch "k8s.io/apimachinery/pkg/watch"
@@ -16,10 +17,11 @@ type TconfClientStub struct{
   TestTconfs []danmtypes.TenantConfig
   ReservedVnis []utils.ReservedVnisList
   TimesUpdateWasCalled int
+  ExhaustAllocs []int
 }
 
-func newTconfClientStub(tconfs []danmtypes.TenantConfig, vnis []utils.ReservedVnisList) *TconfClientStub {
-  return &TconfClientStub{TestTconfs: tconfs, ReservedVnis: vnis}
+func newTconfClientStub(tconfs []danmtypes.TenantConfig, vnis []utils.ReservedVnisList, exhaustAllocs []int) *TconfClientStub {
+  return &TconfClientStub{TestTconfs: tconfs, ReservedVnis: vnis, ExhaustAllocs: exhaustAllocs}
 }
 
 func (tconfClient *TconfClientStub) Create(obj *danmtypes.TenantConfig) (*danmtypes.TenantConfig, error) {
@@ -47,6 +49,21 @@ func (tconfClient *TconfClientStub) Update(obj *danmtypes.TenantConfig) (*danmty
       }
     }
   }
+  if strings.Contains(obj.ObjectMeta.Name,"conflict") && tconfClient.TimesUpdateWasCalled == 1 {
+    for tconfIndex, tconf := range tconfClient.TestTconfs {
+      if tconf.ObjectMeta.Name != obj.ObjectMeta.Name {
+        continue
+      }
+      for ifaceIndex, iface := range tconf.HostDevices {
+        if iface.Alloc != "" {
+          iface.Alloc = utils.AllocFor5k
+          utils.ReserveVnis(&iface,tconfClient.ExhaustAllocs)
+        }
+        tconfClient.TestTconfs[tconfIndex].HostDevices[ifaceIndex] = iface
+      }
+      return nil, errors.New(datastructs.OptimisticLockErrorMsg)
+    }
+  }
   if strings.HasPrefix(obj.ObjectMeta.Name,"error") {
     return nil, errors.New("here you go")
   }
@@ -61,9 +78,12 @@ func (tconfClient *TconfClientStub) DeleteCollection(options *meta_v1.DeleteOpti
   return nil
 }
 
-func (tconfClient *TconfClientStub) Get(tconfNameName string, options meta_v1.GetOptions) (*danmtypes.TenantConfig, error) {
+func (tconfClient *TconfClientStub) Get(tconfName string, options meta_v1.GetOptions) (*danmtypes.TenantConfig, error) {
   for _, tconf := range tconfClient.TestTconfs {
-    if tconf.ObjectMeta.Name == tconfNameName {
+    if tconf.ObjectMeta.Name == tconfName {
+      if strings.Contains(tconfName,"error") {
+        return nil, errors.New("here you go")
+      }
       return &tconf, nil
     }
   }

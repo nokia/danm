@@ -112,7 +112,8 @@ func validateNetworkId(oldManifest, newManifest *danmtypes.DanmNet, opType admis
   if newManifest.Spec.NetworkID == "" {
     return errors.New("Spec.NetworkID mandatory parameter is missing!")
   }
-  if len(newManifest.Spec.NetworkID) > MaxNidLength && IsTypeDynamic(newManifest.Spec.NetworkType) {
+  if len(newManifest.Spec.NetworkID) > MaxNidLength && IsTypeDynamic(newManifest.Spec.NetworkType) &&
+    (newManifest.Spec.Options.Vxlan != 0 || newManifest.Spec.Options.Vlan != 0) {
     return errors.New("Spec.NetworkID cannot be longer than " + strconv.Itoa(MaxNidLength) + " characters (otherwise VLAN and VxLAN host interface creation might fail)!")
   }
   return nil

@@ -193,6 +193,19 @@ func PutDanmEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp) error {
   return errors.New("DanmEp creation was supposedly successful, but the object hasn't really appeared within 1 sec")
 }
 
+func UpdateDanmepAddress(danmClient danmclientset.Interface, ep danmtypes.DanmEp) error {
+  tempEp, err := danmClient.DanmV1().DanmEps(ep.Namespace).Get(ep.ObjectMeta.Name, meta_v1.GetOptions{})
+  if err != nil {
+    return errors.New("Could not get DanmEp object from K8s API server due to error:" + err.Error())
+  }
+  tempEp.Spec.Iface = ep.Spec.Iface
+  _, err = danmClient.DanmV1().DanmEps(ep.Namespace).Update(tempEp)
+  if err != nil {
+    return errors.New("Could not update DanmEp object to K8s API server due to error:" + err.Error())
+  }
+  return nil
+}
+
 // ArePodsConnectedToNetwork checks if there are any Pods currently in the system using the particular network.
 // If there is at least, it returns true, and the spec of the first matching DanmEp.
 func ArePodsConnectedToNetwork(client danmclientset.Interface, dnet *danmtypes.DanmNet)(bool, danmtypes.DanmEp, error) {

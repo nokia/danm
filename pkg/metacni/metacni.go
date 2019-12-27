@@ -367,6 +367,12 @@ func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("DanmEp object could not be created due to error:" + err.Error()), nil)
     return
   }
+  err = danmep.PutDanmEp(danmClient, ep)
+  if err != nil {
+    cnidel.FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("DanmEp object could not be PUT to K8s due to error:" + err.Error()), nil)
+    return
+  }
   delegatedResult,err := cnidel.DelegateInterfaceSetup(DanmConfig, danmClient, netInfo, &ep)
   if err != nil {
     cnidel.FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
@@ -379,10 +385,10 @@ func createDelegatedInterface(syncher *syncher.Syncher, danmClient danmclientset
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("Post-processing failed for interface:" + ep.Spec.Iface.Name + " because:" + err.Error()), nil)
     return
   }
-  err = danmep.PutDanmEp(danmClient, ep)
+  err = danmep.UpdateDanmepAddress(danmClient, ep)
   if err != nil {
     cnidel.FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
-    syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("DanmEp object could not be PUT to K8s due to error:" + err.Error()), nil)
+    syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("DanmEp object could not be UPDATE to K8s due to error:" + err.Error()), nil)
     return
   }
   syncher.PushResult(netInfo.ObjectMeta.Name, nil, delegatedResult)

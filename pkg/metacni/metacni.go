@@ -10,6 +10,7 @@ import (
   "runtime"
   "strconv"
   "strings"
+  "time"
   "encoding/json"
   "github.com/satori/go.uuid"
   "github.com/containernetworking/cni/pkg/skel"
@@ -521,10 +522,18 @@ func DeleteInterfaces(args *skel.CmdArgs) error {
     log.Println("INFO: DEL: DanmEp REST client could not be created because" + err.Error())
     return nil
   }
-  eplist, err := danmep.FindByCid(danmClient, cniArgs.containerId)
-  if err != nil {
-    log.Println("INFO: DEL: Could not interrogate DanmEps from K8s API server because" + err.Error())
-    return nil
+  var eplist []danmtypes.DanmEp
+  for i := 0; ; i++ {
+    eplist, err = danmep.FindByCid(danmClient, cniArgs.containerId)
+    if err == nil {
+      break
+    }
+    if i >= 10 {
+      log.Println("INFO: DEL: Could not interrogate DanmEps from K8s API server because" + err.Error())
+      return nil
+    }
+    log.Println("INFO: DEL: Could not interrogate DanmEps from K8s API server, will retry later")
+    time.Sleep(2000 * time.Millisecond)
   }
   syncher := syncher.NewSyncher(len(eplist))
   for _, ep := range eplist {

@@ -16,6 +16,11 @@ import (
   "github.com/nokia/danm/pkg/bitarray"
 )
 
+const (
+  NoneAllocType = "none"
+  DynamicAllocType = "dynamic"
+)
+
 // Reserve inspects the network object received as an input, and allocates an IPv4 or IPv6 address from the appropriate allocation pool
 // In case static IP allocation is requested, it will try reserver the requested error. If it is not possible, it returns an error
 // The reserved IP address is represented by setting a bit in the network's BitArray type allocation matrix
@@ -48,7 +53,7 @@ func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4
 // The IP address liberation is represented by unsetting a bit in the network's BitArray type allocation matrix
 // The refreshed network object is modified in the K8s API server at the end
 func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, ip string) error {
-  if netInfo.Spec.Options.Alloc == "" || ip == "" {
+  if netInfo.Spec.Options.Alloc == "" || ip == "" || ip == NoneAllocType {
     // Nothing to return here: either network, or the interface is an L2
     return nil
   }
@@ -128,9 +133,10 @@ func allocateIP(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string, 
 }
 
 func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string) (error) {
-  if reqType == "none" {
+  if reqType == NoneAllocType {
+    *ip4 = NoneAllocType
     return nil
-  } else if reqType == "dynamic" {
+  } else if reqType == DynamicAllocType {
     if netInfo.Spec.Options.Alloc == "" {
       return errors.New("IPv4 address cannot be dynamically allocated for an L2 network!")
     }
@@ -178,9 +184,10 @@ func allocIPv4(reqType string, netInfo *danmtypes.DanmNet, ip4 *string) (error) 
 }
 
 func allocIPv6(reqType string, netInfo *danmtypes.DanmNet, ip6 *string, macAddr string) (error) {
-  if reqType == "none" {
+  if reqType == NoneAllocType {
+    *ip6 = NoneAllocType
     return nil
-  } else if reqType == "dynamic" {
+  } else if reqType == DynamicAllocType {
     net6 := netInfo.Spec.Options.Net6
     if net6 == "" {
       return errors.New("ipv6 dynamic address requested without defined IPv6 prefix")

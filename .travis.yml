@@ -8,12 +8,11 @@ env:
 
 language: go
 
-go: 1.12.9
+go: 1.13.5
   
 services: docker
 
 install:
-## - sudo ./.travis/install_buildah.sh
  - go get golang.org/x/tools/cmd/cover
  - go get github.com/mattn/goveralls
 

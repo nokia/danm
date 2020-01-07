@@ -47,7 +47,7 @@ func DeleteIpvlanInterface(ep danmtypes.DanmEp) (error) {
   return deleteEp(ep)
 }
 
-// FindByCid returns a map of Eps which belong to the same Pod
+// FindByCid returns a map of DanmEps which belong to the same infra container ID
 func FindByCid(client danmclientset.Interface, cid string)([]danmtypes.DanmEp, error) {
   result, err := client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
   if err != nil {
@@ -85,6 +85,28 @@ func CidsByHost(client danmclientset.Interface, host string)(map[string]danmtype
   }
   return ret, nil
 }
+
+// FindByPodName returns a map of DanmEps which belong to the same Pod in a given namespace
+// If no Pod name is provided, function returns all DanmEps
+func FindByPodName(client danmclientset.Interface, podName, ns string) ([]danmtypes.DanmEp, error) {
+  result, err := client.DanmV1().DanmEps(ns).List(meta_v1.ListOptions{})
+  if err != nil {
+    return nil, errors.New("cannot list DanmEps because:" + err.Error())
+  }
+  ret := make([]danmtypes.DanmEp, 0)
+  if result == nil {
+    return ret, nil
+  }
+  eplist := result.Items
+  for _, ep := range eplist {
+    if podName != "" && ep.Spec.Pod != podName {
+      continue
+    }
+    ret = append(ret, ep)
+  }
+  return ret, nil
+}
+
 
 func AddIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
   if ep.Spec.NetworkType != "ipvlan" {

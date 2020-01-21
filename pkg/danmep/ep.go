@@ -10,6 +10,7 @@ import (
   "github.com/vishvananda/netlink"
   "github.com/containernetworking/plugins/pkg/ns"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  "github.com/nokia/danm/pkg/ipam"
   "github.com/j-keck/arping"
 )
 
@@ -86,7 +87,7 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
   if err != nil {
     return err
   }
-  if ep.Spec.Iface.Address != "" {
+  if ep.Spec.Iface.Address != "" && ep.Spec.Iface.Address != ipam.NoneAllocType {
     addr,_,_ := net.ParseCIDR(ep.Spec.Iface.Address)
     err = arping.GratuitousArpOverIfaceByName(addr, ep.Spec.Iface.Name)
     if err != nil {
@@ -98,13 +99,13 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
 
 func configureLink(iface netlink.Link, ep danmtypes.DanmEp) error {
   var err error
-  if ep.Spec.Iface.Address != "" {
+  if ep.Spec.Iface.Address != "" && ep.Spec.Iface.Address != ipam.NoneAllocType {
     err = addIpToLink(ep.Spec.Iface.Address, iface)
     if err != nil {
       return err
     }
   }
-  if ep.Spec.Iface.AddressIPv6 != "" {
+  if ep.Spec.Iface.AddressIPv6 != "" && ep.Spec.Iface.AddressIPv6 != ipam.NoneAllocType {
     err = addIpToLink(ep.Spec.Iface.AddressIPv6, iface)
     if err != nil {
       return err
@@ -188,7 +189,7 @@ func addRoutes(routes map[string]string, rtable int) error {
 }
 
 func addPolicyRoute(rtable int, cidr string, proutes map[string]string) error {
-  if rtable == 0 || cidr == "" || proutes == nil {
+  if rtable == 0 || cidr == ""  || cidr == ipam.NoneAllocType || proutes == nil {
     return nil
   }
   srcIp, srcNet, _ := net.ParseCIDR(cidr)

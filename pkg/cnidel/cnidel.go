@@ -81,9 +81,15 @@ func isIpamNeeded(netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) bool {
   if cni, ok := SupportedNativeCnis[strings.ToLower(netInfo.Spec.NetworkType)]; ok {
     return cni.ipamNeeded
   }
-  //For static delegates we should only overwrite the original IPAM if both the network is L3, and IP was requested from the Pod
-  if (ep.Spec.Iface.Address     != "" && netInfo.Spec.Options.Cidr != "" ) ||
-     (ep.Spec.Iface.AddressIPv6 != "" && netInfo.Spec.Options.Net6 != "" ) {
+  //For static delegates we should only overwrite the original IPAM if an IP was explicitly "requested" from the Pod, and the request "makes sense"
+  //Requested includes "none" allocation scheme as well, which can happen for L2 networks too
+  //When a real IP is asked from DANM it only makes sense to overwrite if there is really a CIDR to allocate it from
+  //BEWARE, because once DANM takes over IP allocation, it takes over for both IPv4, and IPv6!
+  //TODO: Can we have partial IPAM allocations? Is chaining IPAM CNIs allowed, e.g. IPv6 from DANM, IPv4 from host-ipam etc.? 
+  if ep.Spec.Iface.Address     == ipam.NoneAllocType ||
+     ep.Spec.Iface.AddressIPv6 == ipam.NoneAllocType ||
+     (ep.Spec.Iface.Address     != "" && ep.Spec.Iface.Address     != ipam.NoneAllocType && netInfo.Spec.Options.Cidr != "") ||
+     (ep.Spec.Iface.AddressIPv6 != "" && ep.Spec.Iface.AddressIPv6 != ipam.NoneAllocType && netInfo.Spec.Options.Net6 != "") {
     return true
   }
   return false
@@ -99,13 +105,13 @@ func IsDeviceNeeded(cniType string) bool {
 
 func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) datastructs.IpamConfig {
   var ipSlice = []datastructs.IpamIp{}
-  if ip4 != "" {
+  if ip4 != "" && ip4 != ipam.NoneAllocType {
     ipSlice = append(ipSlice, datastructs.IpamIp{
                                 IpCidr: ip4,
                                 Version: 4,
                               })
   }
-  if ip6 != "" {
+  if ip6 != "" && ip6 != ipam.NoneAllocType {
     ipSlice = append(ipSlice, datastructs.IpamIp{
                                 IpCidr: ip6,
                                 Version: 6,
@@ -212,7 +218,7 @@ func FreeDelegatedIps(danmClient danmclientset.Interface, netInfo *danmtypes.Dan
 }
 
 func freeDelegatedIp(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip string) error {
-  if netInfo.Spec.NetworkType == "flannel" && ip != ""{
+  if netInfo.Spec.NetworkType == "flannel" && ip != "" && ip != ipam.NoneAllocType {
     flannelIpExhaustionWorkaround(ip)
   }
   //We only need to Free an IP if it was allocated by DANM IPAM, and it was allocated by DANM only if it falls into any of the defined subnets

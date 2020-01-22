@@ -433,12 +433,8 @@ func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Inte
   }
   danmResult := &current.Result{}
   AddIfaceToResult(ep.Spec.EndpointID, epSpec.MacAddress, args.containerId, danmResult)
-  if (ip4 != "") {
-    AddIpToResult(ip4,"4",danmResult)
-  }
-  if (ip6 != "") {
-    AddIpToResult(ip6,"6",danmResult)
-  }
+  AddIpToResult(ip4,"4",danmResult)
+  AddIpToResult(ip6,"6",danmResult)
   syncher.PushResult(netInfo.ObjectMeta.Name, nil, danmResult)
 }
 
@@ -494,7 +490,7 @@ func AddIfaceToResult(epid string, macAddress string, sandBox string, cniResult 
 }
 
 func AddIpToResult(ip string, version string, cniResult *current.Result) {
-  if ip != "" {
+  if ip != "" && ip != ipam.NoneAllocType {
     ip, _ := types.ParseCIDR(ip)
     ipConf := &current.IPConfig {
       Version: version,

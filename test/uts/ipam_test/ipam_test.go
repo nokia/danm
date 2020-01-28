@@ -39,9 +39,9 @@ var reserveTcs = []struct {
   timesUpdateShouldBeCalled int
 }{
   {"noIpsRequested", 0, "", "", "", "", false, true, 0},
-  {"noneIPv4", 0, "none", "", "", "", false, true, 0},
-  {"noneIPv6", 0, "", "none", "", "", false, true, 0},
-  {"noneDualStack", 0, "none", "none", "", "", false, true, 0},
+  {"noneIPv4", 0, "none", "", "none", "", false, true, 0},
+  {"noneIPv6", 0, "", "none", "", "none", false, true, 0},
+  {"noneDualStack", 0, "none", "none", "none", "none", false, true, 0},
   {"dynamicErrorIPv4", 0, "dynamic", "", "", "", true, false, 0},
   {"dynamicErrorIPv6", 0, "", "dynamic", "", "", true, false, 0},
   {"dynamicErrorDualStack", 0, "dynamic", "dynamic", "", "", true, false, 0},

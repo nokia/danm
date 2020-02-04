@@ -3,7 +3,6 @@ package admit
 import (
   "bytes"
   "errors"
-  "net"
   "reflect"
   "strings"
   "time"
@@ -13,9 +12,7 @@ import (
   "k8s.io/api/admission/v1beta1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
-  "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/confman"
-  "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/metacni"
 )
 
@@ -24,7 +21,9 @@ var (
     "NetworkType": "/spec/NetworkType",
     "NetworkID": "/spec/NetworkID",
     "Alloc": "/spec/Options/alloc",
+	"Alloc6": "/spec/Options/alloc6",
     "Pool": "/spec/Options/allocation_pool",
+	"Pool6": "/spec/Options/allocation_pool_v6",
     "Device": "/spec/Options/host_device",
     "Vlan": "/spec/Options/vlan",
     "Vxlan": "/spec/Options/vxlan",
@@ -119,9 +118,6 @@ func mutateNetManifest(danmClient danmclientset.Interface, dnet *danmtypes.DanmN
   }
   var err error
   //L3, freshly added network
-  if dnet.Spec.Options.Cidr != "" && dnet.Spec.Options.Alloc == "" {
-    CreateAllocationArray(dnet)
-  }
   if dnet.TypeMeta.Kind == "TenantNetwork" {
     err = addTenantSpecificDetails(danmClient, dnet)
   }
@@ -134,21 +130,6 @@ func mutateNetManifest(danmClient danmclientset.Interface, dnet *danmtypes.DanmN
 //TODO: make this also fancy when more post validation needs surface
 func postValidateManifest(dnet *danmtypes.DanmNet) error {
   return validateNetworkId(nil, dnet, "", nil)
-}
-
-func CreateAllocationArray(dnet *danmtypes.DanmNet) {
-  _,ipnet,_ := net.ParseCIDR(dnet.Spec.Options.Cidr)
-  bitArray,_ := bitarray.CreateBitArrayFromIpnet(ipnet)
-  reserveGatewayIps(dnet.Spec.Options.Routes, bitArray, ipnet)
-  dnet.Spec.Options.Alloc = bitArray.Encode()
-  return
-}
-
-func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ipnet *net.IPNet) {
-  for _, gw := range routes {
-    gatewayPosition := ipam.Ip2int(net.ParseIP(gw)) - ipam.Ip2int(ipnet.IP)
-    bitArray.Set(gatewayPosition)
-  }
 }
 
 //TODO: we could easily add CIDR + allocation pool overwrites as well for TenantNetworks, if needed

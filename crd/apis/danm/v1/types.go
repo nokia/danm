@@ -35,13 +35,17 @@ type DanmNetOption struct {
   Routes map[string]string  `json:"routes,omitempty"`
   // bit array of tracking address allocation
   Alloc  string  `json:"alloc,omitempty"`
-  // subset of the Cidr from where dynamic IP address allocation happens
-  Pool   IP4Pool `json:"allocation_pool,omitEmpty"`
+  // subset of the IPv4 subnet from which IPs can be allocated
+  Pool   IpPool `json:"allocation_pool,omitEmpty"`
   // IPv6 specific parameters
   // IPv6 unique global address prefix
   Net6    string  `json:"net6,omitempty"`
   // IPv6 routes for this network
   Routes6 map[string]string  `json:"routes6,omitempty"`
+  // bit array tracking IPv6 allocations
+  Alloc6  string  `json:"alloc6,omitempty"`
+  // subset of the IPv6 subnet from which IPs can be allocated
+  Pool6   IpPoolV6 `json:"allocation_pool_v6,omitEmpty"`
   // Routing table number for policy routing
   RTables int `json:"rt_tables,omitempty"`
   // the VLAN id of the VLAN interface created on top of the host device
@@ -55,9 +59,15 @@ type DanmNetList struct {
   Items            []DanmNet `json:"items"`
 }
 
-type IP4Pool struct {
-  Start string `json:"start"`
-  End   string `json:"end"`
+type IpPool struct {
+  Start string `json:"start,omitEmpty"`
+  End   string `json:"end,omitEmpty"`
+}
+
+type IpPoolV6 struct {
+  IpPool
+  Cidr   string `json:"cidr"`
+  LastIp string `json:"lastIp,omitEmpty"`
 }
 
 // +genclient

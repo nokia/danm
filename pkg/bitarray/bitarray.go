@@ -5,10 +5,11 @@ import (
   "math"
   "net"
   b64 "encoding/base64"
+  "github.com/nokia/danm/pkg/datastructs"
 )
 
 const (
-  MaxSupportedNetmask = 32
+  MaxSupportedAllocLength = 24
 )
 
 // BitArray is type to represent an arbitrary long array of bits
@@ -39,15 +40,18 @@ func NewBitArrayFromBase64(text string) *BitArray {
 }
 
 func CreateBitArrayFromIpnet(ipnet *net.IPNet) (*BitArray,error) {
-  ones, _ := ipnet.Mask.Size()
-  if ones > MaxSupportedNetmask {
-    return nil, errors.New("DANM does not support networks with more than 2^32 IP addresses")
+  baLength, _ := ipnet.Mask.Size()
+  if ipnet.IP.To4() == nil {
+    baLength = datastructs.MinV6PrefixLength - baLength
   }
-  bitArray,err := NewBitArray(int(math.Pow(2,float64(MaxSupportedNetmask-ones))))
+  if baLength > MaxSupportedAllocLength {
+    return nil, errors.New("DANM does not support allocations with more than 2^24 IP addresses")
+  }
+  bitArray,err := NewBitArray(int(math.Pow(2,float64(baLength))))
   if err != nil {
     return nil,errors.New("BitArray allocation failed because:" + err.Error())
   }
-  bitArray.Set(uint32(math.Pow(2,float64(MaxSupportedNetmask-ones))-1))
+  bitArray.Set(uint32(math.Pow(2,float64(baLength))-1))
   return bitArray,nil
 }
 

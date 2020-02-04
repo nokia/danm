@@ -264,3 +264,31 @@ func Int2ip6(nn *big.Int) net.IP {
   ip := nn.Bytes()
   return ip
 }
+
+func CreateAllocationArray(subnet *net.IPNet, routes map[string]string) string {
+  bitArray,_ := bitarray.CreateBitArrayFromIpnet(subnet)
+  reserveGatewayIps(routes, bitArray, subnet)
+  return bitArray.Encode()
+}
+
+func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ipnet *net.IPNet) {
+  for _, gw := range routes {
+    var gatewayPosition uint32
+    if ipnet.IP.To4() != nil {
+      gatewayPosition = Ip2int(net.ParseIP(gw)) - Ip2int(ipnet.IP)
+	} else {
+	  //TODO: IPv6 specific allocation algorithm comes here in the next PR
+	}
+    bitArray.Set(gatewayPosition)
+  }
+}
+
+// Here be Stackoverflow magic
+func DoV6CidrsIntersect(masterCidr, subCidr *net.IPNet) bool {
+  for i := range masterCidr.IP {
+    if masterCidr.IP[i] & masterCidr.Mask[i] != subCidr.IP[i] & subCidr.Mask[i] & masterCidr.Mask[i] {
+      return false
+    }
+  }
+  return true
+}

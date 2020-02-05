@@ -9,6 +9,7 @@ import (
   "encoding/json"
   "io/ioutil"
   "net/http"
+  "github.com/apparentlymart/go-cidr/cidr"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/ipam"
@@ -69,13 +70,13 @@ func InitAllocPool(dnet *danmtypes.DanmNet) *danmtypes.DanmNet {
   if dnet.Spec.Options.Cidr == "" {
     return dnet
   }
-  admit.CreateAllocationArray(dnet)
-  _, ipnet, _ := net.ParseCIDR(dnet.Spec.Options.Cidr)
+  _, subnet, _ := net.ParseCIDR(dnet.Spec.Options.Cidr)
+  dnet.Spec.Options.Alloc = ipam.CreateAllocationArray(subnet, dnet.Spec.Options.Routes)
   if dnet.Spec.Options.Pool.Start == "" {
-    dnet.Spec.Options.Pool.Start = (ipam.Int2ip(ipam.Ip2int(ipnet.IP) + 1)).String()
+    dnet.Spec.Options.Pool.Start = cidr.Inc(subnet.IP).String()
   }
   if dnet.Spec.Options.Pool.End == "" {
-    dnet.Spec.Options.Pool.End = (ipam.Int2ip(ipam.Ip2int(admit.GetBroadcastAddress(ipnet)) - 1)).String()
+    dnet.Spec.Options.Pool.End = cidr.Dec(admit.GetBroadcastAddress(subnet)).String()
   }
   if strings.HasPrefix(dnet.ObjectMeta.Name, "full") {
     exhaustNetwork(dnet)
@@ -229,7 +230,7 @@ func createAlloc(len int) string {
 func exhaustAlloc(alloc string) string {
   ba := bitarray.NewBitArrayFromBase64(alloc)
   for i:=0; i<ba.Len(); i++ {
-        ba.Set(uint32(i))
+    ba.Set(uint32(i))
   }
   return ba.Encode()
 }

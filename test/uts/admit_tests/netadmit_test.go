@@ -198,19 +198,19 @@ var (
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "alloc-without-cidr"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Alloc: "gAAAAAAAAAAAAAAE", Pool: danmtypes.IP4Pool{Start: "192.168.1.1"}}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Alloc: "gAAAAAAAAAAAAAAE", Pool: danmtypes.IpPool{Start: "192.168.1.1"}}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "allocstart-outside-cidr"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IP4Pool{Start: "192.168.1.63"}, Cidr: "192.168.1.64/26"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IpPool{Start: "192.168.1.63"}, Cidr: "192.168.1.64/26"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "allocend-outside-cidr"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IP4Pool{End: "192.168.1.128"}, Cidr: "192.168.1.64/26"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IpPool{End: "192.168.1.128"}, Cidr: "192.168.1.64/26"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "no-free-ip"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IP4Pool{Start: "192.168.1.127", End: "192.168.1.127"}, Cidr: "192.168.1.64/26"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IpPool{Start: "192.168.1.127", End: "192.168.1.127"}, Cidr: "192.168.1.64/26"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-vlan"},
@@ -234,7 +234,7 @@ var (
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "no-netype-update"},
-      Spec: danmtypes.DanmNetSpec{NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Alloc: "gAAAAAE=", Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26", Routes: map[string]string{"10.20.0.0/24": "192.168.1.64"}}},
+      Spec: danmtypes.DanmNetSpec{NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Alloc: "gAAAAAE=", Pool: danmtypes.IpPool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26", Routes: map[string]string{"10.20.0.0/24": "192.168.1.64"}}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "l2"},
@@ -246,23 +246,23 @@ var (
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-ens3"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens3", Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens3", Pool: danmtypes.IpPool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-ens4"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens4", Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Device: "ens4", Pool: danmtypes.IpPool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-ens1f0"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "e2", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f0", Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "e2", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f0", Pool: danmtypes.IpPool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-ens1f1"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "e2", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f1", Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "sriov", NetworkID: "e2", Options: danmtypes.DanmNetOption{DevicePool: "nokia.k8s.io/sriov_ens1f1", Pool: danmtypes.IpPool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "tnet-random"},
-      Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IP4Pool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "macvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool: danmtypes.IpPool{Start: "192.168.1.65",End: "192.168.1.126"}, Cidr: "192.168.1.64/26"}},
     },
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "flannel-with-name"},

@@ -21,9 +21,9 @@ var (
     "NetworkType": "/spec/NetworkType",
     "NetworkID": "/spec/NetworkID",
     "Alloc": "/spec/Options/alloc",
-	"Alloc6": "/spec/Options/alloc6",
+    "Alloc6": "/spec/Options/alloc6",
     "Pool": "/spec/Options/allocation_pool",
-	"Pool6": "/spec/Options/allocation_pool_v6",
+    "Pool6": "/spec/Options/allocation_pool_v6",
     "Device": "/spec/Options/host_device",
     "Vlan": "/spec/Options/vlan",
     "Vxlan": "/spec/Options/vxlan",
@@ -166,7 +166,7 @@ func allocateDetailsForDynamicBackends(danmClient danmclientset.Interface, tnet 
       return attachNetworkToIfaceProfile(danmClient, tnet,tconf,iface)
     }
     //DevicePools generally look like this: "xyz.abc.io/resource_name".
-    //Here we separate "real" NICs from abstract K8s Devices 
+    //Here we separate "real" NICs from abstract K8s Devices
     if !strings.Contains(iface.Name,"/") {
       pfProfiles = append(pfProfiles,iface)
     }

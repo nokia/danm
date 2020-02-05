@@ -40,17 +40,18 @@ func NewBitArrayFromBase64(text string) *BitArray {
 }
 
 func CreateBitArrayFromIpnet(ipnet *net.IPNet) (*BitArray,error) {
-  baLength, _ := ipnet.Mask.Size()
+  if ipnet == nil {
+    return nil, nil
+  }
+  maskSize, _ := ipnet.Mask.Size()
+  baLength    := datastructs.MinV4MaskLength - maskSize
   if ipnet.IP.To4() == nil {
-    baLength = datastructs.MinV6PrefixLength - baLength
+    baLength = datastructs.MinV6PrefixLength - maskSize
   }
   if baLength > MaxSupportedAllocLength {
     return nil, errors.New("DANM does not support allocations with more than 2^24 IP addresses")
   }
-  bitArray,err := NewBitArray(int(math.Pow(2,float64(baLength))))
-  if err != nil {
-    return nil,errors.New("BitArray allocation failed because:" + err.Error())
-  }
+  bitArray,_ := NewBitArray(int(math.Pow(2,float64(baLength))))
   bitArray.Set(uint32(math.Pow(2,float64(baLength))-1))
   return bitArray,nil
 }
@@ -77,5 +78,8 @@ func (arr *BitArray) Encode() string {
 
 // Len returns the length of the BitArray
 func (arr *BitArray) Len() int {
+  if arr == nil {
+    return 0
+  }
   return arr.len
 }

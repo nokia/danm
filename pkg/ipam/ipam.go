@@ -276,9 +276,9 @@ func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ip
     var gatewayPosition uint32
     if ipnet.IP.To4() != nil {
       gatewayPosition = Ip2int(net.ParseIP(gw)) - Ip2int(ipnet.IP)
-	} else {
-	  //TODO: IPv6 specific allocation algorithm comes here in the next PR
-	}
+    } else {
+    //TODO: IPv6 specific allocation algorithm comes here in the next PR
+    }
     bitArray.Set(gatewayPosition)
   }
 }

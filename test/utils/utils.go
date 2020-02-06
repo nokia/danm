@@ -3,6 +3,7 @@ package utils
 import (
   "bytes"
   "errors"
+  "log"
   "net"
   "strconv"
   "strings"
@@ -205,20 +206,25 @@ func validatePatches(response *v1beta1.AdmissionResponse, expectedPatches []admi
   if err != nil {
     return err
   }
-  if len(patches) != len(expectedPatches) {
-    return errors.New("received number of patches:" + strconv.Itoa(len(patches)) + " was not what we expected:" + strconv.Itoa(len(expectedPatches)))
+  for _, recPatch := range patches {
+    log.Println("Received patch for path:" + recPatch.Path)
   }
   for _, expPatch := range expectedPatches {
     var foundMatchingPatch bool
     for _, recPatch := range patches {
       if expPatch.Path == recPatch.Path {
         foundMatchingPatch = true
+        break
       }
     }
     if !foundMatchingPatch {
       return errors.New("Patch expected to modify path:" + expPatch.Path + " was not included in the response")
     }
   }
+  if len(patches) != len(expectedPatches) {
+    return errors.New("received number of patches:" + strconv.Itoa(len(patches)) + " was not what we expected:" + strconv.Itoa(len(expectedPatches)))
+  }
+
   return nil
 }
 

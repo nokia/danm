@@ -209,6 +209,9 @@ func createPatchListFromNetChanges(origNetwork danmtypes.DanmNet, changedNetwork
     //TODO: Could (?) use some reflecting here to determine name of the struct field
     patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Alloc"], changedNetwork.Spec.Options.Alloc))
   }
+  if origNetwork.Spec.Options.Alloc6 != changedNetwork.Spec.Options.Alloc6 {
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Alloc6"], changedNetwork.Spec.Options.Alloc6))
+  }
   if origNetwork.Spec.NetworkType != changedNetwork.Spec.NetworkType {
     patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["NetworkType"], changedNetwork.Spec.NetworkType))
   }
@@ -217,6 +220,9 @@ func createPatchListFromNetChanges(origNetwork danmtypes.DanmNet, changedNetwork
   }
   if !reflect.DeepEqual(origNetwork.Spec.Options.Pool, changedNetwork.Spec.Options.Pool) {
     patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Pool"], changedNetwork.Spec.Options.Pool))
+  }
+  if !reflect.DeepEqual(origNetwork.Spec.Options.Pool6, changedNetwork.Spec.Options.Pool6) {
+    patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Pool6"], changedNetwork.Spec.Options.Pool6))
   }
   if origNetwork.Spec.Options.Device != changedNetwork.Spec.Options.Device {
     patchList = append(patchList, CreateGenericPatchFromChange(NetworkPatchPaths["Device"], changedNetwork.Spec.Options.Device))

@@ -134,7 +134,7 @@ func validateAllocV6(newManifest *danmtypes.DanmNet, v4PoolMask int) error {
   if err != nil {
     return errors.New("spec.Options.Pool6.CIDR is invalid!")
   }
-  if allocCidr.IP.To16() == nil || netCidr.IP.To16() == nil {
+  if allocCidr.IP.To4() != nil || netCidr.IP.To4() != nil {
     return errors.New("IPv6 CIDRs are not valid V6 subnets!")
   }
   netMaskSize, _ := allocCidr.Mask.Size()
@@ -150,10 +150,10 @@ func validateAllocV6(newManifest *danmtypes.DanmNet, v4PoolMask int) error {
   if newManifest.Spec.Options.Pool6.Start == "" {
     newManifest.Spec.Options.Pool6.Start = cidr.Inc(allocCidr.IP).String()
   }
-  if newManifest.Spec.Options.Pool.End == "" {
-    newManifest.Spec.Options.Pool.End = cidr.Dec(GetBroadcastAddress(allocCidr)).String()
+  if newManifest.Spec.Options.Pool6.End == "" {
+    newManifest.Spec.Options.Pool6.End = cidr.Dec(GetBroadcastAddress(allocCidr)).String()
   }
-  if ipam.Ip2int(net.ParseIP(newManifest.Spec.Options.Pool.End)) <= ipam.Ip2int(net.ParseIP(newManifest.Spec.Options.Pool.Start)) {
+  if ipam.Ip62int(net.ParseIP(newManifest.Spec.Options.Pool6.End)).Cmp(ipam.Ip62int(net.ParseIP(newManifest.Spec.Options.Pool6.Start))) <=0 {
     return errors.New("Allocation pool start:" + newManifest.Spec.Options.Pool.Start + " is bigger than or equal to allocation pool end:" + newManifest.Spec.Options.Pool.End)
   }
   if newManifest.Spec.Options.Alloc6 == "" {

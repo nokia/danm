@@ -125,6 +125,24 @@ var validateNetworkTcs = []struct {
   {"NotOkayToModifyDeviceDNet", "vniOld", "deviceNew", DnetType, v1beta1.Update, nil, matchDnet, true, nil, 0},
   {"NotOkayToModifyDeviceCNet", "vniOld", "deviceNew", CnetType, v1beta1.Update, nil, matchCnet, true, nil, 0},
   {"OkayToModifyRandomChangeCNet", "vniOld", "nidNew", CnetType, v1beta1.Update, nil, matchCnet, false, nil, 0},
+  {"Ipv6ProvidedAsCidrDNet", "", "v6-as-cidr", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6ProvidedAsCidrTNet", "", "v6-as-cidr", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv6ProvidedAsCidrCNet", "", "v6-as-cidr", CnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4ProvidedAsNet6DNet", "", "v4-as-net6", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4ProvidedAsNet6TNet", "", "v4-as-net6", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4ProvidedAsNet6CNet", "", "v4-as-net6", CnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4ProvidedAsPool6CidrDNet", "", "v4-as-pool6", DnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4ProvidedAsPool6CidrTNet", "", "v4-as-pool6", TnetType, "", nil, nil, true, nil, 0},
+  {"Ipv4ProvidedAsPool6CidrCNet", "", "v4-as-pool6", CnetType, "", nil, nil, true, nil, 0},
+  {"InvalidPool6CidrDNet", "", "invalid-pool6", DnetType, "", nil, nil, true, nil, 0},
+  {"InvalidPool6CidrTNet", "", "invalid-pool6", TnetType, "", nil, nil, true, nil, 0},
+  {"InvalidPool6CidrCNet", "", "invalid-pool6", CnetType, "", nil, nil, true, nil, 0},
+  {"Pool6CidrWithoutNet6DNet", "", "pool6-wo-net6", DnetType, "", nil, nil, true, nil, 0},
+  {"Pool6CidrWithoutNet6TNet", "", "pool6-wo-net6", TnetType, "", nil, nil, true, nil, 0},
+  {"Pool6CidrWithoutNet6CNet", "", "pool6-wo-net6", CnetType, "", nil, nil, true, nil, 0},
+  {"CreateV6NetworkWithoutPool6DNet", "", "net6-without-pool6", DnetType, v1beta1.Create, nil, nil, false, v6Allocs, 0},
+  {"CreateV6NetworkWithoutPool6TNet", "", "net6-without-pool6", TnetType, v1beta1.Create, randomDev, nil, false, v6AllocsForTnet, 1},
+  {"CreateV6NetworkWithoutPool6CNet", "", "net6-without-pool6", CnetType, v1beta1.Create, nil, nil, false, v6Allocs, 0},
 }
 
 var (
@@ -304,6 +322,30 @@ var (
       ObjectMeta: meta_v1.ObjectMeta {Name: "nidNew", Namespace: "vni-test"},
       Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "e2", Options: danmtypes.DanmNetOption{Device: "ens4", Vlan: 50}},
     },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "v6-as-cidr"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Cidr: "2a00:8a00:a000:1193::/64"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "v4-as-net6"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Net6: "192.168.1.0/24"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "v4-as-pool6"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Pool6: danmtypes.IpPoolV6{Cidr: "192.168.1.0/24"}}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "invalid-pool6"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Pool6: danmtypes.IpPoolV6{Cidr: "2a00:8a00:a000:1193::/129"}}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "pool6-wo-net6"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Pool6: danmtypes.IpPoolV6{Cidr: "2a00:8a00:a000:1193::/64"}}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "net6-without-pool6"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64"}},
+    },
   }
 )
 
@@ -336,6 +378,16 @@ var (
     admit.Patch {Path: "/spec/NetworkID"},
     admit.Patch {Path: "/spec/Options/host_device"},
     admit.Patch {Path: "/spec/Options/vxlan"},
+  }
+  v6Allocs = []admit.Patch {
+    admit.Patch {Path: "/spec/Options/alloc6"},
+    admit.Patch {Path: "/spec/Options/allocation_pool_v6"},
+  }
+  v6AllocsForTnet = []admit.Patch {
+    admit.Patch {Path: "/spec/Options/host_device"},
+    admit.Patch {Path: "/spec/Options/vxlan"},
+    admit.Patch {Path: "/spec/Options/alloc6"},
+    admit.Patch {Path: "/spec/Options/allocation_pool_v6"},
   }
 )
 

@@ -3,6 +3,7 @@ package ipam
 import (
   "errors"
   "fmt"
+  "math"
   "net"
   "strconv"
   "strings"
@@ -10,10 +11,12 @@ import (
   "encoding/binary"
   "math/big"
   "math/rand"
+  "github.com/apparentlymart/go-cidr/cidr"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
-  "github.com/nokia/danm/pkg/netcontrol"
   "github.com/nokia/danm/pkg/bitarray"
+  "github.com/nokia/danm/pkg/datastructs"
+  "github.com/nokia/danm/pkg/netcontrol"
 )
 
 const (
@@ -283,12 +286,30 @@ func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ip
   }
 }
 
-// Here be Stackoverflow magic
+
 func DoV6CidrsIntersect(masterCidr, subCidr *net.IPNet) bool {
-  for i := range masterCidr.IP {
-    if masterCidr.IP[i] & masterCidr.Mask[i] != subCidr.IP[i] & subCidr.Mask[i] & masterCidr.Mask[i] {
-      return false
+  firstAllocIp, lastAllocIp := cidr.AddressRange(subCidr)
+  //Brute force: if the Alloc6 CIDR's first, and last IP both belongs to Net6, we assume the whole CIDR also does
+  if masterCidr.Contains(firstAllocIp) && masterCidr.Contains(lastAllocIp) {
+    return true
+  }
+  return false
+}
+
+func GetMaxUsableV6Prefix(dnet *danmtypes.DanmNet) int {
+  if dnet.Spec.Options.Cidr == "" {
+    return datastructs.MaxV6PrefixLength
+  }
+  _, v4Cidr, _ := net.ParseCIDR(dnet.Spec.Options.Cidr)
+  sizeOfV4AllocPool := cidr.AddressCount(v4Cidr)
+  maxRemainingCapacity := uint64(math.Pow(2,float64(bitarray.MaxSupportedAllocLength))) - sizeOfV4AllocPool
+  maxUsableV6Prefix := datastructs.MinV6PrefixLength
+  for pref := datastructs.MaxV6PrefixLength; pref <= datastructs.MinV6PrefixLength; pref++ {
+    _, testCidr, _ := net.ParseCIDR("2a00:8a00:a000:1193:f816:3eff:fe24:e348/" + strconv.Itoa(pref))
+    if cidr.AddressCount(testCidr) < maxRemainingCapacity {
+      maxUsableV6Prefix = pref
+      break
     }
   }
-  return true
+  return maxUsableV6Prefix
 }

@@ -143,6 +143,10 @@ var validateNetworkTcs = []struct {
   {"CreateV6NetworkWithoutPool6DNet", "", "net6-without-pool6", DnetType, v1beta1.Create, nil, nil, false, v6Allocs, 0},
   {"CreateV6NetworkWithoutPool6TNet", "", "net6-without-pool6", TnetType, v1beta1.Create, randomDev, nil, false, v6AllocsForTnet, 1},
   {"CreateV6NetworkWithoutPool6CNet", "", "net6-without-pool6", CnetType, v1beta1.Create, nil, nil, false, v6Allocs, 0},
+  {"V4PlusV6IsOverCapacity", "", "no-space-for-v6-alloc", DnetType, "", nil, nil, true, nil, 0},
+  {"Pool6CidrBiggerThanNet6", "", "pool6-cidr-outside-net6", DnetType, "", nil, nil, true, nil, 0},
+  {"InvalidPool6StartAddress", "", "invalid-pool6-start", DnetType, "", nil, nil, true, nil, 0},
+  {"Pool6StartAddressMatchesEnd", "", "pool6-end-equals-start", DnetType, "", nil, nil, true, nil, 0},
 }
 
 var (
@@ -345,6 +349,22 @@ var (
     danmtypes.DanmNet {
       ObjectMeta: meta_v1.ObjectMeta {Name: "net6-without-pool6"},
       Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "no-space-for-v6-alloc"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Cidr: "37.0.0.0/8", Net6: "2001:db8:85a3::8a2e:370:7334/104"}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "pool6-cidr-outside-net6"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Net6: "2001:db8:85a3::8a2e:370:7334/110", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7334/109"}}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "invalid-pool6-start"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7334/109", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:734g"}}}},
+    },
+    danmtypes.DanmNet {
+      ObjectMeta: meta_v1.ObjectMeta {Name: "pool6-end-equals-start"},
+      Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "nanomsg", Options: danmtypes.DanmNetOption{Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7334/109", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7340"}}}},
     },
   }
 )

@@ -12,7 +12,6 @@ import (
   "github.com/nokia/danm/pkg/danmep"
   "github.com/nokia/danm/pkg/ipam"
   "k8s.io/kubernetes/pkg/kubelet/cm/cpuset"
-  "log"
 )
 
 const (
@@ -124,17 +123,22 @@ func validateAllocV6(newManifest *danmtypes.DanmNet) error {
   if netCidr.IP.To4() != nil {
     return errors.New("spec.Options.Net6 is not a valid V6 subnet!")
   }
-  // The limit of the current storage algorithm is 16M addresses per network.
+  // The limit of the current storage algorithm and etcd 3.4.X is ~8M addresses per network.
   // This means that the summarized size of the IPv4, and IPv6 allocation pools shall not go over this threshold.
   // Therefore we need to calculate the maximum usable prefix for our V6 pool, discounting the space we have already reserved for the V4 pool.
   maxV6AllocPrefix := ipam.GetMaxUsableV6Prefix(newManifest)
   if newManifest.Spec.Options.Pool6.Cidr == "" {
     baseCidrStart := netCidr.IP
-    maskedV6AllocCidrBase := net.CIDRMask(maxV6AllocPrefix, 128)
+    pool6CidrPrefix := maxV6AllocPrefix
+    //If the subnet of the whole network is smaller than the maximum remaining capacity, use only that amount
+    net6Prefix,_ := netCidr.Mask.Size() 
+    if pool6CidrPrefix < net6Prefix {
+      pool6CidrPrefix = net6Prefix
+    }
+    maskedV6AllocCidrBase := net.CIDRMask(pool6CidrPrefix, 128)
     maskedV6AllocCidr := net.IPNet{IP:baseCidrStart, Mask:maskedV6AllocCidrBase}
     newManifest.Spec.Options.Pool6.Cidr = maskedV6AllocCidr.String()
   }
-  log.Println("Alloc6 CIDR:" + newManifest.Spec.Options.Pool6.Cidr)
   _, allocCidr, err := net.ParseCIDR(newManifest.Spec.Options.Pool6.Cidr)
   if err != nil {
     return errors.New("spec.Options.Pool6.CIDR is invalid!")
@@ -145,7 +149,7 @@ func validateAllocV6(newManifest *danmtypes.DanmNet) error {
   netMaskSize, _ := allocCidr.Mask.Size()
   // We don't have enough storage space left for storing IPv6 allocations
   if netMaskSize < maxV6AllocPrefix || netMaskSize == datastructs.MinV6PrefixLength {
-    return errors.New("The defined IPv6 allocation pool exceeds the maximum - 16M-size(IPv4 allocation pool) - storage capacity!")
+    return errors.New("The defined IPv6 allocation pool exceeds the maximum - 8M-size(IPv4 allocation pool) - storage capacity!")
   }
   if (newManifest.Spec.Options.Pool6.Start != "" && !allocCidr.Contains(net.ParseIP(newManifest.Spec.Options.Pool6.Start))) ||
      (newManifest.Spec.Options.Pool6.End   != "" && !allocCidr.Contains(net.ParseIP(newManifest.Spec.Options.Pool6.End)))   ||

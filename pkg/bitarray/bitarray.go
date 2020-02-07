@@ -4,12 +4,13 @@ import (
   "errors"
   "math"
   "net"
+  "strconv"
   b64 "encoding/base64"
   "github.com/nokia/danm/pkg/datastructs"
 )
 
 const (
-  MaxSupportedAllocLength = 24
+  MaxSupportedAllocLength = 23
 )
 
 // BitArray is type to represent an arbitrary long array of bits
@@ -49,7 +50,7 @@ func CreateBitArrayFromIpnet(ipnet *net.IPNet) (*BitArray,error) {
     baLength = datastructs.MinV6PrefixLength - maskSize
   }
   if baLength > MaxSupportedAllocLength {
-    return nil, errors.New("DANM does not support allocations with more than 2^24 IP addresses")
+    return nil, errors.New("DANM does not support networks with more than 2^" + strconv.Itoa(MaxSupportedAllocLength) + " IP addresses")
   }
   bitArray,_ := NewBitArray(int(math.Pow(2,float64(baLength))))
   bitArray.Set(uint32(math.Pow(2,float64(baLength))-1))

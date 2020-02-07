@@ -26,13 +26,13 @@ var createBaFromNetTcs = []struct {
   isErrorExpected bool
   expectedSize int
 }{
-  {"maxIpV4", "10.0.0.0/8", false, int(math.Pow(2,float64(24)))},
+  {"maxIpV4", "10.0.0.0/9", false, int(math.Pow(2,float64(bitarray.MaxSupportedAllocLength)))},
   {"minIpV4", "192.168.1.50/32", false, 1},
   {"negativeIpV4", "192.168.1.50/33", false, 0},
-  {"overTheLimitIpV4", "36.0.0.0/7", true, 0},
-  {"maxIpV6", "2001:db8:85a3::8a2e:370:7334/104", false, int(math.Pow(2,float64(24)))},
+  {"overTheLimitIpV4", "10.0.0.0/8", true, 0},
+  {"maxIpV6", "2001:db8:85a3::8a2e:370:7334/105", false, int(math.Pow(2,float64(bitarray.MaxSupportedAllocLength)))},
   {"minIpV6", "2001:db8:85a3::8a2e:370:7334/128", false, 1},
-  {"overTheLimitIpV6", "2001:db8:85a3::8a2e:370:7334/103", true, 0},  
+  {"overTheLimitIpV6", "2001:db8:85a3::8a2e:370:7334/104", true, 0},  
 }
 
 func TestNewBitArray(t *testing.T) {

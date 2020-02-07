@@ -8,8 +8,8 @@ import (
 const (
   OptimisticLockErrorMsg = "the object has been modified; please apply your changes to the latest version and try again"
   MinV4MaskLength = 32
-  MaxV4MaskLength = 8
-  MaxV6PrefixLength = 104
+  MaxV4MaskLength = 9
+  MaxV6PrefixLength = 105
   MinV6PrefixLength = 128
 )
 

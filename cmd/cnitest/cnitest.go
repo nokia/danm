@@ -172,7 +172,7 @@ func validateFlannelConfig(receivedCniConfig, expectedCniConfig []byte) error {
 func createCurrentCniResult(tcConf TestConfig) *current.Result {
   cniRes := current.Result {CNIVersion: "0.3.1"}
   if tcConf.CniExpectations.Ip != "" ||  tcConf.CniExpectations.Ip6 != "" {
-    metacni.AddIfaceToResult("eth0", "AA:BB:CC:DD:EE:FF", "hululululu", &cniRes)
+    metacni.AddIfaceToResult("eth0", "hululululu", &cniRes)
   }
   if tcConf.CniExpectations.Ip != "" {
     metacni.AddIpToResult(tcConf.CniExpectations.Ip, "4", &cniRes)

@@ -50,7 +50,7 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
     ipamOptions datastructs.IpamConfig
   )
   if isIpamNeeded(netInfo, ep) {
-    ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6, _, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
       return nil, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }

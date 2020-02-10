@@ -35,38 +35,37 @@ var reserveTcs = []struct {
   expectedIp4 string
   expectedIp6 string
   isErrorExpected bool
-  isMacExpected bool
   timesUpdateShouldBeCalled int
 }{
-  {"noIpsRequested", 0, "", "", "", "", false, true, 0},
-  {"noneIPv4", 0, "none", "", "none", "", false, true, 0},
-  {"noneIPv6", 0, "", "none", "", "none", false, true, 0},
-  {"noneDualStack", 0, "none", "none", "none", "none", false, true, 0},
-  {"dynamicErrorIPv4", 0, "dynamic", "", "", "", true, false, 0},
-  {"dynamicErrorIPv6", 0, "", "dynamic", "", "", true, false, 0},
-  {"dynamicErrorDualStack", 0, "dynamic", "dynamic", "", "", true, false, 0},
-  {"dynamicIPv4Success", 1, "dynamic", "", "192.168.1.65/26", "", false, true, 1},
-  {"dynamicIPv4Exhausted", 2, "dynamic", "", "", "", true, false, 0},
-  {"staticInvalidIPv4", 2, "hululululu", "", "", "", true, false, 0},
-  {"staticInvalidNoCidrIPv4", 2, "192.168.1.1", "", "", "", true, false, 0},
-  {"staticL2IPv4", 0, "192.168.1.1/26", "", "", "", true, false, 0},
-  {"staticNetmaskMismatchIPv4", 2, "192.168.1.1/32", "", "", "", true, false, 0},
-  {"staticAlreadyUsedIPv4", 2, "192.168.1.2/30", "", "", "", true, false, 0},
-  {"staticSuccessLastIPv4", 1, "192.168.1.126/26", "", "192.168.1.126/26", "", false, true, 1},
-  {"staticSuccessFirstIPv4", 11, "192.168.1.65/26", "", "192.168.1.65/26", "", false, true, 1},
-  {"staticFailAfterLastIPv4", 1, "192.168.1.127/26", "", "", "", true, false, 0},
-  {"staticFailBeforeFirstIPv4", 1, "192.168.1.64/26", "", "", "", true, false, 0},
-  {"dynamicIPv6Success", 3, "", "dynamic", "", "2a00:8a00:a000:1193", false, true, 0},
-  {"dynamicNotSupportedCidrSizeIPv6", 4, "", "dynamic", "", "", true, false, 0}, //basically anything smaller than /64. Restriction must be fixed some day!
-  {"staticL2IPv6", 2, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "", true, false, 0},
-  {"staticInvalidIPv6", 3, "", "2a00:8a00:a000:1193:hulu:lulu:lulu:lulu/64", "", "", true, false, 0},
-  {"staticNetmaskMismatchIPv6", 3, "", "2a00:8a00:a000:2193:f816:3eff:fe24:e348/64", "", "", true, false, 0},
-  {"staticIPv6Success", 3, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, false, 0},
-  {"dynamicDualStackSuccess", 3, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193", false, true, 1},
-  {"staticDualStackSuccess", 3, "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, true, 1},
-  {"resolvedConflictDuringUpdate", 5, "dynamic", "", "192.168.1.65/26", "", false, true, 2},
-  {"unresolvedConflictAfterUpdate", 6, "dynamic", "", "", "", true, false, 1},
-  {"errorUpdate", 10, "dynamic", "", "", "", true, false, 1},
+  {"noIpsRequested", 0, "", "", "", "", false, 0},
+  {"noneIPv4", 0, "none", "", "none", "", false, 0},
+  {"noneIPv6", 0, "", "none", "", "none", false, 0},
+  {"noneDualStack", 0, "none", "none", "none", "none", false, 0},
+  {"dynamicErrorIPv4", 0, "dynamic", "", "", "", true, 0},
+  {"dynamicErrorIPv6", 0, "", "dynamic", "", "", true, 0},
+  {"dynamicErrorDualStack", 0, "dynamic", "dynamic", "", "", true, 0},
+  {"dynamicIPv4Success", 1, "dynamic", "", "192.168.1.65/26", "", false, 1},
+  {"dynamicIPv4Exhausted", 2, "dynamic", "", "", "", true, 0},
+  {"staticInvalidIPv4", 2, "hululululu", "", "", "", true, 0},
+  {"staticInvalidNoCidrIPv4", 2, "192.168.1.1", "", "", "", true, 0},
+  {"staticL2IPv4", 0, "192.168.1.1/26", "", "", "", true, 0},
+  {"staticNetmaskMismatchIPv4", 2, "192.168.1.1/32", "", "", "", true, 0},
+  {"staticAlreadyUsedIPv4", 2, "192.168.1.2/30", "", "", "", true, 0},
+  {"staticSuccessLastIPv4", 1, "192.168.1.126/26", "", "192.168.1.126/26", "", false, 1},
+  {"staticSuccessFirstIPv4", 11, "192.168.1.65/26", "", "192.168.1.65/26", "", false, 1},
+  {"staticFailAfterLastIPv4", 1, "192.168.1.127/26", "", "", "", true, 0},
+  {"staticFailBeforeFirstIPv4", 1, "192.168.1.64/26", "", "", "", true, 0},
+  {"dynamicIPv6Success", 3, "", "dynamic", "", "2a00:8a00:a000:1193", false, 0},
+  {"dynamicNotSupportedCidrSizeIPv6", 4, "", "dynamic", "", "", true, 0}, //basically anything smaller than /64. Restriction must be fixed some day!
+  {"staticL2IPv6", 2, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "", true, 0},
+  {"staticInvalidIPv6", 3, "", "2a00:8a00:a000:1193:hulu:lulu:lulu:lulu/64", "", "", true, 0},
+  {"staticNetmaskMismatchIPv6", 3, "", "2a00:8a00:a000:2193:f816:3eff:fe24:e348/64", "", "", true, 0},
+  {"staticIPv6Success", 3, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, 0},
+  {"dynamicDualStackSuccess", 3, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193", false, 1},
+  {"staticDualStackSuccess", 3, "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, 1},
+  {"resolvedConflictDuringUpdate", 5, "dynamic", "", "192.168.1.65/26", "", false, 2},
+  {"unresolvedConflictAfterUpdate", 6, "dynamic", "", "", "", true, 1},
+  {"errorUpdate", 10, "dynamic", "", "", "", true, 1},
 }
 
 var freeTcs = []struct {
@@ -109,15 +108,10 @@ func TestReserve(t *testing.T) {
       ips := utils.CreateExpectedAllocationsList(tc.expectedIp4,true,testNets[tc.netIndex].Spec.NetworkID)
       testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
       netClientStub := stubs.NewClientSetStub(testArtifacts)
-      ip4, ip6, mac, err := ipam.Reserve(netClientStub, testNets[tc.netIndex], tc.requestedIp4, tc.requestedIp6)
+      ip4, ip6, err := ipam.Reserve(netClientStub, testNets[tc.netIndex], tc.requestedIp4, tc.requestedIp6)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         t.Errorf("Received error:%v does not match with expectation", err)
         return
-      }
-      if tc.isMacExpected {
-        if mac == "" {
-          t.Errorf("MAC address was expected to be returned, however it was not")
-        }
       }
       if ip4 != tc.expectedIp4 {
         t.Errorf("Allocated IP4 address:%s does not match with expected:%s", ip4, tc.expectedIp4)

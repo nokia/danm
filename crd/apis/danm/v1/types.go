@@ -62,12 +62,12 @@ type DanmNetList struct {
 type IpPool struct {
   Start string `json:"start,omitEmpty"`
   End   string `json:"end,omitEmpty"`
+  LastIp string `json:"lastIp,omitEmpty"`
 }
 
 type IpPoolV6 struct {
   IpPool
   Cidr   string `json:"cidr"`
-  LastIp string `json:"lastIp,omitEmpty"`
 }
 
 // +genclient
@@ -94,6 +94,7 @@ type DanmEpIface struct {
   Name        string            `json:"Name"`
   Address     string            `json:"Address"`
   AddressIPv6 string            `json:"AddressIPv6"`
+  //DEPRECATED, WILL BE REMOVED
   MacAddress  string            `json:"MacAddress"`
   Proutes     map[string]string `json:"proutes"`
   Proutes6    map[string]string `json:"proutes6"`

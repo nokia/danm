@@ -56,25 +56,28 @@ func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4
 // Free inspects the network object received as an input, and releases an IPv4 or IPv6 address from the appropriate allocation pool
 // The IP address liberation is represented by unsetting a bit in the network's BitArray type allocation matrix
 // The refreshed network object is modified in the K8s API server at the end
-func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, ip string) error {
-  if netInfo.Spec.Options.Alloc == "" || ip == "" || ip == NoneAllocType {
-    // Nothing to return here: either network, or the interface is an L2
+func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, rip string) error {
+  if rip == NoneAllocType || rip == "" {
     return nil
   }
-  origAlloc := netInfo.Spec.Options.Alloc
-  tempNetSpec := netInfo
+  ripParts := strings.Split(rip, "/")
+  ip := net.ParseIP(ripParts[0])
+  tempNet := netInfo
+  origSpec:= netInfo.Spec
   for {
-    resetIP(&tempNetSpec, ip)
-    //Right now we only store IPv4 allocations in the API. If this bitmask is unchanged, there is nothing to update in the API server
-    if tempNetSpec.Spec.Options.Alloc == origAlloc {
+    if ip.To4() != nil { 
+      tempNet.Spec.Options.Alloc = resetIp(tempNet.Spec.Options.Alloc, tempNet.Spec.Options.Cidr, ip)
+    }
+    //There is nothing to update in the API server if the network is unchanged after freeing the IP
+    if reflect.DeepEqual(origSpec, tempNet.Spec) {
       return nil
     }
-    retryNeeded, err, newNetSpec := updateIpAllocation(danmClient, tempNetSpec)
+    retryNeeded, err, newNet := updateIpAllocation(danmClient, tempNet)
     if err != nil {
       return err
     }
     if retryNeeded {
-      tempNetSpec = newNetSpec
+      tempNet = newNet
       continue
     }
     return nil
@@ -191,22 +194,16 @@ func updateIpAllocation (danmClient danmclientset.Interface, netInfo danmtypes.D
 }
 
 
-func resetIP(netInfo *danmtypes.DanmNet, rip string) {
-  ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
-  _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-  ipnetNum := Ip2int(ipnet.IP)
-  ip, _, err := net.ParseCIDR(rip)
-  if err != nil {
-    //Invalid IP, nothing to do here. Next call would crash if we wouldn't return
-    return
+func resetIp(alloc, cidr string, rip net.IP) string {
+  ba := bitarray.NewBitArrayFromBase64(alloc)
+  _, subnet, _ := net.ParseCIDR(cidr)
+  if rip == nil || subnet == nil || !subnet.Contains(rip){
+    //Invalid IP, nothing to do here. Resetting would crash if we wouldn't return
+    return alloc
   }
-  reserved := Ip2int(ip)
-  if !ipnet.Contains(ip) {
-    //IP is outside of CIDR, nothing to do here. Next call would crash if we wouldn't return
-    return
-  }
-  ba.Reset(reserved - ipnetNum)
-  netInfo.Spec.Options.Alloc = ba.Encode()
+  allocatedIndex := getIndexOfIp(rip, subnet)
+  ba.Reset(allocatedIndex)
+  return ba.Encode()
 }
 
 func allocIPv6(reqType string, netInfo *danmtypes.DanmNet, ip6 *string) (error) {

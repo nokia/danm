@@ -2,16 +2,13 @@ package ipam
 
 import (
   "errors"
-  "fmt"
   "math"
   "net"
   "reflect"
   "strconv"
   "strings"
-  "time"
   "encoding/binary"
   "math/big"
-  "math/rand"
   "github.com/apparentlymart/go-cidr/cidr"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
@@ -67,6 +64,8 @@ func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, rip str
   for {
     if ip.To4() != nil { 
       tempNet.Spec.Options.Alloc = resetIp(tempNet.Spec.Options.Alloc, tempNet.Spec.Options.Cidr, ip)
+    } else {
+      tempNet.Spec.Options.Alloc6 = resetIp(tempNet.Spec.Options.Alloc6, tempNet.Spec.Options.Pool6.Cidr, ip)
     }
     //There is nothing to update in the API server if the network is unchanged after freeing the IP
     if reflect.DeepEqual(origSpec, tempNet.Spec) {
@@ -89,13 +88,17 @@ func allocateIps(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string,
   ip6 := ""
   var err error
   if req4 != "" {
-    netInfo.Spec.Options.Alloc, err = allocateAddress(netInfo.Spec.Options.Pool, netInfo.Spec.Options.Alloc, req4, netInfo.Spec.Options.Cidr, &ip4)
+    netInfo.Spec.Options.Alloc, ip4, err = allocateAddress(netInfo.Spec.Options.Pool, netInfo.Spec.Options.Alloc, req4, netInfo.Spec.Options.Cidr)
     if err != nil {
       return "", "", err
     }
   }
   if req6 != "" {
-    err = allocIPv6(req6, netInfo, &ip6)
+    if netInfo.Spec.Options.Net6 != "" && netInfo.Spec.Options.Pool6.Cidr == "" {
+      initV6AllocFields(netInfo)
+    }
+    pool6 := danmtypes.IpPool{Start: netInfo.Spec.Options.Pool6.Start, End: netInfo.Spec.Options.Pool6.End}
+    netInfo.Spec.Options.Alloc6, ip6, err = allocateAddress(pool6, netInfo.Spec.Options.Alloc6, req6, netInfo.Spec.Options.Pool6.Cidr)
     if err != nil {
       return "", "", err
     }
@@ -103,13 +106,18 @@ func allocateIps(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string,
   return ip4, ip6, err
 }
 
-func allocateAddress(pool danmtypes.IpPool, alloc, reqType, cidr string, ip *string) (string,error) {
+func initV6AllocFields(netInfo *danmtypes.DanmNet) {
+  InitV6PoolCidr(netInfo)
+  netInfo.Spec.Options.Pool6.Start, netInfo.Spec.Options.Pool6.End, netInfo.Spec.Options.Alloc6 =
+    InitAllocPool(netInfo.Spec.Options.Pool6.Cidr, netInfo.Spec.Options.Pool6.Start, netInfo.Spec.Options.Pool6.End, netInfo.Spec.Options.Alloc6, netInfo.Spec.Options.Routes6)
+}
+
+func allocateAddress(pool danmtypes.IpPool, alloc, reqType, cidr string) (string,string,error) {
   if reqType == NoneAllocType {
-    *ip = NoneAllocType
-    return alloc, nil
+    return alloc, NoneAllocType, nil
   }
   if alloc == "" {
-    return alloc, errors.New("IP address cannot be allocated for an L2 network!")
+    return alloc, "", errors.New("IP address cannot be allocated for an L2 network!")
   }
   ba := bitarray.NewBitArrayFromBase64(alloc)
   _, subnet, _   := net.ParseCIDR(cidr)
@@ -126,7 +134,7 @@ func allocateAddress(pool danmtypes.IpPool, alloc, reqType, cidr string, ip *str
       }
     }
     if !doesAnyFreeIpExist {
-      return alloc, errors.New("IPv4 address cannot be dynamically allocated, all addresses are reserved!")
+      return alloc, "", errors.New("IPv4 address cannot be dynamically allocated, all addresses are reserved!")
     }
   } else {
     //I guess we are doing backward compatibility now :)
@@ -134,19 +142,18 @@ func allocateAddress(pool danmtypes.IpPool, alloc, reqType, cidr string, ip *str
     requestParts := strings.Split(reqType, "/")
     ip := net.ParseIP(requestParts[0])
     if ip == nil {
-      return alloc, errors.New("static IP allocation failed, requested static IP:" + reqType + " is not a valid IP")
+      return alloc, "", errors.New("static IP allocation failed, requested static IP:" + reqType + " is not a valid IP")
     }
     if !(subnet.Contains(ip)) {
-      return alloc, errors.New("static IP allocation failed, requested static IP:" + reqType + " is outside the network's CIDR:" + cidr)
+      return alloc, "", errors.New("static IP allocation failed, requested static IP:" + reqType + " is outside the network's CIDR:" + cidr)
     }
-    allocatedIndex = getIndexOfIp(ip, subnet)
+    allocatedIndex = GetIndexOfIp(ip, subnet)
     if ba.Get(allocatedIndex) {
-      return alloc, errors.New("static IP allocation failed, requested IP address:" + reqType + " is already in use")
+      return alloc, "", errors.New("static IP allocation failed, requested IP address:" + reqType + " is already in use")
     }
     ba.Set(allocatedIndex)
   }
-  *ip = getIpFromIndex(allocatedIndex, subnet)
-  return ba.Encode(), nil
+  return ba.Encode(), getIpFromIndex(allocatedIndex, subnet), nil
 }
 
 func getAllocRangeBasedOnCidr(pool danmtypes.IpPool, cidr *net.IPNet) (uint32,uint32) {
@@ -155,17 +162,28 @@ func getAllocRangeBasedOnCidr(pool danmtypes.IpPool, cidr *net.IPNet) (uint32,ui
     firstIpAsInt := Ip2int(cidr.IP)
     beginAsInt   = Ip2int(net.ParseIP(pool.Start)) - firstIpAsInt
     endAsInt     = Ip2int(net.ParseIP(pool.End)) - firstIpAsInt
+  } else {
+    firstIpAsBigInt := Ip62int(cidr.IP)
+    beginAsBigInt   := Ip62int(net.ParseIP(pool.Start))
+    endAsBigInt     := Ip62int(net.ParseIP(pool.End))
+    beginAsInt   = uint32(beginAsBigInt.Sub(beginAsBigInt, firstIpAsBigInt).Uint64())
+    endAsInt     = uint32(endAsBigInt.Sub(endAsBigInt, firstIpAsBigInt).Uint64())
   }
   return beginAsInt, endAsInt
 }
 
-func getIndexOfIp(ip net.IP, subnet *net.IPNet) uint32 {
+func GetIndexOfIp(ip net.IP, subnet *net.IPNet) uint32 {
+  var index uint32
   if ip.To4() != nil {
     firstIpAsInt := Ip2int(subnet.IP)
     ipAsInt      := Ip2int(ip)
-    return ipAsInt - firstIpAsInt
+    index = ipAsInt - firstIpAsInt
+  } else {
+    firstIpAsBigInt := Ip62int(subnet.IP)
+    ipAsBigInt      := Ip62int(ip)
+    index = uint32(ipAsBigInt.Sub(ipAsBigInt, firstIpAsBigInt).Uint64())
   }
-  return 0
+  return index
 }
 
 func getIpFromIndex(index uint32, subnet *net.IPNet) string {
@@ -174,11 +192,15 @@ func getIpFromIndex(index uint32, subnet *net.IPNet) string {
   if subnet.IP.To4() != nil {
     firstIpAsInt := Ip2int(subnet.IP)
     ip = Int2ip(firstIpAsInt + index)
+  } else {
+    firstIpAsBigInt := Ip62int(subnet.IP)
+    indexAsBigInt   := new(big.Int).SetUint64(uint64(index))
+    ip = Int2ip6(firstIpAsBigInt.Add(firstIpAsBigInt, indexAsBigInt))  
   }
   return ip.String() + "/" + strconv.Itoa(prefix)
 }
 
-func updateIpAllocation (danmClient danmclientset.Interface, netInfo danmtypes.DanmNet) (bool,error,danmtypes.DanmNet) {
+func updateIpAllocation(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet) (bool,error,danmtypes.DanmNet) {
   resourceConflicted, err := netcontrol.PutNetwork(danmClient, &netInfo)
   if err != nil {
     return false, errors.New("DanmNet update failed with error:" + err.Error()), danmtypes.DanmNet{}
@@ -193,7 +215,6 @@ func updateIpAllocation (danmClient danmclientset.Interface, netInfo danmtypes.D
   return false, nil, danmtypes.DanmNet{}
 }
 
-
 func resetIp(alloc, cidr string, rip net.IP) string {
   ba := bitarray.NewBitArrayFromBase64(alloc)
   _, subnet, _ := net.ParseCIDR(cidr)
@@ -201,56 +222,9 @@ func resetIp(alloc, cidr string, rip net.IP) string {
     //Invalid IP, nothing to do here. Resetting would crash if we wouldn't return
     return alloc
   }
-  allocatedIndex := getIndexOfIp(rip, subnet)
+  allocatedIndex := GetIndexOfIp(rip, subnet)
   ba.Reset(allocatedIndex)
   return ba.Encode()
-}
-
-func allocIPv6(reqType string, netInfo *danmtypes.DanmNet, ip6 *string) (error) {
-  if reqType == NoneAllocType {
-    *ip6 = NoneAllocType
-    return nil
-  } else if reqType == DynamicAllocType {
-    net6 := netInfo.Spec.Options.Net6
-    if net6 == "" {
-      return errors.New("ipv6 dynamic address requested without defined IPv6 prefix")
-    }
-    numMac, _ := strconv.ParseInt(strings.Replace("00:00:11:22:33:44:66:77", ":", "", -1), 16, 0)
-    numMac = numMac^0x020000000000
-    hexMac := fmt.Sprintf("%X",numMac)
-    eui := fmt.Sprintf("%s%sfffe%s%s", hexMac[:4],hexMac[4:6],hexMac[6:8],hexMac[8:12])
-    bigeui := big.NewInt(0)
-    bigeui.SetString(eui, 16)
-    ip6addr, ip6net, _ := net.ParseCIDR(net6)
-    ss := big.NewInt(0)
-    ss.Add(Ip62int(ip6addr), bigeui)
-    maskLen, _ := ip6net.Mask.Size()
-    if maskLen>64 {
-      return errors.New("IPv6 subnets smaller than /64 are not supported at the moment!")
-    }
-    *ip6 = (Int2ip6(ss)).String() + "/" + strconv.Itoa(maskLen)
-  } else {
-    net6 := netInfo.Spec.Options.Net6
-    if net6 == "" {
-      return errors.New("Static IPv6 address cannot be allocated for an L2 network!")
-    }
-    _, ip6net, _ := net.ParseCIDR(net6)
-    ip6addr, _, err := net.ParseCIDR(reqType)
-    if err != nil {
-      return errors.New("Static IPv6 address allocation failed, requested IP is malformed:" + reqType)
-    }
-    if !ip6net.Contains(ip6addr) {
-      return errors.New("Requested static IPv6 address is not part of net6 prefix!")
-    }
-    *ip6 = reqType
-  }
-  return nil
-}
-
-func generateMac()(string) {
-  s1 := rand.NewSource(time.Now().UnixNano())
-  r1 := rand.New(s1)
-  return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", 0xfa, 0x16, 0x3e, r1.Intn(127), r1.Intn(255), r1.Intn(255))
 }
 
 func GarbageCollectIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) {
@@ -294,18 +268,14 @@ func CreateAllocationArray(subnet *net.IPNet, routes map[string]string) string {
   return bitArray.Encode()
 }
 
-func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, ipnet *net.IPNet) {
+func reserveGatewayIps(routes map[string]string, bitArray *bitarray.BitArray, subnet *net.IPNet) {
   for _, gw := range routes {
-    var gatewayPosition uint32
-    if ipnet.IP.To4() != nil {
-      gatewayPosition = Ip2int(net.ParseIP(gw)) - Ip2int(ipnet.IP)
-    } else {
-    //TODO: IPv6 specific allocation algorithm comes here in the next PR
+    gatewayPosition := GetIndexOfIp(net.ParseIP(gw), subnet)
+    if gatewayPosition <= bitArray.Len() {
+      bitArray.Set(gatewayPosition)
     }
-    bitArray.Set(gatewayPosition)
   }
 }
-
 
 func DoV6CidrsIntersect(masterCidr, subCidr *net.IPNet) bool {
   firstAllocIp, lastAllocIp := cidr.AddressRange(subCidr)
@@ -332,4 +302,43 @@ func GetMaxUsableV6Prefix(dnet *danmtypes.DanmNet) int {
     }
   }
   return maxUsableV6Prefix
+}
+
+func InitV6PoolCidr(netInfo *danmtypes.DanmNet) {
+  if netInfo.Spec.Options.Net6 == "" || netInfo.Spec.Options.Pool6.Cidr != "" {
+    return
+  }
+  _, netCidr, _   := net.ParseCIDR(netInfo.Spec.Options.Net6)
+  baseCidrStart := netCidr.IP
+  pool6CidrPrefix := GetMaxUsableV6Prefix(netInfo)
+  //If the subnet of the whole network is smaller than the maximum remaining capacity, use only that amount
+  net6Prefix,_ := netCidr.Mask.Size() 
+  if pool6CidrPrefix < net6Prefix {
+    pool6CidrPrefix = net6Prefix
+  }
+  maskedV6AllocCidrBase := net.CIDRMask(pool6CidrPrefix, 128)
+  maskedV6AllocCidr := net.IPNet{IP:baseCidrStart, Mask:maskedV6AllocCidrBase}
+  netInfo.Spec.Options.Pool6.Cidr = maskedV6AllocCidr.String()
+}
+
+func InitAllocPool(netCidr, start, end, alloc string, routes map[string]string) (string,string,string){
+  if netCidr == "" {
+    return start, end, alloc
+  }
+  _, allocCidr, _  := net.ParseCIDR(netCidr)
+  if start == "" {
+    start = cidr.Inc(allocCidr.IP).String()
+  }
+  if end == "" {
+    end = cidr.Dec(GetBroadcastAddress(allocCidr)).String()
+  }
+  if alloc == "" {
+    alloc = CreateAllocationArray(allocCidr, routes)
+  }
+  return start, end, alloc
+}
+
+func GetBroadcastAddress(subnet *net.IPNet) (net.IP) {
+  _, lastIp := cidr.AddressRange(subnet)
+  return lastIp
 }

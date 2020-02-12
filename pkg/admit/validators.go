@@ -7,7 +7,6 @@ import (
   admissionv1 "k8s.io/api/admission/v1beta1"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
-  "github.com/apparentlymart/go-cidr/cidr"
   "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/danmep"
   "github.com/nokia/danm/pkg/ipam"
@@ -87,24 +86,17 @@ func validateAllocV4(newManifest *danmtypes.DanmNet) error {
   if ipnet.IP.To4() == nil {
     return errors.New("Options.CIDR is not a valid V4 subnet!")
   }
-  if newManifest.Spec.Options.Pool.Start == "" {
-    newManifest.Spec.Options.Pool.Start = cidr.Inc(ipnet.IP).String()
+  netMaskSize, _ := ipnet.Mask.Size()
+  if netMaskSize < datastructs.MaxV4MaskLength {
+    return errors.New("Netmask of the IPv4 CIDR is bigger than the maximum allowed /"+ strconv.Itoa(datastructs.MaxV4MaskLength))
   }
-  if newManifest.Spec.Options.Pool.End == "" {
-    newManifest.Spec.Options.Pool.End = cidr.Dec(GetBroadcastAddress(ipnet)).String()
-  }
+  newManifest.Spec.Options.Pool.Start, newManifest.Spec.Options.Pool.End, newManifest.Spec.Options.Alloc =
+    ipam.InitAllocPool(newManifest.Spec.Options.Cidr, newManifest.Spec.Options.Pool.Start, newManifest.Spec.Options.Pool.End, newManifest.Spec.Options.Alloc, newManifest.Spec.Options.Routes)
   if !ipnet.Contains(net.ParseIP(newManifest.Spec.Options.Pool.Start)) || !ipnet.Contains(net.ParseIP(newManifest.Spec.Options.Pool.End)) {
     return errors.New("Allocation pool is outside of defined CIDR!")
   }
   if ipam.Ip2int(net.ParseIP(newManifest.Spec.Options.Pool.End)) <= ipam.Ip2int(net.ParseIP(newManifest.Spec.Options.Pool.Start)) {
     return errors.New("Allocation pool start:" + newManifest.Spec.Options.Pool.Start + " is bigger than or equal to allocation pool end:" + newManifest.Spec.Options.Pool.End)
-  }
-  netMaskSize, _ := ipnet.Mask.Size()
-  if netMaskSize < datastructs.MaxV4MaskLength {
-    return errors.New("Netmask of the IPv4 CIDR is bigger than the maximum allowed /"+ strconv.Itoa(datastructs.MaxV4MaskLength))
-  }
-  if newManifest.Spec.Options.Alloc == "" {
-    newManifest.Spec.Options.Alloc = ipam.CreateAllocationArray(ipnet, newManifest.Spec.Options.Routes)
   }
   return nil
 }
@@ -127,18 +119,7 @@ func validateAllocV6(newManifest *danmtypes.DanmNet) error {
   // This means that the summarized size of the IPv4, and IPv6 allocation pools shall not go over this threshold.
   // Therefore we need to calculate the maximum usable prefix for our V6 pool, discounting the space we have already reserved for the V4 pool.
   maxV6AllocPrefix := ipam.GetMaxUsableV6Prefix(newManifest)
-  if newManifest.Spec.Options.Pool6.Cidr == "" {
-    baseCidrStart := netCidr.IP
-    pool6CidrPrefix := maxV6AllocPrefix
-    //If the subnet of the whole network is smaller than the maximum remaining capacity, use only that amount
-    net6Prefix,_ := netCidr.Mask.Size() 
-    if pool6CidrPrefix < net6Prefix {
-      pool6CidrPrefix = net6Prefix
-    }
-    maskedV6AllocCidrBase := net.CIDRMask(pool6CidrPrefix, 128)
-    maskedV6AllocCidr := net.IPNet{IP:baseCidrStart, Mask:maskedV6AllocCidrBase}
-    newManifest.Spec.Options.Pool6.Cidr = maskedV6AllocCidr.String()
-  }
+  ipam.InitV6PoolCidr(newManifest)
   _, allocCidr, err := net.ParseCIDR(newManifest.Spec.Options.Pool6.Cidr)
   if err != nil {
     return errors.New("spec.Options.Pool6.CIDR is invalid!")
@@ -156,24 +137,12 @@ func validateAllocV6(newManifest *danmtypes.DanmNet) error {
      (!ipam.DoV6CidrsIntersect(netCidr, allocCidr)) {
     return errors.New("IPv6 allocation pool is outside of the defined IPv6 subnet!")
   }
-  if newManifest.Spec.Options.Pool6.Start == "" {
-    newManifest.Spec.Options.Pool6.Start = cidr.Inc(allocCidr.IP).String()
-  }
-  if newManifest.Spec.Options.Pool6.End == "" {
-    newManifest.Spec.Options.Pool6.End = cidr.Dec(GetBroadcastAddress(allocCidr)).String()
-  }
+  newManifest.Spec.Options.Pool6.Start, newManifest.Spec.Options.Pool6.End, newManifest.Spec.Options.Alloc6 =
+    ipam.InitAllocPool(newManifest.Spec.Options.Pool6.Cidr, newManifest.Spec.Options.Pool6.Start, newManifest.Spec.Options.Pool6.End, newManifest.Spec.Options.Alloc6, newManifest.Spec.Options.Routes6)
   if ipam.Ip62int(net.ParseIP(newManifest.Spec.Options.Pool6.End)).Cmp(ipam.Ip62int(net.ParseIP(newManifest.Spec.Options.Pool6.Start))) <=0 {
     return errors.New("Allocation pool start:" + newManifest.Spec.Options.Pool6.Start + " is bigger than or equal to allocation pool end:" + newManifest.Spec.Options.Pool6.End)
   }
-  if newManifest.Spec.Options.Alloc6 == "" {
-    newManifest.Spec.Options.Alloc6 = ipam.CreateAllocationArray(allocCidr, newManifest.Spec.Options.Routes6)
-  }
   return nil
-}
-
-func GetBroadcastAddress(subnet *net.IPNet) (net.IP) {
-  _, lastIp := cidr.AddressRange(subnet)
-  return lastIp
 }
 
 func validateVids(oldManifest, newManifest *danmtypes.DanmNet, opType admissionv1.Operation, client danmclientset.Interface) error {

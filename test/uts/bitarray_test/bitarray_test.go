@@ -10,12 +10,11 @@ import (
 )
 
 var arraySizeTestConsts = []struct {
-  inputSize int
+  inputSize uint32
   isErrorExpected bool
-  expectedSize int
+  expectedSize uint32
 }{
-  {-1, true, 0},
-  {0, true, 0},
+  {0, false, 0},
   {1, false, 1},
   {33000, false, 33000},
 }
@@ -24,20 +23,20 @@ var createBaFromNetTcs = []struct {
   name string
   subnet string
   isErrorExpected bool
-  expectedSize int
+  expectedSize uint32
 }{
-  {"maxIpV4", "10.0.0.0/9", false, int(math.Pow(2,float64(bitarray.MaxSupportedAllocLength)))},
+  {"maxIpV4", "10.0.0.0/9", false, uint32(math.Pow(2,float64(bitarray.MaxSupportedAllocLength)))},
   {"minIpV4", "192.168.1.50/32", false, 1},
   {"negativeIpV4", "192.168.1.50/33", false, 0},
   {"overTheLimitIpV4", "10.0.0.0/8", true, 0},
-  {"maxIpV6", "2001:db8:85a3::8a2e:370:7334/105", false, int(math.Pow(2,float64(bitarray.MaxSupportedAllocLength)))},
+  {"maxIpV6", "2001:db8:85a3::8a2e:370:7334/105", false, uint32(math.Pow(2,float64(bitarray.MaxSupportedAllocLength)))},
   {"minIpV6", "2001:db8:85a3::8a2e:370:7334/128", false, 1},
   {"overTheLimitIpV6", "2001:db8:85a3::8a2e:370:7334/104", true, 0},  
 }
 
 func TestNewBitArray(t *testing.T) {
   for _, tt := range arraySizeTestConsts {
-    t.Run("TestNewBitArray Size:"+strconv.Itoa(tt.inputSize), func(t *testing.T) {
+    t.Run("TestNewBitArray Size:"+strconv.Itoa(int(tt.inputSize)), func(t *testing.T) {
       testArray, newErr := bitarray.NewBitArray(tt.inputSize)
       err := evalBa(tt.isErrorExpected, newErr, tt.expectedSize, testArray)
       if err != nil {
@@ -89,16 +88,16 @@ func TestCreateBitArrayFromIpnet(t *testing.T) {
   }
 }
 
-func evalBa(isErrorExpected bool, err error, expSize int, testArray *bitarray.BitArray) error {
+func evalBa(isErrorExpected bool, err error, expSize uint32, testArray *bitarray.BitArray) error {
   if (isErrorExpected && nil==err) && (!isErrorExpected && nil!=err) {
-    return errors.New("BitArray initialization returned unexpected error result at test value " + strconv.Itoa(expSize) + ": error expected: " + strconv.FormatBool(isErrorExpected) + ", returned error" + err.Error())
+    return errors.New("BitArray initialization returned unexpected error result at test value " + strconv.Itoa(int(expSize)) + ": error expected: " + strconv.FormatBool(isErrorExpected) + ", returned error" + err.Error())
   }
   if isErrorExpected {
     return nil
   }
   actualSize := testArray.Len()
   if actualSize != expSize {
-    return errors.New("BitArray returned unexpected size: " + strconv.Itoa(actualSize) + ", expected size was:"+ strconv.Itoa(expSize))
+    return errors.New("BitArray returned unexpected size: " + strconv.Itoa(int(actualSize)) + ", expected size was:"+ strconv.Itoa(int(expSize)))
   }
   return nil
 }

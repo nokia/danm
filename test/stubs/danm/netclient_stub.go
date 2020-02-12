@@ -36,22 +36,25 @@ func (netClient *NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmN
   netClient.TimesUpdateWasCalled++
   for _, netReservation := range netClient.ReservedIpsList {
     if obj.Spec.NetworkID == netReservation.NetworkId {
-      ba := bitarray.NewBitArrayFromBase64(obj.Spec.Options.Alloc)
-      _, ipnet, _ := net.ParseCIDR(obj.Spec.Options.Cidr)
-      ipnetNum := ipam.Ip2int(ipnet.IP)
       for _, reservation := range netReservation.Reservations {
-        ip,_,err := net.ParseCIDR(reservation.Ip)
-        if err != nil {
+        ip,_,_ := net.ParseCIDR(reservation.Ip)
+        var subnet *net.IPNet
+        var alloc string
+        if ip.To4() != nil {
+          _, subnet, _ = net.ParseCIDR(obj.Spec.Options.Cidr)
+          alloc = obj.Spec.Options.Alloc
+        } else {
+          _, subnet, _ = net.ParseCIDR(obj.Spec.Options.Pool6.Cidr)
+          alloc = obj.Spec.Options.Alloc6
+        }
+        if subnet != nil || !subnet.Contains(ip) {
           continue
         }
-        ipInInt := ipam.Ip2int(ip) - ipnetNum
-        if !ipnet.Contains(ip) {
-          continue
-        }
-        if !ba.Get(uint32(ipInInt)) && reservation.Set {
+        isIpSetInBa := isIpSet(ip, subnet, alloc)
+        if !isIpSetInBa && reservation.Set {
           return nil, errors.New("Reservation failure, IP:" + reservation.Ip + " should have been reserved in DanmNet:" + obj.Spec.NetworkID)
         }
-        if ba.Get(uint32(ipInInt)) && !reservation.Set {
+        if isIpSetInBa && !reservation.Set {
           return nil, errors.New("Reservation failure, IP:" + reservation.Ip + " should have been free in DanmNet:" + obj.Spec.NetworkID)
         }
       }
@@ -109,4 +112,10 @@ func (netClient *NetClientStub) Patch(name string, pt types.PatchType, data []by
 
 func (netClient *NetClientStub) AddReservedIpsList(reservedIps []utils.ReservedIpsList) {
   netClient.ReservedIpsList = reservedIps
+}
+
+func isIpSet(ip net.IP, subnet *net.IPNet, alloc string) bool {
+  index := ipam.GetIndexOfIp(ip, subnet)
+  ba := bitarray.NewBitArrayFromBase64(alloc)
+  return ba.Get(index)
 }

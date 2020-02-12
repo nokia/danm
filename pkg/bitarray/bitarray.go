@@ -15,15 +15,15 @@ const (
 
 // BitArray is type to represent an arbitrary long array of bits
 type BitArray struct {
-  len int
+  len uint32
   data []byte
 }
 
 // NewBitArray creates a new, empty BitArray object
 // Returns error if length is zero, otherwise a pointer to the array
-func NewBitArray(len int) (*BitArray, error) {
-  if 0 >= len {
-    return nil, errors.New("Can't make a BitArray with a negative length!")
+func NewBitArray(len uint32) (*BitArray, error) {
+  if 0 == len {
+    return nil, errors.New("Can't make a BitArray with zero length!")
   }
   bitArray := &BitArray{len, make([]byte, (len+7)/8)}
   bitArray.Set(0)
@@ -35,7 +35,7 @@ func NewBitArrayFromBase64(text string) *BitArray {
   var tmp []byte
   tmp, _ = b64.StdEncoding.DecodeString(text)
   arr := new(BitArray)
-  arr.len = len(tmp)*8
+  arr.len = uint32(len(tmp))*8
   arr.data = tmp
   return arr
 }
@@ -52,7 +52,7 @@ func CreateBitArrayFromIpnet(ipnet *net.IPNet) (*BitArray,error) {
   if baLength > MaxSupportedAllocLength {
     return nil, errors.New("DANM does not support networks with more than 2^" + strconv.Itoa(MaxSupportedAllocLength) + " IP addresses")
   }
-  bitArray,_ := NewBitArray(int(math.Pow(2,float64(baLength))))
+  bitArray,_ := NewBitArray(uint32(math.Pow(2,float64(baLength))))
   bitArray.Set(uint32(math.Pow(2,float64(baLength))-1))
   return bitArray,nil
 }
@@ -78,7 +78,7 @@ func (arr *BitArray) Encode() string {
 }
 
 // Len returns the length of the BitArray
-func (arr *BitArray) Len() int {
+func (arr *BitArray) Len() uint32 {
   if arr == nil {
     return 0
   }

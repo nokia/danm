@@ -10,7 +10,6 @@ import (
   "encoding/json"
   "io/ioutil"
   "net/http"
-  "github.com/apparentlymart/go-cidr/cidr"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/ipam"
@@ -61,28 +60,20 @@ type MalformedObject struct {
 func SetupAllocationPools(nets []danmtypes.DanmNet) error {
   for index, dnet := range nets {
     if dnet.Spec.Options.Cidr != "" {
-      nets[index].Spec = InitAllocPool(&dnet).Spec
+      InitAllocPool(&dnet)
+      nets[index].Spec = dnet.Spec
     }
   }
   return nil
 }
 
-func InitAllocPool(dnet *danmtypes.DanmNet) *danmtypes.DanmNet {
-  if dnet.Spec.Options.Cidr == "" {
-    return dnet
-  }
-  _, subnet, _ := net.ParseCIDR(dnet.Spec.Options.Cidr)
-  dnet.Spec.Options.Alloc = ipam.CreateAllocationArray(subnet, dnet.Spec.Options.Routes)
-  if dnet.Spec.Options.Pool.Start == "" {
-    dnet.Spec.Options.Pool.Start = cidr.Inc(subnet.IP).String()
-  }
-  if dnet.Spec.Options.Pool.End == "" {
-    dnet.Spec.Options.Pool.End = cidr.Dec(admit.GetBroadcastAddress(subnet)).String()
-  }
+func InitAllocPool(dnet *danmtypes.DanmNet) {
+  dnet.Spec.Options.Alloc = ""
+  dnet.Spec.Options.Pool.Start, dnet.Spec.Options.Pool.End, dnet.Spec.Options.Alloc =
+    ipam.InitAllocPool(dnet.Spec.Options.Cidr, dnet.Spec.Options.Pool.Start, dnet.Spec.Options.Pool.End, dnet.Spec.Options.Alloc, dnet.Spec.Options.Routes)
   if strings.HasPrefix(dnet.ObjectMeta.Name, "full") {
     exhaustNetwork(dnet)
   }
-  return dnet
 }
 
 func GetTestNet(netId string, testNets []danmtypes.DanmNet) *danmtypes.DanmNet {
@@ -228,15 +219,16 @@ func validatePatches(response *v1beta1.AdmissionResponse, expectedPatches []admi
   return nil
 }
 
-func createAlloc(len int) string {
+func createAlloc(len uint32) string {
   ba,_ := bitarray.NewBitArray(len+1)
   return ba.Encode()
 }
 
 func exhaustAlloc(alloc string) string {
   ba := bitarray.NewBitArrayFromBase64(alloc)
-  for i:=0; i<ba.Len(); i++ {
-    ba.Set(uint32(i))
+  var i uint32
+  for i=0; i<ba.Len(); i++ {
+    ba.Set(i)
   }
   return ba.Encode()
 }

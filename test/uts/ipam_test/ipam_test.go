@@ -3,7 +3,6 @@ package ipam_test
 import (
   "os"
   "strconv"
-  "strings"
   "testing"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/ipam"
@@ -17,7 +16,7 @@ var testNets = []danmtypes.DanmNet {
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "cidr"},Spec: danmtypes.DanmNetSpec{NetworkID: "cidr", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "fullIpv4"},Spec: danmtypes.DanmNetSpec{NetworkID: "fullIpv4", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.0/30"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "net6"},Spec: danmtypes.DanmNetSpec{NetworkID: "net6", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/64", Cidr: "192.168.1.64/26",}}},
-  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "smallNet6"},Spec: danmtypes.DanmNetSpec{NetworkID: "smallNet6", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/69"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "smallNet6"},Spec: danmtypes.DanmNetSpec{NetworkID: "smallNet6", Options: danmtypes.DanmNetOption{Net6: "2a00:8a00:a000:1193::/120"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "conflict"},Spec: danmtypes.DanmNetSpec{NetworkID: "conflict", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "conflicterror"},Spec: danmtypes.DanmNetSpec{NetworkID: "conflicterror", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "fullconflictFree"},Spec: danmtypes.DanmNetSpec{NetworkID: "fullconflictFree", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
@@ -55,14 +54,14 @@ var reserveTcs = []struct {
   {"staticSuccessFirstIPv4", 11, "192.168.1.65/26", "", "192.168.1.65/26", "", false, 1},
   {"staticFailAfterLastIPv4", 1, "192.168.1.127/26", "", "", "", true, 0},
   {"staticFailBeforeFirstIPv4", 1, "192.168.1.64/26", "", "", "", true, 0},
-  {"dynamicIPv6Success", 3, "", "dynamic", "", "2a00:8a00:a000:1193", false, 0},
-  {"dynamicNotSupportedCidrSizeIPv6", 4, "", "dynamic", "", "", true, 0}, //basically anything smaller than /64. Restriction must be fixed some day!
+  {"dynamicIPv6Success", 3, "", "dynamic", "", "2a00:8a00:a000:1193::1/106", false, 1},
+  {"dynamicIPv6SmallCidrSizeSuccess", 4, "", "dynamic", "", "2a00:8a00:a000:1193::1/120", false, 1},
   {"staticL2IPv6", 2, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "", true, 0},
   {"staticInvalidIPv6", 3, "", "2a00:8a00:a000:1193:hulu:lulu:lulu:lulu/64", "", "", true, 0},
   {"staticNetmaskMismatchIPv6", 3, "", "2a00:8a00:a000:2193:f816:3eff:fe24:e348/64", "", "", true, 0},
-  {"staticIPv6Success", 3, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, 0},
-  {"dynamicDualStackSuccess", 3, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193", false, 1},
-  {"staticDualStackSuccess", 3, "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "192.168.1.115/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, 1},
+  {"staticIPv6Success", 3, "", "2a00:8a00:a000:1193::03e:1010", "", "2a00:8a00:a000:1193::3e:1010/106", false, 1},
+  {"dynamicDualStackSuccess", 3, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193::2/106", false, 1},
+  {"staticDualStackSuccess", 3, "192.168.1.115", "2a00:8a00:a000:1193::03e:2002", "192.168.1.115/26", "2a00:8a00:a000:1193::3e:2002/106", false, 1},
   {"resolvedConflictDuringUpdate", 5, "dynamic", "", "192.168.1.65/26", "", false, 2},
   {"unresolvedConflictAfterUpdate", 6, "dynamic", "", "", "", true, 1},
   {"errorUpdate", 10, "dynamic", "", "", "", true, 1},
@@ -116,8 +115,8 @@ func TestReserve(t *testing.T) {
       if ip4 != tc.expectedIp4 {
         t.Errorf("Allocated IP4 address:%s does not match with expected:%s", ip4, tc.expectedIp4)
       }
-      if !strings.HasPrefix(ip6,tc.expectedIp6) {
-        t.Errorf("Allocated IP6 address:%s does not prefixed with the expected CIDR:%s", ip6, tc.expectedIp6)
+      if ip6 != tc.expectedIp6 {
+        t.Errorf("Allocated IP6 address:%s does not match with the expected:%s", ip6, tc.expectedIp6)
       }
       var timesUpdateWasCalled int
       if netClientStub.DanmClient.NetClient != nil {

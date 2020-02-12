@@ -249,10 +249,10 @@ var delSetupTcs = []struct {
   {"staticCniNoBinary", "no-binary", "noIps", "flannel", "", "", true, 0},
   {"staticCniWithIp", "flannel-test", "noIps", "flannel-ip", "10.244.10.30", "", false, 0},
   {"dynamicMacvlanIpv4", "macvlan-v4", "dynamicIpv4", "macvlan-ip4", "192.168.1.65", "", false, 1},
-  {"dynamicMacvlanIpv6", "macvlan-v6", "dynamicIpv6", "macvlan-ip6", "", "2a00:8a00:a000:1193", false, 0},
+  {"dynamicMacvlanIpv6", "macvlan-v6", "dynamicIpv6", "macvlan-ip6", "", "2a00:8a00:a000:1193", false, 1},
   {"dynamicMacvlanDualStack", "macvlan-ds", "dynamicDual", "macvlan-dual-stack", "192.168.1.65", "2a00:8a00:a000:1193", false, 1},
   {"dynamicMacvlanIpv4Type020Result", "macvlan-v4", "dynamicIpv4", "macvlan-ip4-type020", "192.168.1.65", "", false, 1},
-  {"dynamicMacvlanIpv6Type020Result", "macvlan-v6", "dynamicIpv6", "macvlan-ip6-type020", "", "2a00:8a00:a000:1193", false, 0},
+  {"dynamicMacvlanIpv6Type020Result", "macvlan-v6", "dynamicIpv6", "macvlan-ip6-type020", "", "2a00:8a00:a000:1193", false, 1},
   {"dynamicSriovNoDeviceId", "sriov-test", "dynamicIpv4", "", "", "", true, 1},
   {"dynamicSriovL3", "sriov-test", "dynamicIpv4WithDeviceId", "sriov-l3", "", "", false, 1},
   {"dynamicSriovL2", "sriov-test", "noneWithDeviceId", "sriov-l2", "", "", false, 0},
@@ -262,7 +262,7 @@ var delSetupTcs = []struct {
   {"bridgeL3OriginalNoCidr", "bridge-noipam", "simpleIpv4", "bridge-l3-orig", "", "", false, 0},
   {"bridgeL3OriginalNoIp", "bridge-ipam-ipv4", "noIps", "bridge-l3-orig", "", "", false, 0},
   {"bridgeL2OriginalNoCidr", "bridge-noipam-l2", "simpleIpv4", "bridge-l2-orig", "", "", false, 0},
-  {"bridgeWithV6Overwrite", "bridge-ipam-ipv6", "simpleIpv6", "bridge-l3-ip6", "", "", false, 0},
+  {"bridgeWithV6Overwrite", "bridge-ipam-ipv6", "simpleIpv6", "bridge-l3-ip6", "", "", false, 1},
   {"bridgeWithDsOverwrite", "bridge-ipam-ds", "simpleDs", "bridge-l3-ds", "", "", false, 1},
 }
 
@@ -358,7 +358,7 @@ func TestDelegateInterfaceSetup(t *testing.T) {
       testNet := utils.GetTestNet(tc.netName, testNets)
       testEp := getTestEp(tc.epName)
       testEp.Spec.NetworkName = testNet.ObjectMeta.Name
-      testNet = utils.InitAllocPool(testNet)
+      utils.InitAllocPool(testNet)
       cniRes, err := cnidel.DelegateInterfaceSetup(&cniConf,netClientStub,testNet,testEp)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         var detailedErrorMessage string

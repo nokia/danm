@@ -92,15 +92,22 @@ func allocateIps(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string,
     if err != nil {
       return "", "", err
     }
+    if ip4 != "" && ip4 != NoneAllocType {
+      netInfo.Spec.Options.Pool.LastIp = ip4
+    }
   }
   if req6 != "" {
     if netInfo.Spec.Options.Net6 != "" && netInfo.Spec.Options.Pool6.Cidr == "" {
       InitV6AllocFields(netInfo)
     }
-    pool6 := danmtypes.IpPool{Start: netInfo.Spec.Options.Pool6.Start, End: netInfo.Spec.Options.Pool6.End}
+    //TODO: to have a real uniform handling both V4 and V6 pool definition should be uniform, meaning, V4 pools should also have a separare allocation CIDR
+    pool6 := danmtypes.IpPool{Start: netInfo.Spec.Options.Pool6.Start, End: netInfo.Spec.Options.Pool6.End, LastIp: netInfo.Spec.Options.Pool6.LastIp}
     netInfo.Spec.Options.Alloc6, ip6, err = allocateAddress(pool6, netInfo.Spec.Options.Alloc6, req6, netInfo.Spec.Options.Pool6.Cidr)
     if err != nil {
       return "", "", err
+    }
+    if ip6 != "" && ip6 != NoneAllocType {
+      netInfo.Spec.Options.Pool6.LastIp = ip6
     }
   }
   return ip4, ip6, err
@@ -124,13 +131,20 @@ func allocateAddress(pool danmtypes.IpPool, alloc, reqType, cidr string) (string
   var allocatedIndex uint32
   if reqType == DynamicAllocType {
     begin, end := getAllocRangeBasedOnCidr(pool, subnet)
+    lastIp := net.ParseIP(pool.LastIp)
+    lastAllocatedIp := GetIndexOfIp(lastIp, subnet)
     var doesAnyFreeIpExist bool
-    for i:=begin; i<=end; i++ {
+    for i:=lastAllocatedIp+1; i<=end; i++ {
       if !ba.Get(i) {
         ba.Set(i)
         allocatedIndex = i
         doesAnyFreeIpExist = true
         break
+      }
+      //Now let's look from the beginning until LastIp
+      if i == end && end != lastAllocatedIp {
+        i   = begin
+        end = lastAllocatedIp
       }
     }
     if !doesAnyFreeIpExist {
@@ -174,6 +188,9 @@ func getAllocRangeBasedOnCidr(pool danmtypes.IpPool, cidr *net.IPNet) (uint32,ui
 
 func GetIndexOfIp(ip net.IP, subnet *net.IPNet) uint32 {
   var index uint32
+  if ip == nil {
+    return index
+  }
   if ip.To4() != nil {
     firstIpAsInt := Ip2int(subnet.IP)
     ipAsInt      := Ip2int(ip)

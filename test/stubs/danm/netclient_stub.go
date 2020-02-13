@@ -47,7 +47,7 @@ func (netClient *NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmN
           _, subnet, _ = net.ParseCIDR(obj.Spec.Options.Pool6.Cidr)
           alloc = obj.Spec.Options.Alloc6
         }
-        if subnet != nil || !subnet.Contains(ip) {
+        if subnet == nil || !subnet.Contains(ip) {
           continue
         }
         isIpSetInBa := isIpSet(ip, subnet, alloc)

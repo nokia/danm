@@ -95,7 +95,7 @@ func allocateIps(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string,
   }
   if req6 != "" {
     if netInfo.Spec.Options.Net6 != "" && netInfo.Spec.Options.Pool6.Cidr == "" {
-      initV6AllocFields(netInfo)
+      InitV6AllocFields(netInfo)
     }
     pool6 := danmtypes.IpPool{Start: netInfo.Spec.Options.Pool6.Start, End: netInfo.Spec.Options.Pool6.End}
     netInfo.Spec.Options.Alloc6, ip6, err = allocateAddress(pool6, netInfo.Spec.Options.Alloc6, req6, netInfo.Spec.Options.Pool6.Cidr)
@@ -106,7 +106,7 @@ func allocateIps(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string,
   return ip4, ip6, err
 }
 
-func initV6AllocFields(netInfo *danmtypes.DanmNet) {
+func InitV6AllocFields(netInfo *danmtypes.DanmNet) {
   InitV6PoolCidr(netInfo)
   netInfo.Spec.Options.Pool6.Start, netInfo.Spec.Options.Pool6.End, netInfo.Spec.Options.Alloc6 =
     InitAllocPool(netInfo.Spec.Options.Pool6.Cidr, netInfo.Spec.Options.Pool6.Start, netInfo.Spec.Options.Pool6.End, netInfo.Spec.Options.Alloc6, netInfo.Spec.Options.Routes6)

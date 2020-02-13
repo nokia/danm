@@ -4,7 +4,6 @@ import (
   "bytes"
   "errors"
   "log"
-  "net"
   "strconv"
   "strings"
   "encoding/json"
@@ -59,10 +58,8 @@ type MalformedObject struct {
 
 func SetupAllocationPools(nets []danmtypes.DanmNet) error {
   for index, dnet := range nets {
-    if dnet.Spec.Options.Cidr != "" {
-      InitAllocPool(&dnet)
-      nets[index].Spec = dnet.Spec
-    }
+    InitAllocPool(&dnet)
+    nets[index].Spec = dnet.Spec
   }
   return nil
 }
@@ -71,6 +68,9 @@ func InitAllocPool(dnet *danmtypes.DanmNet) {
   dnet.Spec.Options.Alloc = ""
   dnet.Spec.Options.Pool.Start, dnet.Spec.Options.Pool.End, dnet.Spec.Options.Alloc =
     ipam.InitAllocPool(dnet.Spec.Options.Cidr, dnet.Spec.Options.Pool.Start, dnet.Spec.Options.Pool.End, dnet.Spec.Options.Alloc, dnet.Spec.Options.Routes)
+  if strings.Contains(dnet.ObjectMeta.Name, "initv6") {
+    ipam.InitV6AllocFields(dnet)
+  }
   if strings.HasPrefix(dnet.ObjectMeta.Name, "full") {
     exhaustNetwork(dnet)
   }
@@ -85,14 +85,13 @@ func GetTestNet(netId string, testNets []danmtypes.DanmNet) *danmtypes.DanmNet {
   return nil
 }
 
-func CreateExpectedAllocationsList(ip string, isExpectedToBeSet bool, networkId string) []ReservedIpsList {
-  var ips []ReservedIpsList
+func AppendIpToExpectedAllocsList(allocs []ReservedIpsList, ip string, isExpectedToBeSet bool, networkId string) []ReservedIpsList {
   if ip != "" {
     reservation := Reservation {Ip: ip, Set: isExpectedToBeSet,}
     expectedAllocation := ReservedIpsList{NetworkId: networkId, Reservations: []Reservation {reservation,},}
-    ips = append(ips, expectedAllocation)
+    allocs = append(allocs, expectedAllocation)
   }
-  return ips
+  return allocs
 }
 
 func CreateExpectedVniAllocationsList(vni int, vniType, ifaceName string, isExpectedToBeSet bool) []ReservedVnisList {
@@ -105,16 +104,23 @@ func CreateExpectedVniAllocationsList(vni int, vniType, ifaceName string, isExpe
   return vnis
 }
 
-func exhaustNetwork(netInfo *danmtypes.DanmNet) {
-    ba := bitarray.NewBitArrayFromBase64(netInfo.Spec.Options.Alloc)
-    _, ipnet, _ := net.ParseCIDR(netInfo.Spec.Options.Cidr)
-    ipnetNum := ipam.Ip2int(ipnet.IP)
-    begin := ipam.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.Start)) - ipnetNum
-    end := ipam.Ip2int(net.ParseIP(netInfo.Spec.Options.Pool.End)) - ipnetNum
-    for i:=begin;i<=end;i++ {
-        ba.Set(uint32(i))
+func exhaustNetwork(dnet *danmtypes.DanmNet) {
+  var i uint32
+  if dnet.Spec.Options.Alloc != "" {
+    v4Ba := bitarray.NewBitArrayFromBase64(dnet.Spec.Options.Alloc)
+    for i=0; i<v4Ba.Len(); i++ {
+      v4Ba.Set(i)
     }
-    netInfo.Spec.Options.Alloc = ba.Encode()
+    dnet.Spec.Options.Alloc = v4Ba.Encode()
+  }
+  if dnet.Spec.Options.Alloc6 != "" {
+    v6Ba := bitarray.NewBitArrayFromBase64(dnet.Spec.Options.Alloc6)
+    for i=0; i<v6Ba.Len(); i++ {
+      v6Ba.Set(i)
+    }
+    dnet.Spec.Options.Alloc6 = v6Ba.Encode()
+  }
+  return
 }
 
 func GetTconf(tconfName string, tconfSet []danmtypes.TenantConfig) *danmtypes.TenantConfig {

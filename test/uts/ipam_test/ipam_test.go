@@ -24,6 +24,7 @@ var testNets = []danmtypes.DanmNet {
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "fullerror"},Spec: danmtypes.DanmNetSpec{NetworkID: "error", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "error"},Spec: danmtypes.DanmNetSpec{NetworkID: "error", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "staticFirst"},Spec: danmtypes.DanmNetSpec{NetworkID: "cidr", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "fullinitv6"},Spec: danmtypes.DanmNetSpec{NetworkID: "net6", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Net6: "2a00:8a00:a000:1193::/64"}}},
 }
 
 var reserveTcs = []struct {
@@ -58,7 +59,7 @@ var reserveTcs = []struct {
   {"dynamicIPv6SmallCidrSizeSuccess", 4, "", "dynamic", "", "2a00:8a00:a000:1193::1/120", false, 1},
   {"staticL2IPv6", 2, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "", true, 0},
   {"staticInvalidIPv6", 3, "", "2a00:8a00:a000:1193:hulu:lulu:lulu:lulu/64", "", "", true, 0},
-  {"staticNetmaskMismatchIPv6", 3, "", "2a00:8a00:a000:2193:f816:3eff:fe24:e348/64", "", "", true, 0},
+  {"staticIPv/OutsideOfAllocCidr", 3, "", "2a00:8a00:a000:2193:f816:3eff:fe24:e348/64", "", "", true, 0},
   {"staticIPv6Success", 3, "", "2a00:8a00:a000:1193::03e:1010", "", "2a00:8a00:a000:1193::3e:1010/106", false, 1},
   {"dynamicDualStackSuccess", 3, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193::2/106", false, 1},
   {"staticDualStackSuccess", 3, "192.168.1.115", "2a00:8a00:a000:1193::03e:2002", "192.168.1.115/26", "2a00:8a00:a000:1193::3e:2002/106", false, 1},
@@ -80,10 +81,11 @@ var freeTcs = []struct {
   {"noNetmask", 2, "192.168.1.2", false, 0},
   {"outOfRange", 2, "192.168.1.10/30", false, 0},
   {"invalidIp", 2, "192.168.hululu/30", false, 0},
-  {"ipv6", 2, "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, 0},
+  {"ipv6OutsideOfCidr", 3, "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, 0},
   {"resolvedConflictDuringUpdate", 7, "192.168.1.69/26", false, 2},
   {"unresolvedConflictAfterUpdate", 8, "192.168.1.69/26", true, 1},
   {"errorUpdate", 9, "192.168.1.69/26", true, 1},
+  {"ipv6SuccesfulFree", 12, "2a00:8a00:a000:1193::1/106", false, 1},
 }
 
 var gcTcs = []struct {
@@ -92,9 +94,9 @@ var gcTcs = []struct {
   allocatedIp4 string
   allocatedIp6 string
 }{
-  {"ip4OnlyGc", 5, "192.168.1.110/26", ""},
-  {"ip6OnlyGc", 5, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64"},
-  {"dualStackGc", 5, "192.168.1.108/26", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64"},
+  {"ip4OnlyGc", 12, "192.168.1.110/26", ""},
+  {"ip6OnlyGc", 12, "", "2a00:8a00:a000:1193::1/106"},
+  {"dualStackGc", 12, "192.168.1.115", "2a00:8a00:a000:1193::5"},
 }
 
 func TestReserve(t *testing.T) {
@@ -104,7 +106,9 @@ func TestReserve(t *testing.T) {
   }
   for _, tc := range reserveTcs {
     t.Run(tc.netName, func(t *testing.T) {
-      ips := utils.CreateExpectedAllocationsList(tc.expectedIp4,true,testNets[tc.netIndex].Spec.NetworkID)
+      var ips []utils.ReservedIpsList
+      ips = utils.AppendIpToExpectedAllocsList(ips, tc.expectedIp4, true, testNets[tc.netIndex].Spec.NetworkID)
+      ips = utils.AppendIpToExpectedAllocsList(ips, tc.expectedIp6, true, testNets[tc.netIndex].Spec.NetworkID)
       testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
       netClientStub := stubs.NewClientSetStub(testArtifacts)
       ip4, ip6, err := ipam.Reserve(netClientStub, testNets[tc.netIndex], tc.requestedIp4, tc.requestedIp6)
@@ -136,7 +140,8 @@ func TestFree(t *testing.T) {
   }
   for _, tc := range freeTcs {
     t.Run(tc.netName, func(t *testing.T) {
-      ips := utils.CreateExpectedAllocationsList(tc.allocatedIp,false,testNets[tc.netIndex].Spec.NetworkID)
+      var ips []utils.ReservedIpsList
+      ips = utils.AppendIpToExpectedAllocsList(ips, tc.allocatedIp, false, testNets[tc.netIndex].Spec.NetworkID)
       testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
       netClientStub := stubs.NewClientSetStub(testArtifacts)
       err := ipam.Free(netClientStub, testNets[tc.netIndex], tc.allocatedIp)
@@ -162,7 +167,9 @@ func TestGarbageCollectIps(t *testing.T) {
   }
   for _, tc := range gcTcs {
     t.Run(tc.netName, func(t *testing.T) {
-      ips := utils.CreateExpectedAllocationsList(tc.allocatedIp4,false,testNets[tc.netIndex].Spec.NetworkID)
+      var ips []utils.ReservedIpsList
+      ips = utils.AppendIpToExpectedAllocsList(ips, tc.allocatedIp4, false, testNets[tc.netIndex].Spec.NetworkID)
+      ips = utils.AppendIpToExpectedAllocsList(ips, tc.allocatedIp6, false, testNets[tc.netIndex].Spec.NetworkID)
       testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
       netClientStub := stubs.NewClientSetStub(testArtifacts)
       ipam.GarbageCollectIps(netClientStub, &testNets[tc.netIndex], tc.allocatedIp4, tc.allocatedIp6)

@@ -407,7 +407,8 @@ func TestDelegateInterfaceDelete(t *testing.T) {
     t.Run(tc.tcName, func(t *testing.T) {
       testEp := getTestEp(tc.epName)
       testNet := utils.GetTestNet(tc.netName, testNets)
-      ips := utils.CreateExpectedAllocationsList(testEp.Spec.Iface.Address,false,testNet.Spec.NetworkID)
+      var ips []utils.ReservedIpsList
+      ips = utils.AppendIpToExpectedAllocsList(ips, testEp.Spec.Iface.Address,false,testNet.Spec.NetworkID)
       testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
       netClientStub := stubs.NewClientSetStub(testArtifacts)
       err = setupDelTestTc(tc.cniConfName)

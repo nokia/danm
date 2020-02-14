@@ -88,12 +88,9 @@ func allocateIps(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string,
   ip6 := ""
   var err error
   if req4 != "" {
-    netInfo.Spec.Options.Alloc, ip4, err = allocateAddress(netInfo.Spec.Options.Pool, netInfo.Spec.Options.Alloc, req4, netInfo.Spec.Options.Cidr)
+    netInfo.Spec.Options.Alloc, ip4, err = allocateAddress(&netInfo.Spec.Options.Pool, netInfo.Spec.Options.Alloc, req4, netInfo.Spec.Options.Cidr)
     if err != nil {
       return "", "", err
-    }
-    if ip4 != "" && ip4 != NoneAllocType {
-      netInfo.Spec.Options.Pool.LastIp = ip4
     }
   }
   if req6 != "" {
@@ -101,14 +98,12 @@ func allocateIps(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string,
       InitV6AllocFields(netInfo)
     }
     //TODO: to have a real uniform handling both V4 and V6 pool definition should be uniform, meaning, V4 pools should also have a separare allocation CIDR
-    pool6 := danmtypes.IpPool{Start: netInfo.Spec.Options.Pool6.Start, End: netInfo.Spec.Options.Pool6.End, LastIp: netInfo.Spec.Options.Pool6.LastIp}
-    netInfo.Spec.Options.Alloc6, ip6, err = allocateAddress(pool6, netInfo.Spec.Options.Alloc6, req6, netInfo.Spec.Options.Pool6.Cidr)
+    tempPool6 := danmtypes.IpPool{Start: netInfo.Spec.Options.Pool6.Start, End: netInfo.Spec.Options.Pool6.End, LastIp: netInfo.Spec.Options.Pool6.LastIp}
+    netInfo.Spec.Options.Alloc6, ip6, err = allocateAddress(&tempPool6, netInfo.Spec.Options.Alloc6, req6, netInfo.Spec.Options.Pool6.Cidr)
     if err != nil {
       return "", "", err
     }
-    if ip6 != "" && ip6 != NoneAllocType {
-      netInfo.Spec.Options.Pool6.LastIp = ip6
-    }
+    netInfo.Spec.Options.Pool6.LastIp = tempPool6.LastIp
   }
   return ip4, ip6, err
 }
@@ -119,7 +114,7 @@ func InitV6AllocFields(netInfo *danmtypes.DanmNet) {
     InitAllocPool(netInfo.Spec.Options.Pool6.Cidr, netInfo.Spec.Options.Pool6.Start, netInfo.Spec.Options.Pool6.End, netInfo.Spec.Options.Alloc6, netInfo.Spec.Options.Routes6)
 }
 
-func allocateAddress(pool danmtypes.IpPool, alloc, reqType, cidr string) (string,string,error) {
+func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, cidr string) (string,string,error) {
   if reqType == NoneAllocType {
     return alloc, NoneAllocType, nil
   }
@@ -148,7 +143,7 @@ func allocateAddress(pool danmtypes.IpPool, alloc, reqType, cidr string) (string
       }
     }
     if !doesAnyFreeIpExist {
-      return alloc, "", errors.New("IPv4 address cannot be dynamically allocated, all addresses are reserved!")
+      return alloc, "", errors.New("IP address cannot be dynamically allocated, all addresses are reserved!")
     }
   } else {
     //I guess we are doing backward compatibility now :)
@@ -167,10 +162,14 @@ func allocateAddress(pool danmtypes.IpPool, alloc, reqType, cidr string) (string
     }
     ba.Set(allocatedIndex)
   }
-  return ba.Encode(), getIpFromIndex(allocatedIndex, subnet), nil
+  allocatedIp := getIpFromIndex(allocatedIndex, subnet)
+  if reqType == DynamicAllocType {
+    pool.LastIp = allocatedIp
+  }
+  return ba.Encode(), allocatedIp, nil
 }
 
-func getAllocRangeBasedOnCidr(pool danmtypes.IpPool, cidr *net.IPNet) (uint32,uint32) {
+func getAllocRangeBasedOnCidr(pool *danmtypes.IpPool, cidr *net.IPNet) (uint32,uint32) {
   var beginAsInt, endAsInt uint32
   if cidr.IP.To4() != nil {
     firstIpAsInt := Ip2int(cidr.IP)

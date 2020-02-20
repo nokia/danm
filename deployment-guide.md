@@ -69,50 +69,77 @@ kubectl create -f integration/crds/lightweight
 ```
 kubectl create -f integration/crds/production
 ```
-**2. Put a valid CNI config file into the CNI configuration directory of all your kubelet nodes' (by default it is /etc/cni/net.d/) based on:**
+
+**2. Create a service account for the DANM CNI:**
+
+In order to do its job, DANM needs a service account to access the cluster, and for that account to
+have the necessary RBAC roles provisioned.
+
+We also need to extract the token for this service account, as it will be required in the next step:
+
+```
+kubectl create --namespace kube-system serviceaccount danm
+SECRET_NAME=$(kubectl get --namespace kube-system -o jsonpath='{.secrets[0].name}' serviceaccounts danm)
+SERVICEACCOUNT_TOKEN=$(kubectl get --namespace kube-system secrets ${SECRET_NAME} -o jsonpath='{.data.token}' | base64 -d)
+```
+
+**3. Put a valid CNI config file into the CNI configuration directory of all your kubelet nodes' (by default it is /etc/cni/net.d/) based on:**
 
 [Example CNI config file](https://github.com/nokia/danm/tree/master/integration/cni_config/00-danm.conf)
 
 As kubelet considers the first .conf file in the configured directory as the valid CNI config of the cluster, it is generally a good idea to prefix the .conf file of any CNI metaplugin with "00".
 Make sure to configure the optional DANM configuration parameters to match your environment!
 The parameter "kubeconfig" is mandatory, and shall point to a valid kubeconfig file.
-You can find an example file here:
+
+In order to create a valid kubeconfig file, the cluster server and CA certificate need to be known,
+
+```
+CLUSTER_NAME=$(kubectl config view -o jsonpath='{.clusters[0].name}')
+CLUSTER_SERVER=$(kubectl config view -o jsonpath='{.clusters[0].cluster.server}')
+CLUSTER_CA_CERTIFICATE=$(kubectl config view --flatten -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')
+```
+*(note: Above commands may not work if you have more than one cluster in your kubeconfig file. In that case, adjust
+the commands above to pick the correct cluster, or obtain the values manually)*
+
+and with that, a kubeconfig file can be created.
 
 [Example kubeconf file](https://github.com/nokia/danm/tree/master/integration/cni_config/example_kubeconfig.yaml)
 
-Don't forget to also provision the necessary RBAC rules so DANM can do its job:
+Also provision the necessary RBAC rules so DANM can do its job:
 
-[RBAC rules](https://github.com/nokia/danm/tree/master/integration/cni_config/danm_rbac.yaml)
+```
+kubectl create -f integration/cni_config/danm_rbac.yaml
+```
 
-**3. Copy the "danm" binary into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/):**
+**4. Copy the "danm" binary into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/):**
 ```
 / # ls /opt/cni/bin
 bridge       dhcp         flannel      host-local   loopback     portmap      sample       tuning
 **danm**     host-device  ipvlan       macvlan      ptp          sriov        vlan
 ```
-**4. Copy the "fakeipam" binary into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/):**
+**5. Copy the "fakeipam" binary into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/):**
 ```
 / # ls /opt/cni/bin
 bridge       dhcp         flannel      host-local   loopback     portmap      sample       tuning
 danm        **fakeipam**      host-device  ipvlan       macvlan      ptp          sriov        vlan
 ```
-**5. OPTIONAL: Copy any CNI binaries (flannel, sriov, macvlan etc.) you would like to use in your cluster into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/)**
+**6. OPTIONAL: Copy any CNI binaries (flannel, sriov, macvlan etc.) you would like to use in your cluster into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/)**
 
-**6. Onboard the netwatcher, svcwatcher, and webhook containers into the image registry of your cluster**
+**7. Onboard the netwatcher, svcwatcher, and webhook containers into the image registry of your cluster**
 
- **7. Create the netwatcher DaemonSet by executing the following command from the project's root directory:**
+ **8. Create the netwatcher DaemonSet by executing the following command from the project's root directory:**
  ```
 kubectl create -f integration/manifests/netwatcher/
 ```
 Note1: you should take a look at the example manifest, and possibly tailor it to your own environment first
 Note2: we assume RBAC is configured for the Kubernetes API, so the manifests include the required Role and ServiceAccount for this case.
 
- **8. Create at least one DANM network to bootstrap your infrastructure Pods!**
+ **9. Create at least one DANM network to bootstrap your infrastructure Pods!**
  Otherwise you can easily fall into a catch 22 situation - you won't be able to bring-up Pods because you don't have network, but you cannot create networks because you cannot bring-up a Pod to validate them.
  Your bootstrap networking solution can be really anything you fancy!
  We use Flannel or Calico for the purpose in our environments, and connect Pods to it with such simple network descriptors like what you can find in **integration/bootstrap_networks**.
 
- **9. Create the webhook Deployment and provide it with certificates by executing the following commands from the project's root directory:**
+ **10. Create the webhook Deployment and provide it with certificates by executing the following commands from the project's root directory:**
  ```
 ./integration/manifests/webhook/webhook-create-signed-cert.sh
 cat ./integration/manifests/webhook/webhook.yaml | ./integration/manifests/webhook/webhook-patch-ca-bundle.sh > ./integration/manifests/webhook/webhook-ca-bundle.yaml

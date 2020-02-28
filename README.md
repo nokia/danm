@@ -36,7 +36,7 @@ Want to learn more about this brave new world? Don't hesitate to contact us, we 
 **In any case, DANM is more than just a plugin, it is an End-To-End solution to a whole problem domain**.
 It is:
 * a CNI plugin capable of provisioning IPVLAN interfaces with advanced features
-* an in-built IPAM module with the capability of managing multiple, ***cluster-wide***, discontinuous L3 networks and provide dynamic, static, or no IP allocation scheme on-demand
+* an in-built IPAM module with the capability of managing multiple, ***cluster-wide***, discontinuous L3 networks with managing up to 8M allocations per network! plus providing dynamic, static, or no IP allocation scheme on-demand for both IPv4, and IPv6
 * a CNI metaplugin capable of attaching multiple network interfaces to a container, either through its own CNI, or through delegating the job to any of the popular CNI solution e.g. SR-IOV, Calico, Flannel etc. ***in parallel***
 * a Kubernetes controller capable of centrally managing both VxLAN and VLAN interfaces of all Kubernetes hosts
 * another Kubernetes controller extending Kubernetes' Service-based service discovery concept to work over all network interfaces of a Pod
@@ -92,7 +92,8 @@ It is important to state this, because the features DANM provides open up a coup
 
  We strongly feel that all such scenarios incompatible with the life-cycle of a standard CNI plugin firmly fall outside the responsibility of the core DANM project.
 That being said, tell us about your Kubernetes breaking ideas! We are open to accept such plugins into the wider umbrella of the existing eco-system: outside of the core project, but still loosely linked to suite as optional, external components.
-Just because something doesn't fit into DANM, it does not mean it can't fit into your cloud!
+Just because something doesn't fit into core DANM, it does not mean it can't fit into your cloud!
+Please visit [DANM utils](https://github.com/nokia/danm-utils) repository for more info.
 
 
 ## Deployment

@@ -80,7 +80,7 @@ Wonder how? Refer to chapter [Connecting TenantNetworks to TenantConfigs](#conne
 
 Interested user can find reference manifests showcasing the features of the new APIs under [DANM V4 example manifests](https://github.com/nokia/danm/tree/master/example/4_0_examples).
  ##### Network management in the practical sense
-Regardless which paradigm thrives in your cluster, network objects are managed the exact same way - you just might not be allowed to execute a specific provisioning operation in case you are trying to overstep your boundaries! Don't worry, as DANM will always explicitly and instantly tell you if this is the case.
+Regardless which paradigm thrives in your cluster, network objects are managed the exact same way - you just might not be allowed to execute a specific provisioning operation in case you are trying to overstep your boundaries! Don't worry, as DANM will always explicitly and instantly tell you when this happens.
 Unless explicitly stated in the description of a specific feature, all API features are generally supported, and supported the same way regardless through which network management API type you use them.
 
 Network management always starts with the creation of Kubernetes API objects, logically representing the characteristics of a network Pods can connect to.
@@ -119,14 +119,15 @@ Spec:
 Events:                  <none>
 ```
 
-__WARNING: DANM stores pretty important information in these API objects. Under no circumstances shall a network be deleted, if there are any running Pods still referencing it!__
+__WARNING: DANM stores pretty important information in these API objects. Under no circumstances shall a network be manually deleted, if there are any running Pods still referencing it!__
 __Such action will undoubtedly lead to ruin and DANMation!__
+From DANM 4.0 upward the Webhook component makes sure this cannot happpen, but it is better to be aware of this detail.
 #### Generally supported DANM API features
 ##### Naming container interfaces
 Generally speaking, you need to care about how the network interfaces of your Pods are named inside their respective network namespaces.
 The hard reality to keep in mind is that you shall always have an interface literally called "eth0" created within all your Kubernetes Pods, because Kubelet will always search for the existence of such an interface at the end of Pod instantiation.
-If such an interface does not exist after CNI is invoked (also having an IPv4 address), the state of the Pod will be considered "faulty", and it will be re-created in a loop.
-To be able to comply with this Kubernetes limitation, DANM always names the first container interface "eth0", regardless of your intention.
+If such an interface does not exist after CNI is invoked, the state of the Pod will be considered "faulty", and it will be re-created in a loop.
+To be able to comply with this Kubernetes limitation, DANM always names the first container interface "eth0", regardless your original intention.
 
 Sorry, but they made us do it :)
 
@@ -145,6 +146,7 @@ We recognize that not all networking involves an overlay technology, so provisio
 Network administrators can define routing rules for both IPv4, and IPv6 destination subnets under the "routes", and "routes6" attributes respectively.
 These attributes take a map of string-string key (destination subnet)-value(gateway address) pairs.
 The configured routes will be added to the default routing table of all Pods connecting to this network.
+
 ##### Provisioning policy-based IP routes
 Configuring generic routes on the network level is a nice feature, but in more complex network configurations (e.g. Pod connects to multiple networks) it is desirable to support Pod-level route provisioning.
 The routing table to hold the Pods' policy-based IP routes can be configured via the "rt_tables" API attribute.
@@ -158,16 +160,17 @@ In case this parameter is set to "ipvlan", or is missing; then DANM's in-built I
 In case this attribute is provided and set to another value than "ipvlan", then network management is delegated to the CNI plugin with the same name.
 The binary will be searched in the configured CNI binary directory.
 Example: when a Pod is created and requests a connection to a network with "NetworkType" set to "flannel", then DANM will delegate the creation of this network interface to the <CONFIGURED_CNI_PATH_IN_KUBELET>/flannel binary.
+
 ##### Creating the configuration for delegated CNI operations
-We strongly believe that network management in general should be driven by generic APIs -almost- completely adhering to the same schema. Therefore, DANM is capable to "translate" the generic options coming from network objects into the specific "language" the delegated CNI plugin understands.
-This way users can dynamically configure various networking solutions via the same, abstract interface without caring about how a specific option is called exactly in the terminology of the delegated solution.
+We strongly believe that network management in general should be driven by generic APIs -almost- completely adhering to the same schema. Therefore, DANM is capable of "translating" the generic options coming from network objects into the specific "language" the delegate CNI plugin understands.
+This way users can dynamically configure various networking solutions via the same, abstract API without caring about how a specific option is called exactly in the terminology of the delegate solution.
 
 A generic framework supporting this method is built into DANM's code, but still this level of integration requires case-by-case implementation.
 As a result, DANM currently supports two integration levels:
 
- - **Dynamic integration level:** CNI-specific network attributes (such as IP ranges, parent host devices etc.) can be controlled on a per network level, exclusively taken directly from the CRD object
- - **Static integration level:** CNI-specific network attributes are by default configured via static CNI configuration files (Note: this is the default CNI configuration method); but certain parameters are influenced by the DANM API configuration values.
-
+ - **Dynamic integration level:** CNI-specific network attributes (e.g. name of parent host devices etc.) can be controlled on a per network level, exclusively taken directly from the CRD object
+ - **Static integration level:** CNI-specific network attributes are by default configured via static CNI configuration files (Note: this is the default CNI configuration method).
+Note: most of the DANM API supported attributes (e.g. IP route configuration, IP address management etc.) are generally supported for all CNIs, regardless their supported integration level.
 Always refer to the schema descriptors for more details on which parameters are universally supported!
 
 Our aim is to integrate all the popular CNIs into the DANM eco-system over time, but currently the following CNI's achieved dynamic integration level:
@@ -179,8 +182,7 @@ Our aim is to integrate all the popular CNIs into the DANM eco-system over time,
 - Generic MACVLAN CNI from the CNI plugins example repository [MACVLAN CNI plugin](https://github.com/containernetworking/plugins/blob/master/plugins/main/macvlan/macvlan.go )
 	- Set the "NetworkType" parameter to value "macvlan" to use this backend
 
-No separate configuration needs to be provided to DANM when it connects Pods to networks, if the network is backed by a CNI plugin with dynamic integration level.
-Everything happens automatically purely based on the network manifest!
+No separate configuration file is required when DANM connects Pods to such networks, everything happens automatically purely based on the network manifest!
 
 When network management is delegated to CNI plugins with static integration level; DANM first reads their configuration from the configured CNI config directory.
 The directory can be configured via setting the "CNI_CONF_DIR" environment variable in DANM CNI's context (be it in the host namespace, or inside a Kubelet container). Default value is "/etc/cni/net.d".
@@ -215,16 +217,20 @@ DANM reports all errors towards kubelet in case multiple CNI plugins failed to d
 #### DANM IPAM
 DANM includes a fully generic and very flexible IPAM module in-built into the solution. The usage of this module is seamlessly integrated together with all the natively supported CNI plugins (DANM's IPVLAN, Intel's SR-IOV, and the CNI project's reference MACVLAN plugins); as well as with any other CNI backend fully adhering to the v0.3.1 CNI standard!
 
-The main feature of DANM's IPAM is that it's fully integrated into DANM's network management APIs through the attributes called "cidr", "allocation_pool", and "net6". Therefore users of the module can easily configure all aspects of network management by manipulating solely dynamic Kubernetes API objects!
+The main feature of DANM's IPAM is that it's fully integrated into DANM's network management APIs through the attributes called "cidr", "allocation_pool", "net6", and "allocation_pool_v6". Therefore users of the module can easily configure all aspects of network management by manipulating solely dynamic Kubernetes API objects!
 
 This native integration also enables a very tempting possibility. **As IP allocations belonging to a network are dynamically tracked *within the same API object***, it becomes possible to define:
 * discontinuous subnets 1:1 mapped to a logical network
 * **cluster-wide usable subnets** (instead of node restricted sub CIDRs)
 
-Network administrators can simply put the CIDR, and the allocation pool into the network object. Whenever a Pod is instantiated or deleted **on any host within the cluster**, DANM simply updates the allocation record belonging to the network through the Kubernetes API before provisioning the chosen IP to the Pod's interface.
+Network administrators can simply provision their desired CIDRs, and the allocation pools into the network object. Whenever a Pod is instantiated or deleted **on any host within the cluster**, DANM  updates the respective allocation record belonging to the network through the Kubernetes API before provisioning the chosen IP to the Pod's interface.
 
 The flexible IPAM module also allows Pods to define the IP allocation scheme best suited for them. Pods can ask dynamically allocated IPs from the defined allocation pool, or can ask for one, specific, static address.
 The application can even ask DANM to forego the allocation of any IPs to their interface in case a L2 network interface is required.
+
+DANM IPAM is capable of handling 8 million -that's right!- IP allocations per network object, IPv4, and IPv6 mixed.
+If this is still not enough to impress you, we honestly don't know what else you might need from your IPAM! So please come, and tell us :)
+
 ##### Using IPAM with static backends
 While using the DANM IPAM with dynamic backends is mandatory, netadmins can freely choose if they want their static CNI backends to be also integrated to DANM's IPAM; or they would prefer these interfaces to be statically configured by another IPAM module.
 By default the "ipam" section of a static delegate is always configured from the CNI configuration file identified by the network's NetworkID parameter.
@@ -233,18 +239,13 @@ When a Pod connects to a network with static NetworkType but containing allocati
 If a Pod does not ask DANM to allocate an IP, or the network does not define the necessary parameters; the delegation automatically falls back to the "ipam" defined in the static config file.
 **Note**: DANM can only integrate static backends to its flexible IPAM if the CNI itself is fully compliant to the standard, i.e. uses the plugin defined in the "ipam" section of its configuration. It is the administrator's responsibility to configure the DANM management APIs according to the capabilities of every CNI!
 ##### IPv6 and dual-stack support
-DANM's IPAM module, and its integration to dynamic backends -IPVLAN, MACVLAN, and SR-IOV CNIs- support both IPv6, and dual-stack (one IPv4, and one IPv6 address provisioned to the same interface) addresses!
-To configure an IPv6 CIDR for a network, network administrators shall configure the "net6" attribute. Additionally, IP routes for IPv6 subnets can be configured via "routes6".
+DANM's IPAM module supports both pure IPv6, and dual-stack (one IPv4, and one IPv6 address provisioned to the same interface) addresses with full feature parity!
+To configure an IPv6 CIDR for a network, network administrators shall configure the "net6" attribute.
+Similarly to IPv4 addess management operators can define a desired allocation pool for their V6 subnet via the "allocation_pol_v6" structure.
+Additionally, IP routes for IPv6 subnets can be configured via "routes6".
 If both "cidr", and "net6" are configured for the same network, Pods connecting to that network can ask either one IPv4 or IPv6 address - or even both at the same time!
 
-That being said, network administrators using IPv6, or dual-stack features need to be aware of the current restrictions of the solution:
-* dynamic IPs are randomly allocated from the defined IPv6 subnet according to the following algorithm:
-  * the IP is prefixed with the net6 parameter of the network
-  * MAC address is randomly generated for the EUI64
-* the smallest supported IPv6 subnet is /64
-* allocation pools cannot be defined for IPv6 subnets
-
-This feature is generally supported the same way even for static CNI backends! However guaranteeing that every specific backend is compabile and comfortable with both IPv6, and dual IPs allocated by an IPAM cannot be guaranteed by DANM.
+This feature is generally supported the same way even for static CNI backends! However the promise that every specific CNI plugin is compatible and comfortable with both IPv6, and dual IPs allocated by an IPAM cannot be guaranteed by DANM.
 Therefore, it is the administrator's responsibility to configure the DANM management APIs according to the capabilities of every CNI!
 #### DANM IPVLAN CNI
 DANM's IPVLAN CNI uses the Linux kernel's IPVLAN module to provision high-speed, low-latency network interfaces for applications which need better performance than a bridge (or any other overlay technology) can provide.
@@ -399,22 +400,29 @@ Every CREATE, and ~~PUT~~ (see [https://github.com/nokia/danm/issues/144](https:
  3. spec.Options.Net6 must be supplied in a valid IPv6 CIDR notation
  4. all gateway addresses belonging to an entry of spec.Options.Routes6  shall be in the defined IPv6 CIDR
  5. spec.Options.Alloc shall not be manually defined
- 6. spec.Options.Allocation_pool cannot be defined without defining spec.Options.Cidr
- 7. spec.Options.Allocation_pool.Start shall be in the provided IPv4 CIDR
- 8. spec.Options.Allocation_pool.End shall be in the provided IPv4 CIDR
- 9. spec.Options.Allocation_pool.End shall be smaller than spec.Options.Allocation_pool.Start
- 10. spec.Options.Vlan and spec.Options.Vxlan cannot be provided together
- 11. spec.NetworkID cannot be longer than 11 characters for dynamic backends
- 12. spec.AllowedTenants is not a valid parameter for this API type
- 13. spec.Options.Device_pool must be, and spec.Options.Host_device mustn't be provided for K8s Devices based networks (such as SR-IOV)
- 14. Any of spec.Options.Device, spec.Options.Vlan, or spec.Options.Vxlan attributes cannot be changed if there are any Pods currently connected to the network
+ 6. spec.Options.Alloc6 shall not be manually defined
+ 7. spec.Options.Allocation_pool cannot be defined without defining spec.Options.Cidr
+ 8. spec.Options.Allocation_pool.Start shall be in the provided IPv4 CIDR
+ 9. spec.Options.Allocation_pool.End shall be in the provided IPv4 CIDR
+ 10. spec.Options.Allocation_pool.End shall be smaller than spec.Options.Allocation_pool.Start
+ 11. spec.Options.Allocation_pool_V6 cannot be defined without defining spec.Options.Cidr
+ 12. spec.Options.Allocation_pool_V6.Start shall be in the provided IPv6 CIDR
+ 13. spec.Options.Allocation_pool_V6.End shall be in the provided IPv6 CIDR
+ 14. spec.Options.Allocation_pool_V6.End shall be smaller than spec.Options.Allocation_pool_V6.Start
+ 15. spec.Options.Allocation_pool_V6.Cidr must be supplied in a valid IPv6 CIDR notation, and must be in the provided IPv6 CIDR
+ 16. The combined number of allocatable IP addresses of the manually provided IPv4 and IPv6 allocation CIDRs cannot be higher than 8 million
+ 17. spec.Options.Vlan and spec.Options.Vxlan cannot be provided together
+ 18. spec.NetworkID cannot be longer than 11 characters for dynamic backends
+ 19. spec.AllowedTenants is not a valid parameter for this API type
+ 20. spec.Options.Device_pool must be, and spec.Options.Host_device mustn't be provided for K8s Devices based networks (such as SR-IOV)
+ 21. Any of spec.Options.Device, spec.Options.Vlan, or spec.Options.Vxlan attributes cannot be changed if there are any Pods currently connected to the network
 
  Every DELETE DanmNet operation is subject to the following validation rules:
- 15. the network cannot be deleted if there are any Pods currently connected to the network
+ 22. the network cannot be deleted if there are any Pods currently connected to the network
 
 Not complying with any of these rules results in the denial of the provisioning operation.
 ##### TenantNetwork
-Every CREATE, and ~~PUT~~ (see [https://github.com/nokia/danm/issues/144](https://github.com/nokia/danm/issues/144)) TenantNetwork operation is subject to the DanmNet validation rules no. 1-9, 11, 12.
+Every CREATE, and ~~PUT~~ (see [https://github.com/nokia/danm/issues/144](https://github.com/nokia/danm/issues/144)) TenantNetwork operation is subject to the DanmNet validation rules no. 1-16, 18, 19.
 In addition TenantNetwork provisioning has the following extra rules:
 
  1. spec.Options.Vlan cannot be provided
@@ -424,13 +432,13 @@ In addition TenantNetwork provisioning has the following extra rules:
  5. spec.Options.Host_device cannot be modified
  6. spec.Options.Device_pool cannot be modified
 
-Every DELETE TenantNetwork operation is subject to the DanmNet validation rule no.15.
+Every DELETE TenantNetwork operation is subject to the DanmNet validation rule no.22.
 
 Not complying with any of these rules results in the denial of the provisioning operation.
 ##### ClusterNetwork
-Every CREATE, and ~~PUT~~ (see [https://github.com/nokia/danm/issues/144](https://github.com/nokia/danm/issues/144)) ClusterNetwork operation is subject to the DanmNet validation rules no. 1-11, 13-14.
+Every CREATE, and ~~PUT~~ (see [https://github.com/nokia/danm/issues/144](https://github.com/nokia/danm/issues/144)) ClusterNetwork operation is subject to the DanmNet validation rules no. 1-18, 20-21.
 
-Every DELETE ClusterNetwork operation is subject to the DanmNet validation rule no.15.
+Every DELETE ClusterNetwork operation is subject to the DanmNet validation rule no.22.
 
 Not complying with any of these rules results in the denial of the provisioning operation.
 ##### TenantConfig

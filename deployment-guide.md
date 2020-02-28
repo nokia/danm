@@ -9,7 +9,7 @@
 ## Getting started
 ### Prerequisites
 Otherwise, you need to create your own Kubernetes cluster, and install DANM manually. We suggest to use any of the automated Kubernetes installing solutions (kubeadm, minikube etc.) for a painless experience.
-We currently test DANM with Kubernetes 1.15.X.
+We currently test DANM with Kubernetes 1.17.X.
 Compatibility with earlier than 1.9.X versions of Kubernetes is not officially supported.
 **Running with pre-1.15.X versions have known issues when used together with the production-grade network management APIs. These originate from Kubernetes core code limitations.**
 Best bet is to always stay up-to-date!
@@ -110,7 +110,7 @@ Note2: we assume RBAC is configured for the Kubernetes API, so the manifests inc
  **8. Create at least one DANM network to bootstrap your infrastructure Pods!**
  Otherwise you can easily fall into a catch 22 situation - you won't be able to bring-up Pods because you don't have network, but you cannot create networks because you cannot bring-up a Pod to validate them.
  Your bootstrap networking solution can be really anything you fancy!
- We use Flannel for the purpose in our environments, and connect Pods to it with such simple network descriptors like what you can find in **integration/bootstrap_networks**.
+ We use Flannel or Calico for the purpose in our environments, and connect Pods to it with such simple network descriptors like what you can find in **integration/bootstrap_networks**.
 
  **9. Create the webhook Deployment and provide it with certificates by executing the following commands from the project's root directory:**
  ```
@@ -128,6 +128,6 @@ We also assume RBAC is configured in your cluster.
 kubectl create -f integration/manifests/svcwatcher/
 ```
 This component is an optional part of the suite. You only need to install it if you would like to use Kubernetes Services for all the network interfaces of your Pod - but who wouldn't want that??
-**Disclaimer**: svcwatcher already leverages DANM CNI to create its network interface. Don't forget to change the name of the network referenced in the example manifest file to your bootstrap network!
-We use Flannel for this purpose in our infrastructures.
+**Disclaimer**: svcwatcher, and webhook already leverage DANM CNI to create their network interface. Don't forget to configure an appropriate default network in your cluster before you instantiate them!
+We use Flannel, or Calico for this purpose in our infrastructures.
 We also assume RBAC is configured in your cluster.

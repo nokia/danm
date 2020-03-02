@@ -43,21 +43,34 @@ spec:
     # OPTIONAL - STRING
     device_pool: ## DEVICE_PLUGIN_RESOURCE_POOL_MAME ##
     # The IPv4 CIDR notation of the subnet associated with the network.
-    # Pods connecting to this network get an IPv4 address to their interface from this subnet.
+    # Pods connecting to this network will get their IPv4 addresses from this subnet, if defined.
     # OPTIONAL - IPv4 CIDR FORMAT (e.g. "10.0.0.0/24")
     cidr: ## SUBNET_CIDR ##
-    # IPv4 allocation will be done according to the narrowed down allocation pool parameter, if defined.
+    # IPv4 address allocation will be done according to the narrowed down allocation pool parameter, if defined.
     # Allocation pool must be provided together with "cidr", and shall be included in the subnet range.
     # If CIDR is provided without defining an allocation pool, it is automatically calculated for the whole netmask (minus the first, and the last IP).
-    # The gateway IPs of all the configured IP routes are also automatically reserved from the allocation pool when it is generated.
-    # When the network administrator sets the allocation pool, DANM assumes the non-usable IPs (e.g. broadcast IP, gateway IPs etc.) were already discounted.
+    # The gateway IPs of all the configured IP routes are also automatically reserved in the allocation pool when it is generated.
+    # When the network administrator manually sets the allocation pool, DANM assumes the non-usable IPs (e.g. broadcast IP, gateway IPs etc.) were already discounted.
     allocation_pool:
       start: ## FIRST_ASSIGNABLE_IP ##
       end: ## LAST_ASSIGNABLE_IP ##
     # The IPv6 CIDR notation of the subnet associated with the network.
     # Pods connecting to this network will get their IPv6s from this subnet, if defined.
-    # OPTIONAL - IPv6 CIDR FORMAT (e.g. "2001:db8::/45"). Netmask of the subnet cannot be higher than /64 (i.e. /65 and upwards).
+    # OPTIONAL - IPv6 CIDR FORMAT (e.g. "2001:db8::/45").
     net6: ## SUBNET_CIDR ##
+    # IPv6 address allocation will be done according to the narrowed down allocation pool parameter, if defined.
+    # V6 allocation pool must be provided together with "net6", and shall be included in the subnet range.
+    # The gateway IPs of all the configured IPv6 routes are also automatically reserved in the V6 allocation pool when it is generated.
+    # When the network administrator manually sets the allocation pool, DANM assumes the non-usable IPs (e.g. broadcast IP, gateway IPs etc.) were already discounted.
+    allocation_pool_v6:
+      # A narrower V6 subnet CIDR from which IPv6 addresses can be dynamically allocated.
+      # Maximum usable subnet prefix is /106.
+      # If Net6 is provided without manually defining a V6 allocation pool CIDR, it is automatically defaulted to the first /106 subnet of the Net6 (minus the first, and the last IP).
+      # The same defaulting also takes place when a V6 IP address is allocated from a network not yet containing allocation_pool_v6.
+      # OPTIONAL - IPv6 CIDR FORMAT (e.g. "2a00:8a00:a000:1193::3e:1010/106").
+      cidr: ## SUBNET_CIDR ##
+      start: ## FIRST_ASSIGNABLE_IP ##
+      end: ## LAST_ASSIGNABLE_IP ##
     # Interfaces connected to this network are renamed inside the Pod's network namespace to a string starting with "container_prefix".
     # If not provided, DANM uses "eth" as the prefix.
     # In both cases DANM dynamically suffixes the interface names in Pod instantiation time with a unique integer number, corresponding to the sequence number of the interface during the specific network creation operation.

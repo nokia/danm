@@ -126,13 +126,16 @@ func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, cidr string) (strin
   var allocatedIndex uint32
   if reqType == DynamicAllocType {
     begin, end := getAllocRangeBasedOnCidr(pool, subnet)
-    lastIpIndex := begin-1
+    var lastIpIndex uint32
     if pool.LastIp != "" {
       lastIp := net.ParseIP(pool.LastIp)
       lastIpIndex = GetIndexOfIp(lastIp, subnet)      
     }
+    if lastIpIndex >= end || lastIpIndex == 0 {
+      lastIpIndex = begin
+    }
     var doesAnyFreeIpExist bool
-    for i:=lastIpIndex+1; i<=end; i++ {
+    for i:=lastIpIndex; i<=end; i++ {
       if !ba.Get(i) {
         ba.Set(i)
         allocatedIndex = i

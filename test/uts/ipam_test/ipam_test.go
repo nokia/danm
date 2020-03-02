@@ -25,6 +25,8 @@ var testNets = []danmtypes.DanmNet {
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "error"},Spec: danmtypes.DanmNetSpec{NetworkID: "error", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "staticFirst"},Spec: danmtypes.DanmNetSpec{NetworkID: "cidr", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26"}}},
   danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "fullinitv6"},Spec: danmtypes.DanmNetSpec{NetworkID: "net6", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Net6: "2a00:8a00:a000:1193::/64"}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "v4RestrictedPool"},Spec: danmtypes.DanmNetSpec{NetworkID: "v4RestrictedPool", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80"}}}},
+  danmtypes.DanmNet {ObjectMeta: meta_v1.ObjectMeta {Name: "v4RestrictedPoolWithLastIp"},Spec: danmtypes.DanmNetSpec{NetworkID: "v4RestrictedPoolWithLastIp", Options: danmtypes.DanmNetOption{Cidr: "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80", LastIp: "192.168.1.75"}}}},
 }
 
 var reserveTcs = []struct {
@@ -66,6 +68,8 @@ var reserveTcs = []struct {
   {"resolvedConflictDuringUpdate", 5, "dynamic", "", "192.168.1.65/26", "", false, 2},
   {"unresolvedConflictAfterUpdate", 6, "dynamic", "", "", "", true, 1},
   {"errorUpdate", 10, "dynamic", "", "", "", true, 1},
+  {"dyanmicV4FromAllocationPool", 13, "dynamic", "", "192.168.1.70/26", "", false, 1},
+  {"dyanmicV4FromAllocationPoolWithLastIpSet", 14, "dynamic", "", "192.168.1.76/26", "", false, 1},
 }
 
 var freeTcs = []struct {

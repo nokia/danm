@@ -13,6 +13,7 @@ import (
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
+  "github.com/nokia/danm/pkg/ipam"
 )
 
 type sysctlFunction func(danmtypes.DanmEp) bool
@@ -43,13 +44,22 @@ var sysctls = []sysctlTask {
 }
 
 // DeleteIpvlanInterface deletes a Pod's IPVLAN network interface based on the related DanmEp
-func DeleteIpvlanInterface(ep danmtypes.DanmEp) (error) { 
+func DeleteIpvlanInterface(ep danmtypes.DanmEp) (error) {
   return deleteEp(ep)
 }
 
-// FindByCid returns a map of DanmEps which belong to the same infra container ID
+// FindByCid returns a map of DanmEps which belongs to the same infra container ID
 func FindByCid(client danmclientset.Interface, cid string)([]danmtypes.DanmEp, error) {
-  result, err := client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
+  var err error
+  var result *danmtypes.DanmEpList
+  //Critical CNI_DEL calls depends on this function, so we will re-try for one sec to be able to cope with temporary network disruptions
+  for i := 0; i < 100; i++ {
+    result, err = client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
+    if err == nil {
+      break
+    }
+    time.Sleep(10 * time.Millisecond)
+  }
   if err != nil {
     return nil, errors.New("cannot list DanmEps because:" + err.Error())
   }
@@ -233,4 +243,21 @@ func ArePodsConnectedToNetwork(client danmclientset.Interface, dnet *danmtypes.D
     }
   }
   return false, danmtypes.DanmEp{}, nil
+}
+
+//DeleteDanmEp is a RAII-like API to automatically free IP allocations whenever the resource holding these allocations is deleted
+//It helps making sure IPs are always and only freed when a DanmEp is indeed deleted
+func DeleteDanmEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
+  var err error
+  if (ep.Spec.Iface.Address != "" || ep.Spec.Iface.AddressIPv6 != "") && dnet == nil {
+    return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because its linked network is not available to free DANM IPAM allocated IPs")
+  }
+  //We only need to Free an IP if it was allocated by DANM IPAM, and it was allocated by DANM only if it falls into any of the defined subnets
+  if ipam.WasIpAllocatedByDanm(ep.Spec.Iface.Address, dnet.Spec.Options.Cidr) || ipam.WasIpAllocatedByDanm(ep.Spec.Iface.AddressIPv6, dnet.Spec.Options.Pool6.Cidr) {
+    err = ipam.GarbageCollectIps(danmClient, dnet, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    if err != nil {
+      return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because freeing its reserved IP addresses failed with error:" + err.Error())
+    }
+  }
+  return danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(ep.ObjectMeta.Name, &meta_v1.DeleteOptions{})
 }

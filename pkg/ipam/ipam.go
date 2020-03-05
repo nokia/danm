@@ -249,9 +249,13 @@ func resetIp(alloc, cidr string, rip net.IP) string {
   return ba.Encode()
 }
 
-func GarbageCollectIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) {
-  Free(danmClient, *netInfo, ip4)
-  Free(danmClient, *netInfo, ip6)
+func GarbageCollectIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) error {
+  err := Free(danmClient, *netInfo, ip4)
+  if err != nil {
+    return err
+  }
+  err = Free(danmClient, *netInfo, ip6)
+  return err
 }
 
 // Ip2int converts an IP address stored according to the Golang net package to a native Golang big endian, 32-bit integer
@@ -363,4 +367,16 @@ func InitAllocPool(netCidr, start, end, alloc string, routes map[string]string) 
 func GetBroadcastAddress(subnet *net.IPNet) (net.IP) {
   _, lastIp := cidr.AddressRange(subnet)
   return lastIp
+}
+
+func WasIpAllocatedByDanm(ip, cidr string) bool {
+  _, subnet, _ := net.ParseCIDR(cidr)
+  parsedIp := net.ParseIP(ip)
+  if parsedIp == nil {
+    parsedIp,_,_ = net.ParseCIDR(ip)
+  }
+  if parsedIp != nil && (subnet != nil && subnet.Contains(parsedIp)) {
+    return true
+  }
+  return false
 }

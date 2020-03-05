@@ -4,7 +4,6 @@ import (
   "context"
   "errors"
   "log"
-  "net"
   "os"
   "strconv"
   "strings"
@@ -85,7 +84,7 @@ func isIpamNeeded(netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) bool {
   //Requested includes "none" allocation scheme as well, which can happen for L2 networks too
   //When a real IP is asked from DANM it only makes sense to overwrite if there is really a CIDR to allocate it from
   //BEWARE, because once DANM takes over IP allocation, it takes over for both IPv4, and IPv6!
-  //TODO: Can we have partial IPAM allocations? Is chaining IPAM CNIs allowed, e.g. IPv6 from DANM, IPv4 from host-ipam etc.? 
+  //TODO: Can we have partial IPAM allocations? Is chaining IPAM CNIs allowed, e.g. IPv6 from DANM, IPv4 from host-ipam etc.?
   if ep.Spec.Iface.Address     == ipam.NoneAllocType ||
      ep.Spec.Iface.AddressIPv6 == ipam.NoneAllocType ||
      (ep.Spec.Iface.Address     != "" && ep.Spec.Iface.Address     != ipam.NoneAllocType && netInfo.Spec.Options.Cidr != "") ||
@@ -185,63 +184,43 @@ func setEpIfaceAddress(cniResult *current.Result, epIface *danmtypes.DanmEpIface
 
 // DelegateInterfaceDelete delegates Ks8 Pod network interface delete task to the input 3rd party CNI plugin
 // Returns an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
-func DelegateInterfaceDelete(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
+func DelegateInterfaceDelete(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
   var ip4, ip6 string
-  if wasIpAllocatedByDanm(ep.Spec.Iface.Address, netInfo.Spec.Options.Cidr) {
+  if ipam.WasIpAllocatedByDanm(ep.Spec.Iface.Address, netInfo.Spec.Options.Cidr) {
     ip4 = ep.Spec.Iface.Address
   }
-  if wasIpAllocatedByDanm(ep.Spec.Iface.AddressIPv6, netInfo.Spec.Options.Net6) {
+  if ipam.WasIpAllocatedByDanm(ep.Spec.Iface.AddressIPv6, netInfo.Spec.Options.Net6) {
     ip6 = ep.Spec.Iface.AddressIPv6
   }
   ipamForDelete := getCniIpamConfig(netInfo, ip4, ip6)
   rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamForDelete, ep)
   if err != nil {
-    FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    FreeDelegatedIps(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return err
   }
   cniType := netInfo.Spec.NetworkType
   _, err = execCniPlugin(cniType, CniDelOp, netInfo, rawConfig, ep)
   if err != nil {
-    FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+    FreeDelegatedIps(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return errors.New("Error delegating DEL to CNI plugin:" + cniType + " because:" + err.Error())
   }
-  return FreeDelegatedIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+  return FreeDelegatedIps(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
 }
 
-func FreeDelegatedIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) error {
-  err4 := freeDelegatedIp(danmClient, netInfo, ip4)
-  err6 := freeDelegatedIp(danmClient, netInfo, ip6)
+func FreeDelegatedIps(netInfo *danmtypes.DanmNet, ip4, ip6 string) error {
+  err4 := freeDelegatedIp(netInfo, ip4)
+  err6 := freeDelegatedIp(netInfo, ip6)
   if err4 != nil {
     return err4
   }
   return err6
 }
 
-func freeDelegatedIp(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip string) error {
+func freeDelegatedIp(netInfo *danmtypes.DanmNet, ip string) error {
   if netInfo.Spec.NetworkType == "flannel" && ip != "" && ip != ipam.NoneAllocType {
     flannelIpExhaustionWorkaround(ip)
   }
-  //We only need to Free an IP if it was allocated by DANM IPAM, and it was allocated by DANM only if it falls into any of the defined subnets
-  if wasIpAllocatedByDanm(ip, netInfo.Spec.Options.Cidr) || wasIpAllocatedByDanm(ip, netInfo.Spec.Options.Net6) {
-    err := ipam.Free(danmClient, *netInfo, ip)
-    if err != nil {
-      return errors.New("cannot give back ip address: " + ip + " for network:" + netInfo.ObjectMeta.Name +
-                        " of type: " + netInfo.TypeMeta.Kind + " because:" + err.Error())
-    }
-  }
   return nil
-}
-
-func wasIpAllocatedByDanm(ip, cidr string) bool {
-  _, subnet, _ := net.ParseCIDR(cidr)
-  parsedIp := net.ParseIP(ip)
-  if parsedIp == nil {
-    parsedIp,_,_ = net.ParseCIDR(ip)
-  }
-  if parsedIp != nil && (subnet != nil && subnet.Contains(parsedIp)) {
-    return true
-  }
-  return false
 }
 
 // Host-local IPAM management plugin uses disk-local Store by default.

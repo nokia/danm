@@ -249,9 +249,12 @@ func resetIp(alloc, cidr string, rip net.IP) string {
   return ba.Encode()
 }
 
-func GarbageCollectIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) {
-  Free(danmClient, *netInfo, ip4)
-  Free(danmClient, *netInfo, ip6)
+func GarbageCollectIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) error {
+  err := Free(danmClient, *netInfo, ip4)
+  if err != nil {
+    return err
+  }
+  return Free(danmClient, *netInfo, ip6)
 }
 
 // Ip2int converts an IP address stored according to the Golang net package to a native Golang big endian, 32-bit integer

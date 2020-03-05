@@ -418,15 +418,19 @@ func createDanmInterface(syncher *syncher.Syncher, danmClient danmclientset.Inte
   }
   err = danmep.AddIpvlanInterface(netInfo, ep)
   if err != nil {
-    ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
-    danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(ep.ObjectMeta.Name, &meta_v1.DeleteOptions{})
+    erro := ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
+    if erro == nil {
+      danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(ep.ObjectMeta.Name, &meta_v1.DeleteOptions{})
+    }
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("IPVLAN interface could not be created due to error:" + err.Error()), nil)
     return
   }
   err = danmep.PostProcessInterface(ep, netInfo)
   if err != nil {
-    ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
-    danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(ep.ObjectMeta.Name, &meta_v1.DeleteOptions{})
+    erro := ipam.GarbageCollectIps(danmClient, netInfo, ip4, ip6)
+    if erro == nil {
+      danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(ep.ObjectMeta.Name, &meta_v1.DeleteOptions{})
+    }
     syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("Sysctls could not be set due to error:" + err.Error()), nil)
     return
   }
@@ -545,9 +549,11 @@ func deleteInterface(danmClient danmclientset.Interface, args *cniArgs, syncher 
       aggregatedError += "failed to delete container NIC:" + err.Error() + "; "
     }
   }
-  err = danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(ep.ObjectMeta.Name, &meta_v1.DeleteOptions{})
-  if err != nil {
-    aggregatedError += "failed to delete DanmEp:" + err.Error() + "; "
+  if aggregatedError == "" {
+    err = danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(ep.ObjectMeta.Name, &meta_v1.DeleteOptions{})
+    if err != nil {
+      aggregatedError += "failed to delete DanmEp:" + err.Error() + "; "
+    }
   }
   if aggregatedError != "" {
     syncher.PushResult(ep.Spec.NetworkName, errors.New(aggregatedError), nil)
@@ -567,8 +573,11 @@ func deleteNic(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, e
 }
 
 func deleteDanmNet(danmClient danmclientset.Interface, ep danmtypes.DanmEp, netInfo *danmtypes.DanmNet) error {
-  ipam.GarbageCollectIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
-  return danmep.DeleteIpvlanInterface(ep)
+  err := danmep.DeleteIpvlanInterface(ep)
+  if err != nil {
+    return err
+  }
+  return ipam.GarbageCollectIps(danmClient, netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
 }
 
 func GetInterfaces(args *skel.CmdArgs) error {

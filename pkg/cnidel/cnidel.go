@@ -5,7 +5,6 @@ import (
   "errors"
   "log"
   "os"
-  "strconv"
   "strings"
   "path/filepath"
   "github.com/containernetworking/cni/pkg/invoke"
@@ -14,13 +13,11 @@ import (
   "github.com/containernetworking/cni/pkg/version"
   "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/ipam"
-  "github.com/nokia/danm/pkg/netcontrol"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
 )
 
 const (
-  LegacyNamingScheme = "legacy"
   CniAddOp = "ADD"
   CniDelOp = "DEL"
 )
@@ -43,22 +40,13 @@ func IsDelegationRequired(netInfo *danmtypes.DanmNet) bool {
 
 // DelegateInterfaceSetup delegates K8s Pod network interface setup task to the input 3rd party CNI plugin
 // Returns the CNI compatible result object, or an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
-func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (*current.Result,error) {
+//TODO: I hate myself for the bool input parameter, but that's what we are going with for the time being. Could be this information cleverly defaulted from existing DanmEp spec in all cases?
+func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclientset.Interface, wasIpReservedByDanmIpam bool, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (*current.Result,error) {
   var (
     err error
     ipamOptions datastructs.IpamConfig
   )
-  if isIpamNeeded(netInfo, ep) {
-    ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6, err = ipam.Reserve(danmClient, *netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
-    if err != nil {
-      return nil, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
-    }
-    //As netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
-    //Without re-reading the network body we risk leaking IPs if error happens later on within the same thread!
-    netInfo,err = netcontrol.GetNetworkFromEp(danmClient, *ep)
-    if err != nil {
-      return nil, err
-    }
+  if wasIpReservedByDanmIpam {
     ipamOptions = getCniIpamConfig(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
   }
   rawConfig, err := getCniPluginConfig(netConf, netInfo, ipamOptions, ep)
@@ -76,19 +64,19 @@ func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclients
   return cniResult, nil
 }
 
-func isIpamNeeded(netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) bool {
+func IsDanmIpamNeededForDelegation(iface datastructs.Interface, netInfo *danmtypes.DanmNet) bool {
   if cni, ok := SupportedNativeCnis[strings.ToLower(netInfo.Spec.NetworkType)]; ok {
-    return cni.ipamNeeded
+    return cni.IpamNeeded
   }
   //For static delegates we should only overwrite the original IPAM if an IP was explicitly "requested" from the Pod, and the request "makes sense"
   //Requested includes "none" allocation scheme as well, which can happen for L2 networks too
   //When a real IP is asked from DANM it only makes sense to overwrite if there is really a CIDR to allocate it from
   //BEWARE, because once DANM takes over IP allocation, it takes over for both IPv4, and IPv6!
   //TODO: Can we have partial IPAM allocations? Is chaining IPAM CNIs allowed, e.g. IPv6 from DANM, IPv4 from host-ipam etc.?
-  if ep.Spec.Iface.Address     == ipam.NoneAllocType ||
-     ep.Spec.Iface.AddressIPv6 == ipam.NoneAllocType ||
-     (ep.Spec.Iface.Address     != "" && ep.Spec.Iface.Address     != ipam.NoneAllocType && netInfo.Spec.Options.Cidr != "") ||
-     (ep.Spec.Iface.AddressIPv6 != "" && ep.Spec.Iface.AddressIPv6 != ipam.NoneAllocType && netInfo.Spec.Options.Net6 != "") {
+  if iface.Ip     == ipam.NoneAllocType ||
+     iface.Ip6    == ipam.NoneAllocType ||
+     (iface.Ip    != "" && iface.Ip  != ipam.NoneAllocType && netInfo.Spec.Options.Cidr != "") ||
+     (iface.Ip6   != "" && iface.Ip6 != ipam.NoneAllocType && netInfo.Spec.Options.Pool6.Cidr != "") {
     return true
   }
   return false
@@ -96,7 +84,7 @@ func isIpamNeeded(netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) bool {
 
 func IsDeviceNeeded(cniType string) bool {
   if cni, ok := SupportedNativeCnis[strings.ToLower(cniType)]; ok {
-    return cni.deviceNeeded
+    return cni.DeviceNeeded
   } else {
     return false
   }
@@ -124,7 +112,7 @@ func getCniIpamConfig(netinfo *danmtypes.DanmNet, ip4, ip6 string) datastructs.I
 
 func getCniPluginConfig(netConf *datastructs.NetConf, netInfo *danmtypes.DanmNet, ipamOptions datastructs.IpamConfig, ep *danmtypes.DanmEp) ([]byte, error) {
   if cni, ok := SupportedNativeCnis[strings.ToLower(netInfo.Spec.NetworkType)]; ok {
-    return cni.readConfig(netInfo, ipamOptions, ep, cni.CNIVersion)
+    return cni.ReadConfig(netInfo, ipamOptions, ep, cni.CNIVersion)
   } else {
     return readCniConfigFile(netConf.CniConfigDir, netInfo, ipamOptions)
   }
@@ -249,22 +237,4 @@ func GetEnv(key, fallback string) string {
     return value
   }
   return fallback
-}
-
-// CalculateIfaceName decides what should be the name of a container's interface.
-// If a name is explicitly set in the related network API object, the NIC will be named accordingly.
-// If a name is not explicitly set, then DANM names the interface ethX where X=sequence number of the interface
-// When legacy naming scheme is configured container_prefix behaves as the exact name of an interface, rather than its name suggest
-func CalculateIfaceName(namingScheme, chosenName, defaultName string, sequenceId int) string {
-  //Kubelet expects the first interface to be literally named "eth0", so...
-  if sequenceId == 0 {
-    return "eth0"
-  }
-  if chosenName != "" {
-    if namingScheme != LegacyNamingScheme {
-      chosenName += strconv.Itoa(sequenceId)
-    }
-    return chosenName
-  }
-  return defaultName + strconv.Itoa(sequenceId)
 }

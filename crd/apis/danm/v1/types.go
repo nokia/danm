@@ -2,6 +2,7 @@ package v1
 
 import (
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+  "k8s.io/apimachinery/pkg/types"
 )
 
 // +genclient
@@ -85,6 +86,7 @@ type DanmEpSpec struct {
   Iface       DanmEpIface `json:"Interface"`
   Host        string      `json:"Host,omitempty"`
   Pod         string      `json:"Pod"`
+  PodUID      types.UID   `json:"PodUID,omitempty"`
   CID         string      `json:"CID,omitempty"`
   Netns       string      `json:"netns,omitempty"`
   ApiType     string      `json:"apiType"`

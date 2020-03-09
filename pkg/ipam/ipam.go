@@ -62,7 +62,7 @@ func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, rip str
   tempNet := netInfo
   origSpec:= netInfo.Spec
   for {
-    if ip.To4() != nil { 
+    if ip.To4() != nil {
       tempNet.Spec.Options.Alloc = resetIp(tempNet.Spec.Options.Alloc, tempNet.Spec.Options.Cidr, ip)
     } else {
       tempNet.Spec.Options.Alloc6 = resetIp(tempNet.Spec.Options.Alloc6, tempNet.Spec.Options.Pool6.Cidr, ip)
@@ -129,7 +129,7 @@ func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, cidr string) (strin
     var lastIpIndex uint32
     if pool.LastIp != "" {
       lastIp := net.ParseIP(pool.LastIp)
-      lastIpIndex = GetIndexOfIp(lastIp, subnet)      
+      lastIpIndex = GetIndexOfIp(lastIp, subnet)
     }
     if lastIpIndex >= end || lastIpIndex == 0 {
       lastIpIndex = begin
@@ -217,7 +217,7 @@ func getIpFromIndex(index uint32, subnet *net.IPNet) string {
   } else {
     firstIpAsBigInt := Ip62int(subnet.IP)
     indexAsBigInt   := new(big.Int).SetUint64(uint64(index))
-    ip = Int2ip6(firstIpAsBigInt.Add(firstIpAsBigInt, indexAsBigInt))  
+    ip = Int2ip6(firstIpAsBigInt.Add(firstIpAsBigInt, indexAsBigInt))
   }
   return ip.String() + "/" + strconv.Itoa(prefix)
 }
@@ -338,7 +338,7 @@ func InitV6PoolCidr(netInfo *danmtypes.DanmNet) {
   baseCidrStart := netCidr.IP
   pool6CidrPrefix := GetMaxUsableV6Prefix(netInfo)
   //If the subnet of the whole network is smaller than the maximum remaining capacity, use only that amount
-  net6Prefix,_ := netCidr.Mask.Size() 
+  net6Prefix,_ := netCidr.Mask.Size()
   if pool6CidrPrefix < net6Prefix {
     pool6CidrPrefix = net6Prefix
   }

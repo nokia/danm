@@ -3,18 +3,25 @@ package cnidel
 import (
   "github.com/containernetworking/cni/pkg/types"
   sriov_types "github.com/intel/sriov-cni/pkg/types"
-  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/datastructs"
 )
 
-type cniConfigReader func(netInfo *danmtypes.DanmNet, ipam datastructs.IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error)
-
-type cniBackendConfig struct {
-  datastructs.CniBackend
-  readConfig cniConfigReader
-  ipamNeeded bool
-  deviceNeeded bool
-}
+var(
+  SupportedNativeCnis = map[string]*datastructs.CniBackendConfig {
+    "sriov": &datastructs.CniBackendConfig {
+      CNIVersion: "0.3.1",
+      ReadConfig: datastructs.CniConfigReader(getSriovCniConfig),
+      IpamNeeded: true,
+      DeviceNeeded: true,
+    },
+    "macvlan": &datastructs.CniBackendConfig {
+      CNIVersion: "0.3.1",
+      ReadConfig: datastructs.CniConfigReader(getMacvlanCniConfig),
+      IpamNeeded: true,
+      DeviceNeeded: false,
+    },
+  }
+)
 
 // sriovNet represent the configuration of sriov cni v1.0.0
 type SriovNet struct {

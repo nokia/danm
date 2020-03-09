@@ -3,6 +3,7 @@ package danmep
 import (
   "errors"
   "fmt"
+  "os"
   "log"
   "runtime"
   "strconv"
@@ -13,10 +14,13 @@ import (
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
+  "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/ipam"
+  "github.com/nokia/danm/pkg/netcontrol"
+  "github.com/satori/go.uuid"
 )
 
-type sysctlFunction func(danmtypes.DanmEp) bool
+type sysctlFunction func(*danmtypes.DanmEp) bool
 type sysctlObject struct {
   sysctlName  string
   sysctlValue string
@@ -53,12 +57,12 @@ func FindByCid(client danmclientset.Interface, cid string)([]danmtypes.DanmEp, e
   var err error
   var result *danmtypes.DanmEpList
   //Critical CNI_DEL calls depends on this function, so we will re-try for one sec to be able to cope with temporary network disruptions
-  for i := 0; i < 100; i++ {
+  for i := 0; i < 10; i++ {
     result, err = client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
     if err == nil {
       break
     }
-    time.Sleep(10 * time.Millisecond)
+    time.Sleep(100 * time.Millisecond)
   }
   if err != nil {
     return nil, errors.New("cannot list DanmEps because:" + err.Error())
@@ -118,7 +122,7 @@ func FindByPodName(client danmclientset.Interface, podName, ns string) ([]danmty
 }
 
 
-func AddIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
+func AddIpvlanInterface(dnet *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
   if ep.Spec.NetworkType != "ipvlan" {
     return nil
   }
@@ -140,7 +144,7 @@ func DetermineHostDeviceName(dnet *danmtypes.DanmNet) string {
   return device
 }
 
-func PostProcessInterface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
+func PostProcessInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   origNs, err := ns.GetCurrentNS()
@@ -176,7 +180,7 @@ func PostProcessInterface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   return addIpRoutes(ep,dnet)
 }
 
-func setDanmEpSysctls(ep danmtypes.DanmEp) error {
+func setDanmEpSysctls(ep *danmtypes.DanmEp) error {
   var err error
   for _, s := range sysctls {
     if s.sysctlFunc(ep) {
@@ -192,37 +196,18 @@ func setDanmEpSysctls(ep danmtypes.DanmEp) error {
   return nil
 }
 
-func isIPv6Needed(ep danmtypes.DanmEp) bool {
+func isIPv6Needed(ep *danmtypes.DanmEp) bool {
   if ep.Spec.Iface.AddressIPv6 != "" {
     return true
   }
   return false
 }
 
-func isIPv6NotNeeded(ep danmtypes.DanmEp) bool {
+func isIPv6NotNeeded(ep *danmtypes.DanmEp) bool {
   if ep.Spec.Iface.AddressIPv6 == "" {
     return true
   }
   return false
-}
-
-func PutDanmEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp) error {
-  _, err := danmClient.DanmV1().DanmEps(ep.Namespace).Create(&ep)
-  if err != nil {
-    return errors.New("DanmEp object could not be PUT to K8s API server due to error:" + err.Error())
-  }
-  //We block the thread until DanmEp is really created in the API server, just in case
-  //We achieve this by not returning until Get for the same resource is successful
-  //Otherwise garbage collection could leak during CNI ADD if another thread finished unsuccessfully,
-  //simply because the DanmEp directing interface deletion does not yet exist
-  for i := 0; i < 100; i++ {
-    tempEp, err := danmClient.DanmV1().DanmEps(ep.Namespace).Get(ep.ObjectMeta.Name, meta_v1.GetOptions{})
-    if err == nil && tempEp.ObjectMeta.Name == ep.ObjectMeta.Name {
-      return nil
-    }
-    time.Sleep(10 * time.Millisecond)
-  }
-  return errors.New("DanmEp creation was supposedly successful, but the object hasn't really appeared within 1 sec")
 }
 
 // ArePodsConnectedToNetwork checks if there are any Pods currently in the system using the particular network.
@@ -245,9 +230,119 @@ func ArePodsConnectedToNetwork(client danmclientset.Interface, dnet *danmtypes.D
   return false, danmtypes.DanmEp{}, nil
 }
 
+//CreateDanmEp is a RAII-like API to automatically reserve IP allocations whenever an object holding these allocations is created
+//It helps making sure IPs are for sure universally reserved upon DanmEp creation itself
+//TODO: I hate myself for the bool input parameter, but ipam absolutely should not depend on cnidel. Could be changed to cleverly defaulting iface attributes to sthing?
+func CreateDanmEp(danmClient danmclientset.Interface, namingScheme string, isIpReservationNeeded bool, netInfo *danmtypes.DanmNet, iface datastructs.Interface, args *datastructs.CniArgs) (*danmtypes.DanmEp,*danmtypes.DanmNet,error) {
+  var (
+    ip4 = iface.Ip
+    ip6 = iface.Ip6
+    err error
+  )
+  if isIpReservationNeeded {
+    ip4, ip6, err = ipam.Reserve(danmClient, *netInfo, iface.Ip, iface.Ip6)
+    if err != nil {
+      return nil, netInfo, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
+    }
+  }
+  epSpec := danmtypes.DanmEpIface {
+    Name: calculateIfaceName(namingScheme, netInfo.Spec.Options.Prefix, iface.DefaultIfaceName, iface.SequenceId),
+    Address:     ip4,
+    AddressIPv6: ip6,
+    Proutes:     iface.Proutes,
+    Proutes6:    iface.Proutes6,
+  }
+  ep, err := createDanmEp(danmClient, epSpec, netInfo, args)
+  if err != nil {
+    return nil, netInfo, errors.New("DanmEp object could not be created due to error:" + err.Error())
+  }
+  //As netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
+  //Without re-reading the network body we risk leaking IPs if an error happens later on within the same thread!
+  dnet,err := netcontrol.GetNetworkFromInterface(danmClient, iface, netInfo.ObjectMeta.Namespace)
+  if err != nil {
+    return ep, dnet, errors.New("network manifest could not be refreshed after IP allocations due to error:" + err.Error())
+  }
+  return ep, dnet, nil
+}
+
+// CalculateIfaceName decides what should be the name of a container's interface.
+// If a name is explicitly set in the related network API object, the NIC will be named accordingly.
+// If a name is not explicitly set, then DANM names the interface ethX where X=sequence number of the interface
+// When legacy naming scheme is configured container_prefix behaves as the exact name of an interface, rather than its name suggest
+func calculateIfaceName(namingScheme, chosenName, defaultName string, sequenceId int) string {
+  //Kubelet expects the first interface to be literally named "eth0", so...
+  if sequenceId == 0 {
+    return "eth0"
+  }
+  if chosenName != "" {
+    if namingScheme != datastructs.LegacyNamingScheme {
+      chosenName += strconv.Itoa(sequenceId)
+    }
+    return chosenName
+  }
+  return defaultName + strconv.Itoa(sequenceId)
+}
+
+func createDanmEp(danmClient danmclientset.Interface, epInput danmtypes.DanmEpIface, netInfo *danmtypes.DanmNet, args *datastructs.CniArgs) (*danmtypes.DanmEp, error) {
+  epidInt, err := uuid.NewV4()
+  if err != nil {
+    return nil, errors.New("uuid.NewV4 returned error during EP creation:" + err.Error())
+  }
+  epid := epidInt.String()
+  host, err := os.Hostname()
+  if err != nil {
+    return nil, errors.New("OS.Hostname returned error during EP creation:" + err.Error())
+  }
+  epSpec := danmtypes.DanmEpSpec {
+    NetworkName: netInfo.ObjectMeta.Name,
+    NetworkType: netInfo.Spec.NetworkType,
+    EndpointID:  epid,
+    Iface:       epInput,
+    Host:        host,
+    Pod:         args.PodName,
+    PodUID:      args.Pod.ObjectMeta.UID,
+    CID:         args.ContainerId,
+    Netns:       args.Netns,
+    ApiType:     netInfo.TypeMeta.Kind,
+  }
+  meta := meta_v1.ObjectMeta {
+    Name: epid,
+    Namespace: args.Namespace,
+    ResourceVersion: "",
+    Labels: args.Pod.Labels,
+  }
+  typeMeta := meta_v1.TypeMeta {
+      APIVersion: danmtypes.SchemeGroupVersion.String(),
+      Kind: "DanmEp",
+  }
+  ep := danmtypes.DanmEp{
+    TypeMeta: typeMeta,
+    ObjectMeta: meta,
+    Spec: epSpec,
+  }
+  newEp, err := danmClient.DanmV1().DanmEps(ep.Namespace).Create(&ep)
+  if err != nil {
+    return newEp, errors.New("DanmEp object could not be PUT to K8s API server due to error:" + err.Error())
+  }
+  return newEp, nil
+}
+
+// UpdateDanmEp is a more network outage resilient version of the one provided by the base K8s client
+func UpdateDanmEp(client danmclientset.Interface, ep *danmtypes.DanmEp) error {
+  var err error
+  for i := 0; i < 10; i++ {
+    _, err = client.DanmV1().DanmEps(ep.Namespace).Update(ep)
+    if err == nil {
+      break
+    }
+    time.Sleep(100 * time.Millisecond)
+  }
+  return err
+}
+
 //DeleteDanmEp is a RAII-like API to automatically free IP allocations whenever the resource holding these allocations is deleted
 //It helps making sure IPs are always and only freed when a DanmEp is indeed deleted
-func DeleteDanmEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
+func DeleteDanmEp(danmClient danmclientset.Interface, ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   var err error
   if (ep.Spec.Iface.Address != "" || ep.Spec.Iface.AddressIPv6 != "") && dnet == nil {
     return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because its linked network is not available to free DANM IPAM allocated IPs")

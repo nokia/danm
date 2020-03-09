@@ -10,27 +10,6 @@ import (
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
 
-var (
-  SupportedNativeCnis = map[string]*cniBackendConfig {
-    "sriov": &cniBackendConfig {
-      CniBackend: datastructs.CniBackend {
-        CNIVersion: "0.3.1",
-      },
-      readConfig: cniConfigReader(getSriovCniConfig),
-      ipamNeeded: true,
-      deviceNeeded: true,
-    },
-    "macvlan": &cniBackendConfig {
-      CniBackend: datastructs.CniBackend {
-        CNIVersion: "0.3.1",
-      },
-      readConfig: cniConfigReader(getMacvlanCniConfig),
-      ipamNeeded: true,
-      deviceNeeded: false,
-    },
-  }
-)
-
 //This function creates CNI configuration for all static-level backends
 //The CNI binary matching with NetowrkType is invoked with the CNI config file matching with NetworkID parameter
 func readCniConfigFile(cniconfDir string, netInfo *danmtypes.DanmNet, ipamOptions datastructs.IpamConfig) ([]byte, error) {

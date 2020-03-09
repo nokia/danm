@@ -3,6 +3,8 @@ package datastructs
 import (
   "github.com/containernetworking/cni/pkg/types"
   "github.com/containernetworking/cni/pkg/version"
+  danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
+  core_v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -15,6 +17,7 @@ const (
 
 var (
   SupportedCniVersions = version.PluginSupports("0.3.1")
+  LegacyNamingScheme = "legacy"
 )
 
 type NetConf struct {
@@ -24,8 +27,13 @@ type NetConf struct {
   NamingScheme        string `json:"namingScheme"`
 }
 
-type CniBackend struct {
+type CniConfigReader func(netInfo *danmtypes.DanmNet, ipam IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error)
+
+type CniBackendConfig struct {
   CNIVersion string
+  ReadConfig CniConfigReader
+  IpamNeeded bool
+  DeviceNeeded bool
 }
 
 // Interface represents a request coming from the Pod to connect it to one DanmNet during CNI_ADD operation
@@ -53,4 +61,15 @@ type IpamConfig struct {
 type IpamIp struct {
   IpCidr    string      `json:"ipcidr"`
   Version   int         `json:"version"`
+}
+
+type CniArgs struct {
+  Namespace string
+  Netns string
+  PodName string
+  ContainerId string
+  StdIn []byte
+  Interfaces []Interface
+  Pod *core_v1.Pod
+  DefaultNetwork *danmtypes.DanmNet
 }

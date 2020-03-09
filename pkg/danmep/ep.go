@@ -14,7 +14,7 @@ import (
   "github.com/j-keck/arping"
 )
 
-func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
+func createIpvlanInterface(dnet *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
   host, err := os.Hostname()
   if err != nil {
     return errors.New("cannot get hostname because:" + err.Error())
@@ -30,7 +30,7 @@ func createIpvlanInterface(dnet *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
   return createContainerIface(ep, dnet, device)
 }
 
-func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device string) error {
+func createContainerIface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet, device string) error {
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   origns, err := ns.GetCurrentNS()
@@ -97,7 +97,7 @@ func createContainerIface(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet, device s
   return nil
 }
 
-func configureLink(iface netlink.Link, ep danmtypes.DanmEp) error {
+func configureLink(iface netlink.Link, ep *danmtypes.DanmEp) error {
   var err error
   if ep.Spec.Iface.Address != "" && ep.Spec.Iface.Address != ipam.NoneAllocType {
     err = addIpToLink(ep.Spec.Iface.Address, iface)
@@ -135,7 +135,7 @@ func addIpToLink(ip string, iface netlink.Link) error {
   return nil
 }
 
-func addIpRoutes(ep danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
+func addIpRoutes(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   defaultRoutingTable := 0
   err := addRoutes(dnet.Spec.Options.Routes, defaultRoutingTable)
   if err != nil {
@@ -261,7 +261,7 @@ func deleteEp(ep danmtypes.DanmEp) error {
   return deleteContainerIface(ep)
 }
 
-func createDummyInterface(ep danmtypes.DanmEp) error {
+func createDummyInterface(ep *danmtypes.DanmEp) error {
   dummy := &netlink.Dummy {
     LinkAttrs: netlink.LinkAttrs {
       Name: ep.Spec.Iface.Name,

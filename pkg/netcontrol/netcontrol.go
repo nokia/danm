@@ -399,7 +399,7 @@ func GetNetworkFromInterface(danmClient danmclientset.Interface, iface datastruc
   return nil, errors.New("requested network:" + netName + " of type:" + netType + " in namespace:" + nameSpace + " does not exist")
 }
 
-func GetNetworkFromEp(danmClient danmclientset.Interface, ep danmtypes.DanmEp) (*danmtypes.DanmNet,error) {
+func GetNetworkFromEp(danmClient danmclientset.Interface, ep *danmtypes.DanmEp) (*danmtypes.DanmNet,error) {
   dummyIface := datastructs.Interface{}
   if ep.Spec.ApiType == DanmNetKind || ep.Spec.ApiType == "" {dummyIface.Network = ep.Spec.NetworkName}
   if ep.Spec.ApiType == TenantNetworkKind  {dummyIface.TenantNetwork = ep.Spec.NetworkName}

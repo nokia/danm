@@ -208,7 +208,7 @@ func addPolicyRoute(rtable int, cidr string, proutes map[string]string) error {
   return nil
 }
 
-func deleteContainerIface(ep danmtypes.DanmEp) error {
+func deleteContainerIface(ep *danmtypes.DanmEp) error {
   runtime.LockOSThread()
   defer runtime.UnlockOSThread()
   origns, err := ns.GetCurrentNS()
@@ -254,7 +254,7 @@ func determineIfName(dnet *danmtypes.DanmNet) string {
   return device
 }
 
-func deleteEp(ep danmtypes.DanmEp) error {
+func deleteEp(ep *danmtypes.DanmEp) error {
   if ns.IsNSorErr(ep.Spec.Netns) != nil {
     return errors.New("Cannot find netns")
   }

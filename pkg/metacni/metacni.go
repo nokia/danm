@@ -341,8 +341,8 @@ func createNic(syncher *syncher.Syncher, danmClient danmclientset.Interface, ifa
   ep, netInfo, err := danmep.CreateDanmEp(danmClient, DanmConfig.NamingScheme, isIpReservationNeeded, netInfo, iface, args)
   if err != nil {
     danmep.DeleteDanmEp(danmClient, ep, netInfo)
-    syncher.PushResult(netInfo.ObjectMeta.Name, err, nil)
-    return 
+    syncher.PushResult(ep.Spec.NetworkName, err, nil)
+    return
   }
   var cniResult *current.Result
   if cnidel.IsDelegationRequired(netInfo) {
@@ -352,16 +352,16 @@ func createNic(syncher *syncher.Syncher, danmClient danmclientset.Interface, ifa
   }
   if err != nil {
     danmep.DeleteDanmEp(danmClient, ep, netInfo)
-    syncher.PushResult(netInfo.ObjectMeta.Name, err, cniResult)
-    return  
+    syncher.PushResult(ep.Spec.NetworkName, err, cniResult)
+    return
   }
   err = danmep.PostProcessInterface(ep, netInfo)
   if err != nil {
     danmep.DeleteDanmEp(danmClient, ep, netInfo)
-    syncher.PushResult(netInfo.ObjectMeta.Name, errors.New("Post-processing failed for interface:" + ep.Spec.Iface.Name + " because:" + err.Error()), nil)
+    syncher.PushResult(ep.Spec.NetworkName, errors.New("Post-processing failed for interface:" + ep.Spec.Iface.Name + " because:" + err.Error()), nil)
     return
   }
-  syncher.PushResult(netInfo.ObjectMeta.Name, nil, cniResult)
+  syncher.PushResult(ep.Spec.NetworkName, nil, cniResult)
 }
 
 func createDelegatedInterface(danmClient danmclientset.Interface, wasIpReservedByDanmIpam bool, ep *danmtypes.DanmEp, netInfo *danmtypes.DanmNet, args *datastructs.CniArgs) (*current.Result,error) {
@@ -373,7 +373,8 @@ func createDelegatedInterface(danmClient danmclientset.Interface, wasIpReservedB
     cnidel.FreeDelegatedIps(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     return delegatedResult, errors.New("CNI delegation failed due to error:" + err.Error())
   }
-  if origV4Address != ep.Spec.Iface.Address || origV6Address != ep.Spec.Iface.AddressIPv6 {
+  if (origV4Address != ep.Spec.Iface.Address     && origV4Address != ipam.NoneAllocType) ||
+     (origV6Address != ep.Spec.Iface.AddressIPv6 && origV6Address != ipam.NoneAllocType) {
     err = danmep.UpdateDanmEp(danmClient, ep)
     if err != nil {
       //TODO: is this -basically only host-ipam related- stuff really needed, or is just legacy residue?
@@ -439,6 +440,7 @@ func DeleteInterfaces(args *skel.CmdArgs) error {
     return nil
   }
   syncher := syncher.NewSyncher(len(eplist))
+  //Note to self: NEVER change this to pass-by-pointer. It totally breaks CNI DEL for all but one interface
   for _, ep := range eplist {
     go deleteInterface(danmClient, cniArgs, syncher, ep)
   }
@@ -453,12 +455,12 @@ func deleteInterface(danmClient danmclientset.Interface, args *datastructs.CniAr
   //During delete we are not that interested in errors, but we also can't just return yet.
   //We need to try and clean-up as many remaining resources as possible
   var aggregatedError string
-  netInfo, err := netcontrol.GetNetworkFromEp(danmClient, ep)
+  netInfo, err := netcontrol.GetNetworkFromEp(danmClient, &ep)
   if err != nil {
     aggregatedError += "failed to get network:"+ err.Error() + "; "
   }
   if netInfo != nil {
-    err = deleteNic(netInfo, ep)
+    err = deleteNic(netInfo, &ep)
     if err != nil {
       aggregatedError += "failed to delete container NIC:" + err.Error() + "; "
     }
@@ -474,10 +476,10 @@ func deleteInterface(danmClient danmclientset.Interface, args *datastructs.CniAr
   }
 }
 
-func deleteNic(netInfo *danmtypes.DanmNet, ep danmtypes.DanmEp) error {
+func deleteNic(netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
   var err error
   if ep.Spec.NetworkType != "ipvlan" {
-    err = cnidel.DelegateInterfaceDelete(DanmConfig, netInfo, &ep)
+    err = cnidel.DelegateInterfaceDelete(DanmConfig, netInfo, ep)
   } else {
     err = danmep.DeleteIpvlanInterface(ep)
   }

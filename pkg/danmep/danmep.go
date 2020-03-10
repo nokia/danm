@@ -47,8 +47,13 @@ var sysctls = []sysctlTask {
   },
 }
 
+const (
+  MaxRetryCount = 10
+  RetryInterval = 100
+)
+
 // DeleteIpvlanInterface deletes a Pod's IPVLAN network interface based on the related DanmEp
-func DeleteIpvlanInterface(ep danmtypes.DanmEp) (error) {
+func DeleteIpvlanInterface(ep *danmtypes.DanmEp) (error) {
   return deleteEp(ep)
 }
 
@@ -57,12 +62,12 @@ func FindByCid(client danmclientset.Interface, cid string)([]danmtypes.DanmEp, e
   var err error
   var result *danmtypes.DanmEpList
   //Critical CNI_DEL calls depends on this function, so we will re-try for one sec to be able to cope with temporary network disruptions
-  for i := 0; i < 10; i++ {
+  for i := 0; i < MaxRetryCount; i++ {
     result, err = client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
     if err == nil {
       break
     }
-    time.Sleep(100 * time.Millisecond)
+    time.Sleep(RetryInterval * time.Millisecond)
   }
   if err != nil {
     return nil, errors.New("cannot list DanmEps because:" + err.Error())
@@ -258,7 +263,7 @@ func CreateDanmEp(danmClient danmclientset.Interface, namingScheme string, isIpR
   }
   //As netInfo is only copied to IPAM above, the IP allocation is not refreshed in the original copy.
   //Without re-reading the network body we risk leaking IPs if an error happens later on within the same thread!
-  dnet,err := netcontrol.GetNetworkFromInterface(danmClient, iface, netInfo.ObjectMeta.Namespace)
+  dnet, err := netcontrol.GetNetworkFromEp(danmClient, ep)
   if err != nil {
     return ep, dnet, errors.New("network manifest could not be refreshed after IP allocations due to error:" + err.Error())
   }
@@ -330,12 +335,12 @@ func createDanmEp(danmClient danmclientset.Interface, epInput danmtypes.DanmEpIf
 // UpdateDanmEp is a more network outage resilient version of the one provided by the base K8s client
 func UpdateDanmEp(client danmclientset.Interface, ep *danmtypes.DanmEp) error {
   var err error
-  for i := 0; i < 10; i++ {
+  for i := 0; i < MaxRetryCount; i++ {
     _, err = client.DanmV1().DanmEps(ep.Namespace).Update(ep)
     if err == nil {
       break
     }
-    time.Sleep(100 * time.Millisecond)
+    time.Sleep(RetryInterval * time.Millisecond)
   }
   return err
 }

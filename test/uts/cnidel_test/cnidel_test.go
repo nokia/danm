@@ -2,7 +2,6 @@ package cnidel_test
 
 import (
   "os"
-  "strconv"
   "strings"
   "testing"
   "io/ioutil"
@@ -11,7 +10,6 @@ import (
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/cnidel"
   "github.com/nokia/danm/pkg/datastructs"
-  stubs "github.com/nokia/danm/test/stubs/danm"
   "github.com/nokia/danm/test/utils"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -142,7 +140,7 @@ var expectedCniConfigs = []CniConf {
   {"deletemacvlan", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"DEL","CNI_IFNAME":"ens1f0"}},"cniconf":{"cniVersion":"0.3.1","name":"full","master":"ens1f0","mode":"bridge","mtu":1500,"ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
   {"bridge-l3-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
   {"bridge-l2-ip4", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
-  {"bridge-l3-orig", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "host-local","subnet": "10.10.0.0/16"}}}`)},
+  {"bridge-l3-orig", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"10.10.0.1/16","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "host-local","subnet": "10.10.0.0/16"}}}`)},
   {"bridge-l2-orig", []byte(`{"cniexp":{"cnitype":"macvlan","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0"}}`)},
   {"bridge-l3-ip6", []byte(`{"cniexp":{"cnitype":"macvlan","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "fakeipam"}}}`)},
   {"bridge-l3-ds", []byte(`{"cniexp":{"cnitype":"macvlan","ip":"192.168.1.65/26","ip6":"2a00:8a00:a000:1193::/64","env":{"CNI_COMMAND":"ADD","CNI_IFNAME":"eth0"}},"cniconf":{"cniVersion":"0.3.1","name": "mynet","type": "bridge","bridge": "mynet0","isDefaultGateway": true,"forceAddress": false,"ipMasq": true,"hairpinMode": true,"ipam": {"type": "fakeipam","ips":[{"ipcidr":"192.168.1.65/26","version":4}]}}}`)},
@@ -160,22 +158,22 @@ var testCniConfFiles = []CniConf {
 var testEps = []danmtypes.DanmEp {
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "dynamicIpv4"},
-    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f0", Address: "dynamic",},},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f0", Address: "192.168.1.65/26",},},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "dynamicIpv6"},
-    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f1", AddressIPv6: "dynamic",},},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f1", AddressIPv6: "2a00:8a00:a000:1193::/64",},},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "dynamicDual"},
-    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f1", Address: "dynamic", AddressIPv6: "dynamic",},},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"ens1f1", Address: "192.168.1.65/26", AddressIPv6: "2a00:8a00:a000:1193::/64",},},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "noIps"}, Spec: danmtypes.DanmEpSpec{Iface: danmtypes.DanmEpIface{Name: "eth0"}},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "dynamicIpv4WithDeviceId"},
-    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "dynamic", DeviceID: "0000:af:06.0"},},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "192.168.1.65/26", DeviceID: "0000:af:06.0"},},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "noneWithDeviceId"},
@@ -191,15 +189,15 @@ var testEps = []danmtypes.DanmEp {
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "simpleIpv4"},
-    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "dynamic",},},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "192.168.1.65/26",},},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "simpleIpv6"},
-    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", AddressIPv6: "dynamic",},},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", AddressIPv6: "2a00:8a00:a000:1193::/64",},},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "simpleDs"},
-    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "dynamic", AddressIPv6: "dynamic",},},
+    Spec: danmtypes.DanmEpSpec {Iface: danmtypes.DanmEpIface{Name:"eth0", Address: "192.168.1.65/26", AddressIPv6: "2a00:8a00:a000:1193::/64",},},
   },
   danmtypes.DanmEp{
     ObjectMeta: meta_v1.ObjectMeta {Name: "withAddressSimple"},
@@ -240,30 +238,30 @@ var delSetupTcs = []struct {
   expectedIp string
   expectedIp6 string
   isErrorExpected bool
-  timesUpdateShouldBeCalled int
+  isIpAlreadyAllocatedByDanmIpam bool
 }{
-  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", "", "", "", true, 0},
-  {"emptyIpamconfigError", "ipamNeeded", "noIps", "", "", "", true, 0},
-  {"staticCniSuccess", "flannel-test", "noIps", "flannel", "", "", false, 0},
-  {"staticCniNoConfig", "no-conf", "noIps", "", "", "", true, 0},
-  {"staticCniNoBinary", "no-binary", "noIps", "flannel", "", "", true, 0},
-  {"staticCniWithIp", "flannel-test", "noIps", "flannel-ip", "10.244.10.30", "", false, 0},
-  {"dynamicMacvlanIpv4", "macvlan-v4", "dynamicIpv4", "macvlan-ip4", "192.168.1.65", "", false, 1},
-  {"dynamicMacvlanIpv6", "macvlan-v6", "dynamicIpv6", "macvlan-ip6", "", "2a00:8a00:a000:1193", false, 1},
-  {"dynamicMacvlanDualStack", "macvlan-ds", "dynamicDual", "macvlan-dual-stack", "192.168.1.65", "2a00:8a00:a000:1193", false, 1},
-  {"dynamicMacvlanIpv4Type020Result", "macvlan-v4", "dynamicIpv4", "macvlan-ip4-type020", "192.168.1.65", "", false, 1},
-  {"dynamicMacvlanIpv6Type020Result", "macvlan-v6", "dynamicIpv6", "macvlan-ip6-type020", "", "2a00:8a00:a000:1193", false, 1},
-  {"dynamicSriovNoDeviceId", "sriov-test", "dynamicIpv4", "", "", "", true, 1},
-  {"dynamicSriovL3", "sriov-test", "dynamicIpv4WithDeviceId", "sriov-l3", "", "", false, 1},
-  {"dynamicSriovL2", "sriov-test", "noneWithDeviceId", "sriov-l2", "", "", false, 0},
-  {"bridgeWithV4Overwrite", "bridge-ipam-ipv4", "simpleIpv4", "bridge-l3-ip4", "", "", false, 1},
-  {"bridgeWithV4Add", "bridge-ipam-l2", "simpleIpv4", "bridge-l2-ip4", "", "", false, 1},
-  {"bridgeWithInvalidAdd", "bridge-invalid", "simpleIpv4", "", "", "", true, 1},
-  {"bridgeL3OriginalNoCidr", "bridge-noipam", "simpleIpv4", "bridge-l3-orig", "", "", false, 0},
-  {"bridgeL3OriginalNoIp", "bridge-ipam-ipv4", "noIps", "bridge-l3-orig", "", "", false, 0},
-  {"bridgeL2OriginalNoCidr", "bridge-noipam-l2", "simpleIpv4", "bridge-l2-orig", "", "", false, 0},
-  {"bridgeWithV6Overwrite", "bridge-ipam-ipv6", "simpleIpv6", "bridge-l3-ip6", "", "", false, 1},
-  {"bridgeWithDsOverwrite", "bridge-ipam-ds", "simpleDs", "bridge-l3-ds", "", "", false, 1},
+  {"ipamNeededError", "ipamNeeded", "dynamicIpv4", "", "", "", true, false},
+  {"emptyIpamconfigError", "ipamNeeded", "noIps", "", "", "", true, false},
+  {"staticCniSuccess", "flannel-test", "noIps", "flannel", "", "", false, false},
+  {"staticCniNoConfig", "no-conf", "noIps", "", "", "", true, false},
+  {"staticCniNoBinary", "no-binary", "noIps", "flannel", "", "", true, false},
+  {"staticCniWithIp", "flannel-test", "noIps", "flannel-ip", "10.244.10.30", "", false, false},
+  {"dynamicMacvlanIpv4", "macvlan-v4", "dynamicIpv4", "macvlan-ip4", "192.168.1.65", "", false, true},
+  {"dynamicMacvlanIpv6", "macvlan-v6", "dynamicIpv6", "macvlan-ip6", "", "2a00:8a00:a000:1193", false, true},
+  {"dynamicMacvlanDualStack", "macvlan-ds", "dynamicDual", "macvlan-dual-stack", "192.168.1.65", "2a00:8a00:a000:1193", false, true},
+  {"dynamicMacvlanIpv4Type020Result", "macvlan-v4", "dynamicIpv4", "macvlan-ip4-type020", "192.168.1.65", "", false, true},
+  {"dynamicMacvlanIpv6Type020Result", "macvlan-v6", "dynamicIpv6", "macvlan-ip6-type020", "", "2a00:8a00:a000:1193", false, true},
+  {"dynamicSriovNoDeviceId", "sriov-test", "dynamicIpv4", "", "", "", true, true},
+  {"dynamicSriovL3", "sriov-test", "dynamicIpv4WithDeviceId", "sriov-l3", "", "", false, true},
+  {"dynamicSriovL2", "sriov-test", "noneWithDeviceId", "sriov-l2", "", "", false, true},
+  {"bridgeWithV4Overwrite", "bridge-ipam-ipv4", "simpleIpv4", "bridge-l3-ip4", "", "", false, true},
+  {"bridgeWithV4Add", "bridge-ipam-l2", "simpleIpv4", "bridge-l2-ip4", "", "", false, true},
+  {"bridgeWithInvalidAdd", "bridge-invalid", "simpleIpv4", "", "", "", true, false},
+  {"bridgeL3OriginalNoCidr", "bridge-noipam", "noIps", "bridge-l3-orig", "10.10.0.1", "", false, false},
+  {"bridgeL3OriginalNoIp", "bridge-ipam-ipv4", "noIps", "bridge-l3-orig", "", "", false, false},
+  {"bridgeL2OriginalNoCidr", "bridge-noipam-l2", "simpleIpv4", "bridge-l2-orig", "", "", false, false},
+  {"bridgeWithV6Overwrite", "bridge-ipam-ipv6", "simpleIpv6", "bridge-l3-ip6", "", "", false, true},
+  {"bridgeWithDsOverwrite", "bridge-ipam-ds", "simpleDs", "bridge-l3-ds", "", "", false, true},
 }
 
 var delDeleteTcs = []struct {
@@ -316,32 +314,6 @@ func TestGetEnv(t *testing.T) {
   }
 }
 
-func TestCalculateIfaceName(t *testing.T) {
-  testChosenName := "thechosenone"
-  testDefaultName := "notthechosenone"
-  testSequenceId := 4
-  expChosenName := testChosenName+strconv.Itoa(testSequenceId)
-  ifaceName := cnidel.CalculateIfaceName("", testChosenName, testDefaultName, testSequenceId)
-  if ifaceName != expChosenName {
-    t.Errorf("Received value for explicitly set interface name: %s does not match with expected: %s", ifaceName, expChosenName)
-  }
-  expDefName := testDefaultName+strconv.Itoa(testSequenceId)
-  defIfaceName := cnidel.CalculateIfaceName("", "", testDefaultName, testSequenceId)
-  if defIfaceName != expDefName {
-    t.Errorf("Received value for default interface name: %s does not match with expected: %s", defIfaceName, expDefName)
-  }
-  expFirstNicName := "eth0"
-  firstIfaceName := cnidel.CalculateIfaceName("", testChosenName, testDefaultName, 0)
-  if firstIfaceName != expFirstNicName {
-    t.Errorf("The first interface shall always be named eth0, regardless what the user wants")
-  }
-  expChosenNameLegacy := testChosenName
-  legacyIfaceName := cnidel.CalculateIfaceName(cnidel.LegacyNamingScheme, testChosenName, testDefaultName, testSequenceId)
-  if legacyIfaceName != expChosenNameLegacy {
-    t.Errorf("Received value for explicitly set interface name: %s does not match with expected: %s when using legacy interface naming scheme", ifaceName, expChosenNameLegacy)
-  }
-}
-
 func TestDelegateInterfaceSetup(t *testing.T) {
   err := setupDelTest("ADD")
   if err != nil {
@@ -353,13 +325,10 @@ func TestDelegateInterfaceSetup(t *testing.T) {
       if err != nil {
         t.Errorf("TC could not be set-up because:%s", err.Error())
       }
-      testArtifacts := utils.TestArtifacts{TestNets: testNets}
-      netClientStub := stubs.NewClientSetStub(testArtifacts)
       testNet := utils.GetTestNet(tc.netName, testNets)
       testEp := getTestEp(tc.epName)
       testEp.Spec.NetworkName = testNet.ObjectMeta.Name
-      utils.InitAllocPool(testNet)
-      cniRes, err := cnidel.DelegateInterfaceSetup(&cniConf,netClientStub,testNet,testEp)
+      cniRes, err := cnidel.DelegateInterfaceSetup(&cniConf,tc.isIpAlreadyAllocatedByDanmIpam,testNet,testEp)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         var detailedErrorMessage string
         if err != nil {
@@ -383,13 +352,6 @@ func TestDelegateInterfaceSetup(t *testing.T) {
           t.Errorf("Expected IP:%s is not saved in DanmEp.Spec.Iface's respective address field:%s", tc.expectedIp6, testEp.Spec.Iface.AddressIPv6)
         }
       }
-      var timesUpdateWasCalled int
-      if netClientStub.DanmClient.NetClient != nil {
-        timesUpdateWasCalled = netClientStub.DanmClient.NetClient.TimesUpdateWasCalled
-      }
-      if tc.timesUpdateShouldBeCalled != timesUpdateWasCalled {
-        t.Errorf("Network manifest should have been updated:" + strconv.Itoa(tc.timesUpdateShouldBeCalled) + " times, but it happened:" + strconv.Itoa(timesUpdateWasCalled) + " times instead")
-      }
     })
   }
   err = teardownDelTest()
@@ -407,10 +369,6 @@ func TestDelegateInterfaceDelete(t *testing.T) {
     t.Run(tc.tcName, func(t *testing.T) {
       testEp := getTestEp(tc.epName)
       testNet := utils.GetTestNet(tc.netName, testNets)
-      var ips []utils.ReservedIpsList
-      ips = utils.AppendIpToExpectedAllocsList(ips, testEp.Spec.Iface.Address,false,testNet.Spec.NetworkID)
-      testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
-      netClientStub := stubs.NewClientSetStub(testArtifacts)
       err = setupDelTestTc(tc.cniConfName)
       if err != nil {
         t.Errorf("TC could not be set-up because:%s", err.Error())
@@ -426,7 +384,7 @@ func TestDelegateInterfaceDelete(t *testing.T) {
           t.Errorf("Delete TC Flannel prereq could not be set-up because:%s", err.Error())
         }
       }
-      err := cnidel.DelegateInterfaceDelete(&cniConf,netClientStub,testNet,testEp)
+      err := cnidel.DelegateInterfaceDelete(&cniConf,testNet,testEp)
       if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
         var detailedErrorMessage string
         if err != nil {
@@ -440,13 +398,6 @@ func TestDelegateInterfaceDelete(t *testing.T) {
         if err == nil {
           t.Errorf("IP file:" + ipFile + " was not cleaned-up by Flannel IP exhaustion protection code!")
         }
-      }
-      var timesUpdateWasCalled int
-      if netClientStub.DanmClient.NetClient != nil {
-        timesUpdateWasCalled = netClientStub.DanmClient.NetClient.TimesUpdateWasCalled
-      }
-      if tc.timesUpdateShouldBeCalled != timesUpdateWasCalled {
-        t.Errorf("Network manifest should have been updated:" + strconv.Itoa(tc.timesUpdateShouldBeCalled) + " times, but it happened:" + strconv.Itoa(timesUpdateWasCalled) + " times instead")
       }
     })
   }

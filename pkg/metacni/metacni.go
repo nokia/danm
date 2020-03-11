@@ -367,7 +367,7 @@ func createNic(syncher *syncher.Syncher, danmClient danmclientset.Interface, ifa
 func createDelegatedInterface(danmClient danmclientset.Interface, wasIpReservedByDanmIpam bool, ep *danmtypes.DanmEp, netInfo *danmtypes.DanmNet, args *datastructs.CniArgs) (*current.Result,error) {
   origV4Address := ep.Spec.Iface.Address
   origV6Address := ep.Spec.Iface.AddressIPv6
-  delegatedResult,err := cnidel.DelegateInterfaceSetup(DanmConfig, danmClient, wasIpReservedByDanmIpam, netInfo, ep)
+  delegatedResult,err := cnidel.DelegateInterfaceSetup(DanmConfig, wasIpReservedByDanmIpam, netInfo, ep)
   if err != nil {
     //TODO: is this -basically only host-ipam related- stuff really needed, or is just legacy residue?
     cnidel.FreeDelegatedIps(netInfo, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)

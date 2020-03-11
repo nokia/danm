@@ -14,7 +14,6 @@ import (
   "github.com/nokia/danm/pkg/datastructs"
   "github.com/nokia/danm/pkg/ipam"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
-  danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
 )
 
 const (
@@ -41,7 +40,7 @@ func IsDelegationRequired(netInfo *danmtypes.DanmNet) bool {
 // DelegateInterfaceSetup delegates K8s Pod network interface setup task to the input 3rd party CNI plugin
 // Returns the CNI compatible result object, or an error if interface creation was unsuccessful, or if the 3rd party CNI config could not be loaded
 //TODO: I hate myself for the bool input parameter, but that's what we are going with for the time being. Could be this information cleverly defaulted from existing DanmEp spec in all cases?
-func DelegateInterfaceSetup(netConf *datastructs.NetConf, danmClient danmclientset.Interface, wasIpReservedByDanmIpam bool, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (*current.Result,error) {
+func DelegateInterfaceSetup(netConf *datastructs.NetConf, wasIpReservedByDanmIpam bool, netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) (*current.Result,error) {
   var (
     err error
     ipamOptions datastructs.IpamConfig

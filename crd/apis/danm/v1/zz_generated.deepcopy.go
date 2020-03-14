@@ -55,7 +55,7 @@ func (in *ClusterNetwork) DeepCopyObject() runtime.Object {
 func (in *ClusterNetworkList) DeepCopyInto(out *ClusterNetworkList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]ClusterNetwork, len(*in))
@@ -145,7 +145,7 @@ func (in *DanmEpIface) DeepCopy() *DanmEpIface {
 func (in *DanmEpList) DeepCopyInto(out *DanmEpList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]DanmEp, len(*in))
@@ -222,7 +222,7 @@ func (in *DanmNet) DeepCopyObject() runtime.Object {
 func (in *DanmNetList) DeepCopyInto(out *DanmNetList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]DanmNet, len(*in))
@@ -396,7 +396,7 @@ func (in *TenantConfig) DeepCopyObject() runtime.Object {
 func (in *TenantConfigList) DeepCopyInto(out *TenantConfigList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]TenantConfig, len(*in))
@@ -456,7 +456,7 @@ func (in *TenantNetwork) DeepCopyObject() runtime.Object {
 func (in *TenantNetworkList) DeepCopyInto(out *TenantNetworkList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]TenantNetwork, len(*in))

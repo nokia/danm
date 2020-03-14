@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"k8s.io/client-go/transport"
 	"log"
 	"time"
 	"os"
@@ -38,7 +40,16 @@ func main() {
 	cfg, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		glog.Fatalf("Error building kubeconfig: %s", err.Error())
+		return
 	}
+
+	// use a Go context so we can tell the leaderelection code when we
+	// want to step down
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// use a client that will stop allowing new requests once the context ends
+	cfg.Wrap(transport.ContextCanceller(ctx, fmt.Errorf("the leader is shutting down")))
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -59,11 +70,11 @@ func main() {
 		kubeInformerFactory.Core().V1().Endpoints(),
 		danmInformerFactory.Danm().V1().DanmEps())
 
-	run := func(stopCh <-chan struct{}) {
-		go kubeInformerFactory.Start(stopCh)
-		go danmInformerFactory.Start(stopCh)
+	run := func(ctx context.Context) {
+		go kubeInformerFactory.Start(ctx.Done())
+		go danmInformerFactory.Start(ctx.Done())
 
-		if err = controller.Run(10, stopCh); err != nil {
+		if err = controller.Run(10, ctx.Done()); err != nil {
 			glog.Fatalf("Error running controller: %s", err.Error())
 		}
 	}
@@ -72,6 +83,7 @@ func main() {
 		"kube-system",
 		"danm-svc-controller",
 		kubeClient.CoreV1(),
+		kubeClient.CoordinationV1(),
 		resourcelock.ResourceLockConfig{
 			Identity:      GetHostname(),
 			EventRecorder: createRecorder(kubeClient, "danm-svc-controller"),
@@ -80,7 +92,7 @@ func main() {
 		glog.Fatalf("Error creating lock: %v", err)
 	}
 
-	leaderelection.RunOrDie(leaderelection.LeaderElectionConfig{
+	leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
 		Lock:          rl,
 		LeaseDuration: 10 * time.Second,
 		RenewDeadline: 5 * time.Second,

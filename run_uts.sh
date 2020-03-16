@@ -1,15 +1,21 @@
-#!/bin/sh -e
+#!/bin/bash -e
+DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
-echo 'Updating alpine base image'
-docker pull golang:1.13-alpine3.10
+# Build DANM container images and keep the builder container. Use the cache, which is especially
+# useful in a pipeline case where we may just have built the image a moment ago.
+USE_CACHE=1 KEEP_BUILDER=1 "${DIR}"/build_danm.sh
 
-echo 'Building DANM UT container'
-docker build --no-cache --tag=danm_ut:1.0 scm/ut
+COMMIT_HASH=$(git rev-parse --short=8 HEAD)
+if [ -n "$(git status --porcelain)" ]
+then
+  COMMIT_HASH="${COMMIT_HASH}_dirty"
+fi
 
 echo 'Running DANM UT'
-docker run --rm --net=host --name=danm_ut -v ${GOPATH}/bin:/go/bin -v ${GOPATH}/src:/go/src -v ${GOPATH}/pkg:/go/pkg -v /var/log:/var/log danm_ut:1.0
-
-echo 'Cleaning up DANM UT container'
-docker rmi -f danm_ut:1.0
+docker run --rm \
+  -v ${DIR}/ut/logs:/var/log \
+  -v ${DIR}/ut/coverage:/coverage \
+  ${TAG_PREFIX}builder:${COMMIT_HASH} \
+  scm/ut/run_uts.sh
 
 echo 'DANM tests were successfully executed!'

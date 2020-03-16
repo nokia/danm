@@ -20,44 +20,24 @@ To be able to do that, your development environment shall already have Docker da
 Note, that the project itself depends on Golang 1.10+ and glide being available, but we packaged these dependencies into an automatically created builder container, so you don't have to worry about them!
 ### Building the binaries
 
-It is actually as easy as go get-ting the repository from GitHub, and executing the build_danm.sh script from the root of the project!
+It is actually as easy as cloning the repository from GitHub, and executing the build_danm.sh script from the root of the project!
 ```
-go get -d github.com/nokia/danm
-cd $GOPATH/src/github.com/nokia/danm
+git clone github.com/nokia/danm
+cd danm
 ./build_danm.sh
 ```
-This will first build the Alpine based builder container, mount the $GOPATH/src, $GOPATH/bin and $GOPATH/pkg directory into it, and invoke the necessary script to build all binaries inside the container.
-The builder container destroys itself once its purpose has been fulfilled.
 
-The result will be 6, statically linked binaries put into your $GOPATH/bin directory.
+The result will four container images:
 
-- danm
+- `danm-cni-plugins`: This image contains the core CNI plugins (`danm`, `fakeipam`).
+  It will be deployed as a DaemonSet that puts these binaries in place in each Kubernetes node.
 
-- fakeipam
+- `netwatcher`: This image will be used by the `netwatcher` DaemonSet
 
-- netwatcher
+- `webhook`: This image will be used by the `webhook` pod
 
-- svcwatcher
+- `svcwatcher`: This image will be used by the `svcwatcher` DaemonSet if you choose to install it.
 
-- webhook
-
-### Building the containers
-Netwatcher, svcwatcher, and webhook binaries are built into their own containers.
-The project contains example Dockerfiles for all of these components under the integration/docker directory.
-
-**Copy the respective binary into the right folder (netwatcher into integration/docker/netwatcher, svcwatcher into integration/docker/svcwatcher, webhook into integration/docker/webhook), then execute:**
-```
-docker build -t netwatcher:latest integration/docker/netwatcher
-docker build -t svcwatcher:latest integration/docker/svcwatcher
-docker build -t webhook:latest integration/docker/webhook
-```
-or
-```
-buildah bud -t netwatcher:latest integration/docker/netwatcher
-buildah bud -t svcwatcher:latest integration/docker/svcwatcher
-buildah bud -t webhook:latest integration/docker/webhook
-```
-This builds the respective containers. Afterwards, these containers can be directly integrated into a running Kubernetes cluster!
 ## Deployment
 The method of deploying the whole DANM suite into a Kubernetes cluster is the following.
 
@@ -111,35 +91,36 @@ Also provision the necessary RBAC rules so DANM can do its job:
 kubectl create -f integration/cni_config/danm_rbac.yaml
 ```
 
-**4. Copy the "danm" binary into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/):**
-```
-/ # ls /opt/cni/bin
-bridge       dhcp         flannel      host-local   loopback     portmap      sample       tuning
-**danm**     host-device  ipvlan       macvlan      ptp          sriov        vlan
-```
-**5. Copy the "fakeipam" binary into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/):**
-```
-/ # ls /opt/cni/bin
-bridge       dhcp         flannel      host-local   loopback     portmap      sample       tuning
-danm        **fakeipam**      host-device  ipvlan       macvlan      ptp          sriov        vlan
-```
-**6. OPTIONAL: Copy any CNI binaries (flannel, sriov, macvlan etc.) you would like to use in your cluster into the configured CNI plugin directory of all your kubelet nodes' (by default it is /opt/cni/bin/)**
+**4. Onboard the netwatcher, svcwatcher, and webhook containers into the image registry of your cluster**
 
-**7. Onboard the netwatcher, svcwatcher, and webhook containers into the image registry of your cluster**
+**5. Create the cni-plugin DaemonSet by executing the following command from the project's root directory:**
 
- **8. Create the netwatcher DaemonSet by executing the following command from the project's root directory:**
- ```
+```
+kubectl create -f integration/cni_config/danm_rbac.yaml
+kubectl create -f integration/manifests/cni_plugins
+```
+
+This DaemonSet will copy the `danm` and `fakeipam` binaries into the
+`/opt/cni/bin` directory of each node.
+
+**6. OPTIONAL: Install any other CNI plugins (flannel, sriov etc.) you would like to use in your cluster**
+
+Specific installation steps depend on the CNI plugin; some require copying into `/opt/cni/bin` on
+all nodes in your cluster, whereas others are installed using a DaemonSet (or a combination of both).
+
+**7. Create the netwatcher DaemonSet by executing the following command from the project's root directory:**
+```
 kubectl create -f integration/manifests/netwatcher/
 ```
 Note1: you should take a look at the example manifest, and possibly tailor it to your own environment first
 Note2: we assume RBAC is configured for the Kubernetes API, so the manifests include the required Role and ServiceAccount for this case.
 
- **9. Create at least one DANM network to bootstrap your infrastructure Pods!**
+ **8. Create at least one DANM network to bootstrap your infrastructure Pods!**
  Otherwise you can easily fall into a catch 22 situation - you won't be able to bring-up Pods because you don't have network, but you cannot create networks because you cannot bring-up a Pod to validate them.
  Your bootstrap networking solution can be really anything you fancy!
  We use Flannel or Calico for the purpose in our environments, and connect Pods to it with such simple network descriptors like what you can find in **integration/bootstrap_networks**.
 
- **10. Create the webhook Deployment and provide it with certificates by executing the following commands from the project's root directory:**
+ **9. Create the webhook Deployment and provide it with certificates by executing the following commands from the project's root directory:**
 
 Below scripts require the `jq` tool and `openssl`; please make sure you have them installed.
 

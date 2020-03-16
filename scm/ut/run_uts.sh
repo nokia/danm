@@ -26,7 +26,7 @@ function check_codegen_tampering {
 set -e
 export CGO_ENABLED=0
 cd ${GOPATH}/src/github.com/nokia/danm
-go mod vendor
+
 run_uts
 check_codegen_tampering
 if [ -n "${DID_YOU_TAMPER}" ]
@@ -35,3 +35,5 @@ then
   echo "Generated DANM client code was manually modified in the working copy, failing tests!"
   exit 1
 fi
+
+cp ${GOPATH}/src/github.com/nokia/danm/coverage*.out /coverage/

@@ -25,6 +25,9 @@ function check_codegen_tampering {
 }
 
 set -e
+set -x
+export CGO_ENABLED=0
+go mod vendor
 run_uts
 check_codegen_tampering
 if [ -n "${DID_YOU_TAMPER}" ]

@@ -34,6 +34,14 @@ rules:
   - watch
   - get
 - apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - update
+  - get
+- apiGroups:
   - "danm.k8s.io"
   resources:
   - danmeps

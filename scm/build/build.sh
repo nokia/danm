@@ -6,6 +6,20 @@ export GOOS=linux
 export CGO_ENABLED=0
 cd "${GOPATH}/src/github.com/nokia/danm"
 go mod vendor
-LATEST_TAG=$(git describe --tags)
-COMMIT_HASH=$(git rev-parse HEAD)
+
+#
+# If we're being invoked inside Docker by the /build_danm script, use the
+# COMMIT_HASH and LATEST_TAG values that were already set by the invoking script.
+# Otherwise (eg if build.sh invoked directly during development cycle), set them
+# here.
+#
+if [ -z "${COMMIT_HASH}" ]
+then
+  COMMIT_HASH=$(git rev-parse HEAD)
+fi
+if [ -z "${LATEST_TAG}" ]
+then
+  LATEST_TAG=$(git describe --tags)
+fi
+
 go install -mod=vendor -a -ldflags "-extldflags '-static' -X main.version=${LATEST_TAG} -X main.commitHash=${COMMIT_HASH}" github.com/nokia/danm/cmd/...

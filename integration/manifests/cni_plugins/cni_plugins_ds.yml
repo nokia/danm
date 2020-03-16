@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: danm-cni
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      danm.k8s.io: danm-cni
+  template:
+    metadata:
+      labels:
+        danm.k8s.io: danm-cni
+    spec:
+      containers:
+        - name: danm-cni
+          image: danm-cni-plugins
+          volumeMounts:
+            - name: cni
+              mountPath: /host/cni
+      hostNetwork: true
+      terminationGracePeriodSeconds: 0
+      volumes:
+        - name: cni
+          hostPath:
+            path: /opt/cni/bin

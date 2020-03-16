@@ -20,4 +20,4 @@ install:
 script:
   - ./build_danm.sh
   - ./run_uts.sh
-  - $GOPATH/bin/goveralls -coverprofile=$GOPATH/src/github.com/nokia/danm/coverage3.out -service=travis-ci -repotoken ZY6MA490QABNKGnJgYLi53QTDuTC4H69K
+  - $GOPATH/bin/goveralls -coverprofile=ut/coverage/coverage3.out -service=travis-ci -repotoken ZY6MA490QABNKGnJgYLi53QTDuTC4H69K

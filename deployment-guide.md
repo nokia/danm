@@ -140,7 +140,10 @@ Note2: we assume RBAC is configured for the Kubernetes API, so the manifests inc
  We use Flannel or Calico for the purpose in our environments, and connect Pods to it with such simple network descriptors like what you can find in **integration/bootstrap_networks**.
 
  **10. Create the webhook Deployment and provide it with certificates by executing the following commands from the project's root directory:**
- ```
+
+Below scripts require the `jq` tool and `openssl`; please make sure you have them installed.
+
+```
 ./integration/manifests/webhook/webhook-create-signed-cert.sh
 cat ./integration/manifests/webhook/webhook.yaml | ./integration/manifests/webhook/webhook-patch-ca-bundle.sh > ./integration/manifests/webhook/webhook-ca-bundle.yaml
 kubectl create -f integration/manifests/webhook/webhook-ca-bundle.yaml

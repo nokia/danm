@@ -340,7 +340,9 @@ func createNic(syncher *syncher.Syncher, danmClient danmclientset.Interface, ifa
   isIpReservationNeeded := cnidel.IsDanmIpamNeededForDelegation(iface, netInfo) || netInfo.Spec.NetworkType == "ipvlan"
   ep, netInfo, err := danmep.CreateDanmEp(danmClient, DanmConfig.NamingScheme, isIpReservationNeeded, netInfo, iface, args)
   if err != nil {
-    danmep.DeleteDanmEp(danmClient, ep, netInfo)
+    if ep != nil {
+      danmep.DeleteDanmEp(danmClient, ep, netInfo)
+    }
     syncher.PushResult(ep.Spec.NetworkName, err, nil)
     return
   }

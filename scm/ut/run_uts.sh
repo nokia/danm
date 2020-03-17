@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 function run_uts {
-  cd $GOPATH/src/github.com/nokia/danm
   echo "" > coverage.out
   for d in $(go list ./... | grep -v vendor | grep -v crd); do
       go test -covermode=count -v -coverprofile=profile.out -coverpkg=github.com/nokia/danm/pkg/... "${d}"
@@ -25,8 +24,8 @@ function check_codegen_tampering {
 }
 
 set -e
-set -x
 export CGO_ENABLED=0
+cd ${GOPATH}/src/github.com/nokia/danm
 go mod vendor
 run_uts
 check_codegen_tampering

@@ -37,8 +37,8 @@ So, you are adamant you want to contribute to our project, and maybe even alread
 
 Keep in mind that the project is:
 
- - written in Golang, so you will need a properly set-up Golang 1.9+  development environment
- - managed by Glide, so you will need to install it on your machine (for the time being)
+ - written in Golang and using `go module` feature for dependency management, so you will need a properly set-up `Golang 1.12+`  development environment
+ - build scripts depend on `docker`, to be able to run scripts locally you will have to install it on your machine
 
 Once you have the prerequisites, fork our project, code your changes, test your contribution, then start a normal GitHub review process.
 
@@ -60,8 +60,6 @@ We are not allergic to the number of commits it took to create a contribution, y
 However, we require you to break-up big contributions into smaller, functionally coherent pieces. This approach greatly reduces both integration and review efforts!
 ### Future plans
 The following topics are on our mind right now, so if you are looking for topic to start with these are as good as any!
-
-We are aiming to adopt the go module style dependency management within our project.
 
 Being a new project, we have not yet integrated the repository to an automated CI system (like Travis).
 

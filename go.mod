@@ -10,6 +10,7 @@ require (
 	github.com/intel/multus-cni v0.0.0-20200316130803-079c853eba60
 	github.com/intel/sriov-cni v2.1.0+incompatible
 	github.com/j-keck/arping v1.0.0
+	github.com/kr/pty v1.1.5 // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/vishvananda/netlink v1.1.1-0.20200221165523-c79a4b7b4066
 	k8s.io/api v0.17.4

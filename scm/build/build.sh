@@ -1,7 +1,5 @@
 #!/bin/sh -ex
 export GOOS=linux
-# Force turn on go modules feature becase the project is inside GOPATH
-export GO111MODULE=on
 # Force turn off CGO enables building pure static binaries, otherwise
 # built binary still depends on and dinamically linked against the build
 # environments standard library implementation (e.g. glibc/musl/...)

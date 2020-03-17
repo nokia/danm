@@ -26,7 +26,7 @@ go get -d github.com/nokia/danm
 cd $GOPATH/src/github.com/nokia/danm
 ./build_danm.sh
 ```
-This will first build the Alpine based builder container, mount the $GOPATH/src and the $GOPATH/bin directory into it, and invoke the necessary script to build all binaries inside the container.
+This will first build the Alpine based builder container, mount the $GOPATH/src, $GOPATH/bin and $GOPATH/pkg directory into it, and invoke the necessary script to build all binaries inside the container.
 The builder container destroys itself once its purpose has been fulfilled.
 
 The result will be 6, statically linked binaries put into your $GOPATH/bin directory.

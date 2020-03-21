@@ -343,7 +343,7 @@ func createNic(syncher *syncher.Syncher, danmClient danmclientset.Interface, ifa
     if ep != nil {
       danmep.DeleteDanmEp(danmClient, ep, netInfo)
     }
-    syncher.PushResult(ep.Spec.NetworkName, err, nil)
+    syncher.PushResult(netInfo.ObjectMeta.Name, err, nil)
     return
   }
   var cniResult *current.Result

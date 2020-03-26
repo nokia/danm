@@ -20,7 +20,7 @@ spec:
       labels:
         danm.k8s.io: svcwatcher
     spec:
-      serviceAccount: svcwatcher
+      serviceAccountName: svcwatcher
       dnsPolicy: ClusterFirst
       nodeSelector:
         "node-role.kubernetes.io/master": ""

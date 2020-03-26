@@ -1,6 +1,6 @@
 ---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: caas:danm
 rules:
@@ -16,8 +16,8 @@ rules:
     resources: [ "pods" ]
     verbs: [ "get","watch","list"]
 ---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   name: caas:danm
 roleRef:

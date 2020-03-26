@@ -1,9 +1,12 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: loadbalancer
   namespace: example-vnf
 spec:
+  selector:
+    matchLabels:
+      app: loadbalancer
   replicas: 2
   template:
     metadata:

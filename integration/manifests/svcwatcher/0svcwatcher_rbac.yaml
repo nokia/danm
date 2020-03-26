@@ -70,4 +70,3 @@ subjects:
 - kind: ServiceAccount
   namespace: kube-system
   name: svcwatcher
-

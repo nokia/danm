@@ -1,9 +1,12 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-deployment
   namespace: default
 spec:
+  selector:
+    matchLabels:
+      app: test-deployment
   replicas: 1
   template:
     metadata:

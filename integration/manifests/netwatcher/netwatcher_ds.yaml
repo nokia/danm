@@ -12,7 +12,7 @@ spec:
       labels:
         danm.k8s.io: netwatcher
     spec:
-      serviceAccount: netwatcher
+      serviceAccountName: netwatcher
       hostNetwork: true
       dnsPolicy: ClusterFirst
       hostIPC: true

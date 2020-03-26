@@ -5,4 +5,4 @@ metadata:
   namespace: kube-system
 spec:
   NetworkID: flannel
-  NetworkType: flannel 
+  NetworkType: flannel

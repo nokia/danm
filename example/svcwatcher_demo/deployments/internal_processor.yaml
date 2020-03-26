@@ -1,9 +1,12 @@
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: internal-processor
   namespace: example-vnf
 spec:
+  selector:
+    matchLabels:
+      app: internal-processor
   replicas: 6
   template:
     metadata:

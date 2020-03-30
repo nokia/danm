@@ -116,8 +116,8 @@ var (
     danmtypes.TenantConfig {
       ObjectMeta: meta_v1.ObjectMeta {Name: "shortnid"},TypeMeta: meta_v1.TypeMeta {Kind: "TenantConfig"},
       NetworkIds: map[string]string {
-        "flannel": "abcdefghijkl",
-        "sriov": "abcdefghijk",
+        "flannel": "abcdefghijk",
+        "sriov": "abcdefghij",
        },
     },
     danmtypes.TenantConfig {

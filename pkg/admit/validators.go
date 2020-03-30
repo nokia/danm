@@ -14,7 +14,7 @@ import (
 )
 
 const (
-  MaxNidLength = 11
+  MaxNidLength = 10
 )
 
 var (

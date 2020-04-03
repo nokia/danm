@@ -36,7 +36,7 @@ spec:
                     maxLength: 0
                   - type: string
                     format: cidr
-                    pattern: '[\d./]+'
+                    pattern: '^\d+\.'
                 allocation_pool:
                   properties:
                     start:
@@ -57,7 +57,7 @@ spec:
                         maxLength: 0
                       - type: string
                         format: cidr
-                        pattern: '[\d./]+'
+                        pattern: '^\d+\.'
                 container_prefix:
                   type: string
                 host_device:
@@ -85,7 +85,7 @@ spec:
                     maxLength: 0
                   - type: string
                     format: cidr
-                    pattern: '([0-9a-fA-F]*:)+[\d.]*/\d+'
+                    pattern: ':'
                 allocation_pool_v6:
                   properties:
                     start:
@@ -106,14 +106,14 @@ spec:
                         maxLength: 0
                       - type: string
                         format: cidr
-                        pattern: '([0-9a-fA-F]*:)+[\d.]*/\d+'
+                        pattern: ':'
                     cidr:
                       oneOf:
                       - type: string
                         maxLength: 0
                       - type: string
                         format: cidr
-                        pattern: '([0-9a-fA-F]*:)+[\d.]*/\d+'
+                        pattern: ':'
                 routes:
                   type: object
                 routes6:

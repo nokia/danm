@@ -37,12 +37,12 @@ func main() {
     log.Println("ERROR: Parsing kubeconfig failed with error:" + err.Error() + " , exiting")
     os.Exit(-1)
   }
-  netWatcher, err := netcontrol.NewWatcher(config)
+  stopCh := make(chan struct{})
+  netWatcher, err := netcontrol.NewWatcher(config, &stopCh)
   if err != nil {
     log.Println("ERROR: Creation of NetWatcher failed with error:" + err.Error() + " , exiting")
     os.Exit(-1)
   }
-  stopCh := make(chan struct{})
   netWatcher.Run(&stopCh)
   select {}
 }

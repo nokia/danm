@@ -2,7 +2,9 @@ package netcontrol
 
 import (
   "errors"
+  "io"
   "log"
+  "os"
   "strconv"
   "strings"
   "time"
@@ -11,6 +13,7 @@ import (
   danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
   "github.com/nokia/danm/pkg/datastructs"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+  apierrors "k8s.io/apimachinery/pkg/api/errors"
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/cache"
 )
@@ -27,16 +30,18 @@ type NetWatcher struct {
   Factories map[string]danminformers.SharedInformerFactory
   Clients map[string]danmclientset.Interface
   Controllers map[string]cache.Controller
+  StopChan *chan struct{}
 }
 
 // NewWatcher initializes and returns a new NetWatcher object
 // Upon the reception of a notification it performs host network management operations
 // Watcher stores all K8s Clients, Factories, and Informeres of the DANM network management APIs
-func NewWatcher(cfg *rest.Config) (*NetWatcher,error) {
+func NewWatcher(cfg *rest.Config, stopChan  *chan struct{}) (*NetWatcher,error) {
   netWatcher := &NetWatcher{
     Factories: make(map[string]danminformers.SharedInformerFactory),
     Clients: make(map[string]danmclientset.Interface),
     Controllers: make(map[string]cache.Controller),
+    StopChan: stopChan,
   }
   //this is how we test if the specific API is used within the cluster, or not
   //we can only create an Informer for an existing API, otherwise we get errors
@@ -46,6 +51,7 @@ func NewWatcher(cfg *rest.Config) (*NetWatcher,error) {
   }
   _, err = dnetClient.DanmV1().DanmNets("").List(meta_v1.ListOptions{})
   if err == nil {
+    log.Println("INFO: DanmNet API seems to be installed in the cluster")
     netWatcher.createDnetInformer(dnetClient)
   }
   tnetClient, err := danmclientset.NewForConfig(cfg)
@@ -54,6 +60,7 @@ func NewWatcher(cfg *rest.Config) (*NetWatcher,error) {
   }
   _, err = tnetClient.DanmV1().TenantNetworks("").List(meta_v1.ListOptions{})
   if err == nil {
+    log.Println("INFO: TenantNetwork API seems to be installed in the cluster")
     netWatcher.createTnetInformer(tnetClient)
   }
   cnetClient, err := danmclientset.NewForConfig(cfg)
@@ -62,12 +69,13 @@ func NewWatcher(cfg *rest.Config) (*NetWatcher,error) {
   }
   _, err = cnetClient.DanmV1().ClusterNetworks().List(meta_v1.ListOptions{})
   if err == nil {
+    log.Println("INFO: ClusterNetwork API seems to be installed in the cluster")
     netWatcher.createCnetInformer(cnetClient)
   }
-  log.Println("Number of watcher's started for recognized APIs:" + strconv.Itoa(len(netWatcher.Controllers)))
   if len(netWatcher.Controllers) == 0 {
     return nil, errors.New("no network management APIs are installed in the cluster, netwatcher cannot start!")
   }
+  log.Println("Number of watcher's started for recognized APIs:" + strconv.Itoa(len(netWatcher.Controllers)))
   return netWatcher, nil
 }
 
@@ -77,6 +85,19 @@ func (netWatcher *NetWatcher) Run(stopCh *chan struct{}) {
   }
 }
 
+func (netWatcher *NetWatcher) WatchErrorHandler(r *cache.Reflector, err error) {
+	if apierrors.IsResourceExpired(err) || apierrors.IsGone(err) || err == io.EOF {
+    log.Println("INFO: One of the API watchers closed gracefully, re-establishing connection")
+    return
+  }
+  //The default K8s client retry mechanism expires after a certain amount of time, and just gives-up
+  //It is better to shutdown the whole process now and freshly re-build the watchers, than risking becoming a permanent zombie
+  close(*netWatcher.StopChan)
+  //Give some time for gracefully terminating the connections
+  time.Sleep(5*time.Seconds)
+  log.Println("ERROR: One of the API watchers closed unexpectedly with error:" + err.Error() + " shutting down NetWatcher!")
+  os.Exit(0)
+}
 
 func (netWatcher *NetWatcher) createDnetInformer(dnetClient danmclientset.Interface) {
   netWatcher.Clients[DanmNetKind] = dnetClient
@@ -88,6 +109,7 @@ func (netWatcher *NetWatcher) createDnetInformer(dnetClient danmclientset.Interf
       UpdateFunc: UpdateDanmNet,
       DeleteFunc: DeleteDanmNet,
   })
+  dnetController.SetWatchErrorHandler(netWatcher.WatchErrorHandler)
   netWatcher.Controllers[DanmNetKind] = dnetController
 }
 
@@ -101,6 +123,7 @@ func (netWatcher *NetWatcher) createTnetInformer(tnetClient danmclientset.Interf
       UpdateFunc: UpdateTenantNetwork,
       DeleteFunc: DeleteTenantNetwork,
   })
+  tnetController.SetWatchErrorHandler(netWatcher.WatchErrorHandler)
   netWatcher.Controllers[TenantNetworkKind] = tnetController
 }
 
@@ -114,6 +137,7 @@ func (netWatcher *NetWatcher) createCnetInformer(cnetClient danmclientset.Interf
       UpdateFunc: UpdateClusterNetwork,
       DeleteFunc: DeleteClusterNetwork,
   })
+  cnetController.SetWatchErrorHandler(netWatcher.WatchErrorHandler)
   netWatcher.Controllers[ClusterNetworkKind] = cnetController
 }
 

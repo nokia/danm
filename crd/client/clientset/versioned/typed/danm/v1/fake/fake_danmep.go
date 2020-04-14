@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var danmepsResource = schema.GroupVersionResource{Group: "danm.k8s.io", Version:
 var danmepsKind = schema.GroupVersionKind{Group: "danm.k8s.io", Version: "v1", Kind: "DanmEp"}
 
 // Get takes name of the danmEp, and returns the corresponding danmEp object, and an error if there is any.
-func (c *FakeDanmEps) Get(name string, options v1.GetOptions) (result *danmv1.DanmEp, err error) {
+func (c *FakeDanmEps) Get(ctx context.Context, name string, options v1.GetOptions) (result *danmv1.DanmEp, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(danmepsResource, c.ns, name), &danmv1.DanmEp{})
 
@@ -50,7 +52,7 @@ func (c *FakeDanmEps) Get(name string, options v1.GetOptions) (result *danmv1.Da
 }
 
 // List takes label and field selectors, and returns the list of DanmEps that match those selectors.
-func (c *FakeDanmEps) List(opts v1.ListOptions) (result *danmv1.DanmEpList, err error) {
+func (c *FakeDanmEps) List(ctx context.Context, opts v1.ListOptions) (result *danmv1.DanmEpList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(danmepsResource, danmepsKind, c.ns, opts), &danmv1.DanmEpList{})
 
@@ -72,14 +74,14 @@ func (c *FakeDanmEps) List(opts v1.ListOptions) (result *danmv1.DanmEpList, err 
 }
 
 // Watch returns a watch.Interface that watches the requested danmEps.
-func (c *FakeDanmEps) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeDanmEps) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(danmepsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a danmEp and creates it.  Returns the server's representation of the danmEp, and an error, if there is any.
-func (c *FakeDanmEps) Create(danmEp *danmv1.DanmEp) (result *danmv1.DanmEp, err error) {
+func (c *FakeDanmEps) Create(ctx context.Context, danmEp *danmv1.DanmEp, opts v1.CreateOptions) (result *danmv1.DanmEp, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(danmepsResource, c.ns, danmEp), &danmv1.DanmEp{})
 
@@ -90,7 +92,7 @@ func (c *FakeDanmEps) Create(danmEp *danmv1.DanmEp) (result *danmv1.DanmEp, err 
 }
 
 // Update takes the representation of a danmEp and updates it. Returns the server's representation of the danmEp, and an error, if there is any.
-func (c *FakeDanmEps) Update(danmEp *danmv1.DanmEp) (result *danmv1.DanmEp, err error) {
+func (c *FakeDanmEps) Update(ctx context.Context, danmEp *danmv1.DanmEp, opts v1.UpdateOptions) (result *danmv1.DanmEp, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(danmepsResource, c.ns, danmEp), &danmv1.DanmEp{})
 
@@ -101,7 +103,7 @@ func (c *FakeDanmEps) Update(danmEp *danmv1.DanmEp) (result *danmv1.DanmEp, err 
 }
 
 // Delete takes name of the danmEp and deletes it. Returns an error if one occurs.
-func (c *FakeDanmEps) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeDanmEps) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(danmepsResource, c.ns, name), &danmv1.DanmEp{})
 
@@ -109,15 +111,15 @@ func (c *FakeDanmEps) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeDanmEps) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(danmepsResource, c.ns, listOptions)
+func (c *FakeDanmEps) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(danmepsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &danmv1.DanmEpList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched danmEp.
-func (c *FakeDanmEps) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *danmv1.DanmEp, err error) {
+func (c *FakeDanmEps) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *danmv1.DanmEp, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(danmepsResource, c.ns, name, pt, data, subresources...), &danmv1.DanmEp{})
 

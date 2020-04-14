@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
@@ -60,13 +61,13 @@ func NewFilteredClusterNetworkInformer(client versioned.Interface, resyncPeriod 
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DanmV1().ClusterNetworks().List(options)
+				return client.DanmV1().ClusterNetworks().List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DanmV1().ClusterNetworks().Watch(options)
+				return client.DanmV1().ClusterNetworks().Watch(context.TODO(), options)
 			},
 		},
 		&danmv1.ClusterNetwork{},

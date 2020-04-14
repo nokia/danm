@@ -1,6 +1,7 @@
 package danm
 
 import (
+  "context"
   "errors"
   "net"
   "strings"
@@ -28,11 +29,11 @@ func newNetClientStub(nets []danmtypes.DanmNet, ips []utils.ReservedIpsList) *Ne
   return &NetClientStub{TestNets: nets, ReservedIpsList: ips}
 }
 
-func (netClient *NetClientStub) Create(obj *danmtypes.DanmNet) (*danmtypes.DanmNet, error) {
+func (netClient *NetClientStub) Create(ctx context.Context, obj *danmtypes.DanmNet, opts meta_v1.CreateOptions) (*danmtypes.DanmNet, error) {
   return nil, nil
 }
 
-func (netClient *NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmNet, error) {
+func (netClient *NetClientStub) Update(ctx context.Context, obj *danmtypes.DanmNet, opts meta_v1.UpdateOptions) (*danmtypes.DanmNet, error) {
   netClient.TimesUpdateWasCalled++
   for _, netReservation := range netClient.ReservedIpsList {
     if obj.Spec.NetworkID == netReservation.NetworkId {
@@ -77,15 +78,15 @@ func (netClient *NetClientStub) Update(obj *danmtypes.DanmNet) (*danmtypes.DanmN
   return obj, nil
 }
 
-func (netClient *NetClientStub) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (netClient *NetClientStub) Delete(ctx context.Context, name string, options meta_v1.DeleteOptions) error {
   return nil
 }
 
-func (netClient *NetClientStub) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (netClient *NetClientStub) DeleteCollection(ctx context.Context, options meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
   return nil
 }
 
-func (netClient *NetClientStub) Get(netName string, options meta_v1.GetOptions) (*danmtypes.DanmNet, error) {
+func (netClient *NetClientStub) Get(ctx context.Context, netName string, options meta_v1.GetOptions) (*danmtypes.DanmNet, error) {
   if strings.Contains(netName, "error") {
     return nil, errors.New("fatal error, don't retry")
   }
@@ -97,16 +98,16 @@ func (netClient *NetClientStub) Get(netName string, options meta_v1.GetOptions) 
   return nil, errors.New("let's test error case as well")
 }
 
-func (netClient *NetClientStub) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (netClient *NetClientStub) Watch(ctx context.Context, opts meta_v1.ListOptions) (watch.Interface, error) {
   watch := watch.NewEmptyWatch()
   return watch, nil
 }
 
-func (netClient *NetClientStub) List(opts meta_v1.ListOptions) (*danmtypes.DanmNetList, error) {
+func (netClient *NetClientStub) List(ctx context.Context, opts meta_v1.ListOptions) (*danmtypes.DanmNetList, error) {
   return nil, nil
 }
 
-func (netClient *NetClientStub) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *danmtypes.DanmNet, err error) {
+func (netClient *NetClientStub) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts meta_v1.PatchOptions, subresources ...string) (result *danmtypes.DanmNet, err error) {
   return nil, nil
 }
 

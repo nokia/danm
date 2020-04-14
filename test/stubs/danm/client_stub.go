@@ -38,7 +38,7 @@ func (client *ClientStub) ClusterNetworks() client.ClusterNetworkInterface {
   return nil
 }
 
-func (c *ClientStub) RESTClient() rest.Interface {
+func (client *ClientStub) RESTClient() rest.Interface {
   return nil
 }
 

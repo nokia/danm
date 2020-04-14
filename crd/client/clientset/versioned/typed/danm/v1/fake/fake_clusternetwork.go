@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -38,7 +40,7 @@ var clusternetworksResource = schema.GroupVersionResource{Group: "danm.k8s.io", 
 var clusternetworksKind = schema.GroupVersionKind{Group: "danm.k8s.io", Version: "v1", Kind: "ClusterNetwork"}
 
 // Get takes name of the clusterNetwork, and returns the corresponding clusterNetwork object, and an error if there is any.
-func (c *FakeClusterNetworks) Get(name string, options v1.GetOptions) (result *danmv1.ClusterNetwork, err error) {
+func (c *FakeClusterNetworks) Get(ctx context.Context, name string, options v1.GetOptions) (result *danmv1.ClusterNetwork, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(clusternetworksResource, name), &danmv1.ClusterNetwork{})
 	if obj == nil {
@@ -48,7 +50,7 @@ func (c *FakeClusterNetworks) Get(name string, options v1.GetOptions) (result *d
 }
 
 // List takes label and field selectors, and returns the list of ClusterNetworks that match those selectors.
-func (c *FakeClusterNetworks) List(opts v1.ListOptions) (result *danmv1.ClusterNetworkList, err error) {
+func (c *FakeClusterNetworks) List(ctx context.Context, opts v1.ListOptions) (result *danmv1.ClusterNetworkList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(clusternetworksResource, clusternetworksKind, opts), &danmv1.ClusterNetworkList{})
 	if obj == nil {
@@ -69,13 +71,13 @@ func (c *FakeClusterNetworks) List(opts v1.ListOptions) (result *danmv1.ClusterN
 }
 
 // Watch returns a watch.Interface that watches the requested clusterNetworks.
-func (c *FakeClusterNetworks) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeClusterNetworks) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(clusternetworksResource, opts))
 }
 
 // Create takes the representation of a clusterNetwork and creates it.  Returns the server's representation of the clusterNetwork, and an error, if there is any.
-func (c *FakeClusterNetworks) Create(clusterNetwork *danmv1.ClusterNetwork) (result *danmv1.ClusterNetwork, err error) {
+func (c *FakeClusterNetworks) Create(ctx context.Context, clusterNetwork *danmv1.ClusterNetwork, opts v1.CreateOptions) (result *danmv1.ClusterNetwork, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(clusternetworksResource, clusterNetwork), &danmv1.ClusterNetwork{})
 	if obj == nil {
@@ -85,7 +87,7 @@ func (c *FakeClusterNetworks) Create(clusterNetwork *danmv1.ClusterNetwork) (res
 }
 
 // Update takes the representation of a clusterNetwork and updates it. Returns the server's representation of the clusterNetwork, and an error, if there is any.
-func (c *FakeClusterNetworks) Update(clusterNetwork *danmv1.ClusterNetwork) (result *danmv1.ClusterNetwork, err error) {
+func (c *FakeClusterNetworks) Update(ctx context.Context, clusterNetwork *danmv1.ClusterNetwork, opts v1.UpdateOptions) (result *danmv1.ClusterNetwork, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(clusternetworksResource, clusterNetwork), &danmv1.ClusterNetwork{})
 	if obj == nil {
@@ -95,22 +97,22 @@ func (c *FakeClusterNetworks) Update(clusterNetwork *danmv1.ClusterNetwork) (res
 }
 
 // Delete takes name of the clusterNetwork and deletes it. Returns an error if one occurs.
-func (c *FakeClusterNetworks) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeClusterNetworks) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(clusternetworksResource, name), &danmv1.ClusterNetwork{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeClusterNetworks) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(clusternetworksResource, listOptions)
+func (c *FakeClusterNetworks) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(clusternetworksResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &danmv1.ClusterNetworkList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched clusterNetwork.
-func (c *FakeClusterNetworks) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *danmv1.ClusterNetwork, err error) {
+func (c *FakeClusterNetworks) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *danmv1.ClusterNetwork, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(clusternetworksResource, name, pt, data, subresources...), &danmv1.ClusterNetwork{})
 	if obj == nil {

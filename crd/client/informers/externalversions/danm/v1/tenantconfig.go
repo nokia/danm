@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
@@ -60,13 +61,13 @@ func NewFilteredTenantConfigInformer(client versioned.Interface, resyncPeriod ti
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DanmV1().TenantConfigs().List(options)
+				return client.DanmV1().TenantConfigs().List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DanmV1().TenantConfigs().Watch(options)
+				return client.DanmV1().TenantConfigs().Watch(context.TODO(), options)
 			},
 		},
 		&danmv1.TenantConfig{},

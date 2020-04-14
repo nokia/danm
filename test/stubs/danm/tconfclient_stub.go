@@ -1,6 +1,7 @@
 package danm
 
 import (
+  "context"
   "errors"
   "strconv"
   "strings"
@@ -24,11 +25,11 @@ func newTconfClientStub(tconfs []danmtypes.TenantConfig, vnis []utils.ReservedVn
   return &TconfClientStub{TestTconfs: tconfs, ReservedVnis: vnis, ExhaustAllocs: exhaustAllocs}
 }
 
-func (tconfClient *TconfClientStub) Create(obj *danmtypes.TenantConfig) (*danmtypes.TenantConfig, error) {
+func (tconfClient *TconfClientStub) Create(ctx context.Context, obj *danmtypes.TenantConfig, opts meta_v1.CreateOptions) (*danmtypes.TenantConfig, error) {
   return nil, nil
 }
 
-func (tconfClient *TconfClientStub) Update(obj *danmtypes.TenantConfig) (*danmtypes.TenantConfig, error) {
+func (tconfClient *TconfClientStub) Update(ctx context.Context, obj *danmtypes.TenantConfig, opts meta_v1.UpdateOptions) (*danmtypes.TenantConfig, error) {
   tconfClient.TimesUpdateWasCalled++
   for _, vniReservation := range tconfClient.ReservedVnis {
     for index, hostProfile := range obj.HostDevices {
@@ -70,15 +71,15 @@ func (tconfClient *TconfClientStub) Update(obj *danmtypes.TenantConfig) (*danmty
   return &danmtypes.TenantConfig{}, nil
 }
 
-func (tconfClient *TconfClientStub) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (tconfClient *TconfClientStub) Delete(ctx context.Context, name string, options meta_v1.DeleteOptions) error {
   return nil
 }
 
-func (tconfClient *TconfClientStub) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (tconfClient *TconfClientStub) DeleteCollection(ctx context.Context, options meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
   return nil
 }
 
-func (tconfClient *TconfClientStub) Get(tconfName string, options meta_v1.GetOptions) (*danmtypes.TenantConfig, error) {
+func (tconfClient *TconfClientStub) Get(ctx context.Context, tconfName string, options meta_v1.GetOptions) (*danmtypes.TenantConfig, error) {
   for _, tconf := range tconfClient.TestTconfs {
     if tconf.ObjectMeta.Name == tconfName {
       if strings.Contains(tconfName,"error") {
@@ -90,12 +91,12 @@ func (tconfClient *TconfClientStub) Get(tconfName string, options meta_v1.GetOpt
   return nil, nil
 }
 
-func (tconfClient *TconfClientStub) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (tconfClient *TconfClientStub) Watch(ctx context.Context, opts meta_v1.ListOptions) (watch.Interface, error) {
   watch := watch.NewEmptyWatch()
   return watch, nil
 }
 
-func (tconfClient *TconfClientStub) List(opts meta_v1.ListOptions) (*danmtypes.TenantConfigList, error) {
+func (tconfClient *TconfClientStub) List(ctx context.Context, opts meta_v1.ListOptions) (*danmtypes.TenantConfigList, error) {
   if tconfClient.TestTconfs == nil {
     return nil, nil
   }
@@ -106,6 +107,6 @@ func (tconfClient *TconfClientStub) List(opts meta_v1.ListOptions) (*danmtypes.T
   return &tconfList, nil
 }
 
-func (tconfClient *TconfClientStub) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *danmtypes.TenantConfig, err error) {
+func (tconfClient *TconfClientStub) Patch(nctx context.Context, ame string, pt types.PatchType, data []byte, opts meta_v1.PatchOptions, subresources ...string) (result *danmtypes.TenantConfig, err error) {
   return nil, nil
 }

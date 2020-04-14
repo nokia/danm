@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var tenantnetworksResource = schema.GroupVersionResource{Group: "danm.k8s.io", V
 var tenantnetworksKind = schema.GroupVersionKind{Group: "danm.k8s.io", Version: "v1", Kind: "TenantNetwork"}
 
 // Get takes name of the tenantNetwork, and returns the corresponding tenantNetwork object, and an error if there is any.
-func (c *FakeTenantNetworks) Get(name string, options v1.GetOptions) (result *danmv1.TenantNetwork, err error) {
+func (c *FakeTenantNetworks) Get(ctx context.Context, name string, options v1.GetOptions) (result *danmv1.TenantNetwork, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(tenantnetworksResource, c.ns, name), &danmv1.TenantNetwork{})
 
@@ -50,7 +52,7 @@ func (c *FakeTenantNetworks) Get(name string, options v1.GetOptions) (result *da
 }
 
 // List takes label and field selectors, and returns the list of TenantNetworks that match those selectors.
-func (c *FakeTenantNetworks) List(opts v1.ListOptions) (result *danmv1.TenantNetworkList, err error) {
+func (c *FakeTenantNetworks) List(ctx context.Context, opts v1.ListOptions) (result *danmv1.TenantNetworkList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(tenantnetworksResource, tenantnetworksKind, c.ns, opts), &danmv1.TenantNetworkList{})
 
@@ -72,14 +74,14 @@ func (c *FakeTenantNetworks) List(opts v1.ListOptions) (result *danmv1.TenantNet
 }
 
 // Watch returns a watch.Interface that watches the requested tenantNetworks.
-func (c *FakeTenantNetworks) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeTenantNetworks) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(tenantnetworksResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a tenantNetwork and creates it.  Returns the server's representation of the tenantNetwork, and an error, if there is any.
-func (c *FakeTenantNetworks) Create(tenantNetwork *danmv1.TenantNetwork) (result *danmv1.TenantNetwork, err error) {
+func (c *FakeTenantNetworks) Create(ctx context.Context, tenantNetwork *danmv1.TenantNetwork, opts v1.CreateOptions) (result *danmv1.TenantNetwork, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(tenantnetworksResource, c.ns, tenantNetwork), &danmv1.TenantNetwork{})
 
@@ -90,7 +92,7 @@ func (c *FakeTenantNetworks) Create(tenantNetwork *danmv1.TenantNetwork) (result
 }
 
 // Update takes the representation of a tenantNetwork and updates it. Returns the server's representation of the tenantNetwork, and an error, if there is any.
-func (c *FakeTenantNetworks) Update(tenantNetwork *danmv1.TenantNetwork) (result *danmv1.TenantNetwork, err error) {
+func (c *FakeTenantNetworks) Update(ctx context.Context, tenantNetwork *danmv1.TenantNetwork, opts v1.UpdateOptions) (result *danmv1.TenantNetwork, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(tenantnetworksResource, c.ns, tenantNetwork), &danmv1.TenantNetwork{})
 
@@ -101,7 +103,7 @@ func (c *FakeTenantNetworks) Update(tenantNetwork *danmv1.TenantNetwork) (result
 }
 
 // Delete takes name of the tenantNetwork and deletes it. Returns an error if one occurs.
-func (c *FakeTenantNetworks) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeTenantNetworks) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(tenantnetworksResource, c.ns, name), &danmv1.TenantNetwork{})
 
@@ -109,15 +111,15 @@ func (c *FakeTenantNetworks) Delete(name string, options *v1.DeleteOptions) erro
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeTenantNetworks) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(tenantnetworksResource, c.ns, listOptions)
+func (c *FakeTenantNetworks) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(tenantnetworksResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &danmv1.TenantNetworkList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched tenantNetwork.
-func (c *FakeTenantNetworks) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *danmv1.TenantNetwork, err error) {
+func (c *FakeTenantNetworks) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *danmv1.TenantNetwork, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(tenantnetworksResource, c.ns, name, pt, data, subresources...), &danmv1.TenantNetwork{})
 

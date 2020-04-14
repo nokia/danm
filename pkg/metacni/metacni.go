@@ -2,6 +2,7 @@ package metacni
 
 import (
   "bytes"
+  "context"
   "errors"
   "fmt"
   "log"
@@ -157,7 +158,7 @@ func getPod(args *datastructs.CniArgs) error {
   if err != nil {
     return errors.New("cannot create K8s REST client due to error:" + err.Error())
   }
-  pod, err := k8sClient.CoreV1().Pods(string(args.Namespace)).Get(string(args.PodName), meta_v1.GetOptions{})
+  pod, err := k8sClient.CoreV1().Pods(string(args.Namespace)).Get(context.TODO(), string(args.PodName), meta_v1.GetOptions{})
   if err != nil {
     return errors.New("failed to get Pod info from K8s API server due to:" + err.Error())
   }

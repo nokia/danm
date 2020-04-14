@@ -1,6 +1,7 @@
 package svccontrol
 
 import (
+	"context"
 	"fmt"
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
@@ -194,7 +195,7 @@ func (c *Controller) UpdateEndpoints(eps *corev1.Endpoints) error {
      len(eps.Subsets[0].NotReadyAddresses) == 0 {
 		eps.Subsets = nil
 	}
-  _, err := c.kubeclient.CoreV1().Endpoints(eps.Namespace).Update(eps)
+  _, err := c.kubeclient.CoreV1().Endpoints(eps.Namespace).Update(context.TODO(), eps, meta_v1.UpdateOptions{})
   return err
 }
 
@@ -213,9 +214,9 @@ func (c *Controller) CreateModifyEndpoints(svc *corev1.Service, doesEpAlreadyExi
   var err error
 	epNew := c.MakeNewEps(svc, des)
   if doesEpAlreadyExist {
-		_, err = c.kubeclient.CoreV1().Endpoints(svc.Namespace).Update(&epNew)
+		_, err = c.kubeclient.CoreV1().Endpoints(svc.Namespace).Update(context.TODO(), &epNew, meta_v1.UpdateOptions{})
 	} else {
-		_, err = c.kubeclient.CoreV1().Endpoints(svc.Namespace).Create(&epNew)
+		_, err = c.kubeclient.CoreV1().Endpoints(svc.Namespace).Create(context.TODO(), &epNew, meta_v1.CreateOptions{})
 	}
   return err
 }
@@ -558,7 +559,7 @@ func (c *Controller) updatePod(old, new interface{}) {
 			if deNew.Spec.Pod == podName && deNew.Namespace == podNs && deNew.Spec.PodUID == newPod.ObjectMeta.UID {
 				deLabels := newPod.Labels
 				deNew.SetLabels(deLabels)
-				_, err = c.danmclient.DanmV1().DanmEps(deNew.Namespace).Update(deNew)
+				_, err = c.danmclient.DanmV1().DanmEps(deNew.Namespace).Update(context.TODO(), deNew, meta_v1.UpdateOptions{})
         if err != nil {
           glog.Errorf("DanmEp:%s label update for changed Pod:%s failed with error:%s", deNew.ObjectMeta.Name, newPod.ObjectMeta.Name, err)
         }

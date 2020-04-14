@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -39,7 +41,7 @@ var danmnetsResource = schema.GroupVersionResource{Group: "danm.k8s.io", Version
 var danmnetsKind = schema.GroupVersionKind{Group: "danm.k8s.io", Version: "v1", Kind: "DanmNet"}
 
 // Get takes name of the danmNet, and returns the corresponding danmNet object, and an error if there is any.
-func (c *FakeDanmNets) Get(name string, options v1.GetOptions) (result *danmv1.DanmNet, err error) {
+func (c *FakeDanmNets) Get(ctx context.Context, name string, options v1.GetOptions) (result *danmv1.DanmNet, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewGetAction(danmnetsResource, c.ns, name), &danmv1.DanmNet{})
 
@@ -50,7 +52,7 @@ func (c *FakeDanmNets) Get(name string, options v1.GetOptions) (result *danmv1.D
 }
 
 // List takes label and field selectors, and returns the list of DanmNets that match those selectors.
-func (c *FakeDanmNets) List(opts v1.ListOptions) (result *danmv1.DanmNetList, err error) {
+func (c *FakeDanmNets) List(ctx context.Context, opts v1.ListOptions) (result *danmv1.DanmNetList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(danmnetsResource, danmnetsKind, c.ns, opts), &danmv1.DanmNetList{})
 
@@ -72,14 +74,14 @@ func (c *FakeDanmNets) List(opts v1.ListOptions) (result *danmv1.DanmNetList, er
 }
 
 // Watch returns a watch.Interface that watches the requested danmNets.
-func (c *FakeDanmNets) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeDanmNets) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewWatchAction(danmnetsResource, c.ns, opts))
 
 }
 
 // Create takes the representation of a danmNet and creates it.  Returns the server's representation of the danmNet, and an error, if there is any.
-func (c *FakeDanmNets) Create(danmNet *danmv1.DanmNet) (result *danmv1.DanmNet, err error) {
+func (c *FakeDanmNets) Create(ctx context.Context, danmNet *danmv1.DanmNet, opts v1.CreateOptions) (result *danmv1.DanmNet, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewCreateAction(danmnetsResource, c.ns, danmNet), &danmv1.DanmNet{})
 
@@ -90,7 +92,7 @@ func (c *FakeDanmNets) Create(danmNet *danmv1.DanmNet) (result *danmv1.DanmNet, 
 }
 
 // Update takes the representation of a danmNet and updates it. Returns the server's representation of the danmNet, and an error, if there is any.
-func (c *FakeDanmNets) Update(danmNet *danmv1.DanmNet) (result *danmv1.DanmNet, err error) {
+func (c *FakeDanmNets) Update(ctx context.Context, danmNet *danmv1.DanmNet, opts v1.UpdateOptions) (result *danmv1.DanmNet, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(danmnetsResource, c.ns, danmNet), &danmv1.DanmNet{})
 
@@ -101,7 +103,7 @@ func (c *FakeDanmNets) Update(danmNet *danmv1.DanmNet) (result *danmv1.DanmNet, 
 }
 
 // Delete takes name of the danmNet and deletes it. Returns an error if one occurs.
-func (c *FakeDanmNets) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeDanmNets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewDeleteAction(danmnetsResource, c.ns, name), &danmv1.DanmNet{})
 
@@ -109,15 +111,15 @@ func (c *FakeDanmNets) Delete(name string, options *v1.DeleteOptions) error {
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeDanmNets) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(danmnetsResource, c.ns, listOptions)
+func (c *FakeDanmNets) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewDeleteCollectionAction(danmnetsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &danmv1.DanmNetList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched danmNet.
-func (c *FakeDanmNets) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *danmv1.DanmNet, err error) {
+func (c *FakeDanmNets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *danmv1.DanmNet, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewPatchSubresourceAction(danmnetsResource, c.ns, name, pt, data, subresources...), &danmv1.DanmNet{})
 

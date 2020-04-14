@@ -1,6 +1,7 @@
 package danmep
 
 import (
+  "context"
   "errors"
   "fmt"
   "os"
@@ -63,7 +64,7 @@ func FindByCid(client danmclientset.Interface, cid string)([]danmtypes.DanmEp, e
   var result *danmtypes.DanmEpList
   //Critical CNI_DEL calls depends on this function, so we will re-try for one sec to be able to cope with temporary network disruptions
   for i := 0; i < MaxRetryCount; i++ {
-    result, err = client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
+    result, err = client.DanmV1().DanmEps("").List(context.TODO(), meta_v1.ListOptions{})
     if err == nil {
       break
     }
@@ -88,7 +89,7 @@ func FindByCid(client danmclientset.Interface, cid string)([]danmtypes.DanmEp, e
 // CidsByHost returns a map of Eps
 // The Eps in the map are indexed with the name of the K8s host their Pods are running on
 func CidsByHost(client danmclientset.Interface, host string)(map[string]danmtypes.DanmEp, error) {
-  result, err := client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
+  result, err := client.DanmV1().DanmEps("").List(context.TODO(), meta_v1.ListOptions{})
   if err != nil {
     return nil, errors.New("cannot list DanmEps because:" + err.Error())
   }
@@ -108,7 +109,7 @@ func CidsByHost(client danmclientset.Interface, host string)(map[string]danmtype
 // FindByPodName returns a map of DanmEps which belong to the same Pod in a given namespace
 // If no Pod name is provided, function returns all DanmEps
 func FindByPodName(client danmclientset.Interface, podName, ns string) ([]danmtypes.DanmEp, error) {
-  result, err := client.DanmV1().DanmEps(ns).List(meta_v1.ListOptions{})
+  result, err := client.DanmV1().DanmEps(ns).List(context.TODO(), meta_v1.ListOptions{})
   if err != nil {
     return nil, errors.New("cannot list DanmEps because:" + err.Error())
   }
@@ -218,7 +219,7 @@ func isIPv6NotNeeded(ep *danmtypes.DanmEp) bool {
 // ArePodsConnectedToNetwork checks if there are any Pods currently in the system using the particular network.
 // If there is at least, it returns true, and the spec of the first matching DanmEp.
 func ArePodsConnectedToNetwork(client danmclientset.Interface, dnet *danmtypes.DanmNet)(bool, danmtypes.DanmEp, error) {
-  result, err := client.DanmV1().DanmEps("").List(meta_v1.ListOptions{})
+  result, err := client.DanmV1().DanmEps("").List(context.TODO(), meta_v1.ListOptions{})
   if err != nil {
     return false, danmtypes.DanmEp{}, errors.New("cannot list DanmEps because:" + err.Error())
   }
@@ -325,7 +326,7 @@ func createDanmEp(danmClient danmclientset.Interface, epInput danmtypes.DanmEpIf
     ObjectMeta: meta,
     Spec: epSpec,
   }
-  newEp, err := danmClient.DanmV1().DanmEps(ep.Namespace).Create(&ep)
+  newEp, err := danmClient.DanmV1().DanmEps(ep.Namespace).Create(context.TODO(), &ep, meta_v1.CreateOptions{})
   if err != nil {
     return newEp, errors.New("DanmEp object could not be PUT to K8s API server due to error:" + err.Error())
   }
@@ -336,7 +337,7 @@ func createDanmEp(danmClient danmclientset.Interface, epInput danmtypes.DanmEpIf
 func UpdateDanmEp(client danmclientset.Interface, ep *danmtypes.DanmEp) error {
   var err error
   for i := 0; i < MaxRetryCount; i++ {
-    _, err = client.DanmV1().DanmEps(ep.Namespace).Update(ep)
+    _, err = client.DanmV1().DanmEps(ep.Namespace).Update(context.TODO(), ep, meta_v1.UpdateOptions{})
     if err == nil {
       break
     }
@@ -359,5 +360,5 @@ func DeleteDanmEp(danmClient danmclientset.Interface, ep *danmtypes.DanmEp, dnet
       return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because freeing its reserved IP addresses failed with error:" + err.Error())
     }
   }
-  return danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(ep.ObjectMeta.Name, &meta_v1.DeleteOptions{})
+  return danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(context.TODO(), ep.ObjectMeta.Name, meta_v1.DeleteOptions{})
 }

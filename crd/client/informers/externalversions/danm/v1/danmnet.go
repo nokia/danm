@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	time "time"
 
 	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
@@ -61,13 +62,13 @@ func NewFilteredDanmNetInformer(client versioned.Interface, namespace string, re
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DanmV1().DanmNets(namespace).List(options)
+				return client.DanmV1().DanmNets(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DanmV1().DanmNets(namespace).Watch(options)
+				return client.DanmV1().DanmNets(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&danmv1.DanmNet{},

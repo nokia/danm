@@ -1,6 +1,7 @@
 package netcontrol
 
 import (
+  "context"
   "errors"
   "io"
   "log"
@@ -49,7 +50,7 @@ func NewWatcher(cfg *rest.Config, stopChan  *chan struct{}) (*NetWatcher,error) 
   if err != nil {
     return nil, err
   }
-  _, err = dnetClient.DanmV1().DanmNets("").List(meta_v1.ListOptions{})
+  _, err = dnetClient.DanmV1().DanmNets("").List(context.TODO(), meta_v1.ListOptions{})
   if err == nil {
     log.Println("INFO: DanmNet API seems to be installed in the cluster")
     netWatcher.createDnetInformer(dnetClient)
@@ -58,7 +59,7 @@ func NewWatcher(cfg *rest.Config, stopChan  *chan struct{}) (*NetWatcher,error) 
   if err != nil {
     return nil, err
   }
-  _, err = tnetClient.DanmV1().TenantNetworks("").List(meta_v1.ListOptions{})
+  _, err = tnetClient.DanmV1().TenantNetworks("").List(context.TODO(), meta_v1.ListOptions{})
   if err == nil {
     log.Println("INFO: TenantNetwork API seems to be installed in the cluster")
     netWatcher.createTnetInformer(tnetClient)
@@ -67,7 +68,7 @@ func NewWatcher(cfg *rest.Config, stopChan  *chan struct{}) (*NetWatcher,error) 
   if err != nil {
     return nil, err
   }
-  _, err = cnetClient.DanmV1().ClusterNetworks().List(meta_v1.ListOptions{})
+  _, err = cnetClient.DanmV1().ClusterNetworks().List(context.TODO(), meta_v1.ListOptions{})
   if err == nil {
     log.Println("INFO: ClusterNetwork API seems to be installed in the cluster")
     netWatcher.createCnetInformer(cnetClient)
@@ -94,7 +95,7 @@ func (netWatcher *NetWatcher) WatchErrorHandler(r *cache.Reflector, err error) {
   //It is better to shutdown the whole process now and freshly re-build the watchers, than risking becoming a permanent zombie
   close(*netWatcher.StopChan)
   //Give some time for gracefully terminating the connections
-  time.Sleep(5*time.Seconds)
+  time.Sleep(5*time.Second)
   log.Println("ERROR: One of the API watchers closed unexpectedly with error:" + err.Error() + " shutting down NetWatcher!")
   os.Exit(0)
 }
@@ -356,13 +357,13 @@ func PutNetwork(danmClient danmclientset.Interface, dnet *danmtypes.DanmNet) (bo
   var err error
   var wasResourceAlreadyUpdated bool
   if dnet.TypeMeta.Kind == DanmNetKind || dnet.TypeMeta.Kind == "" {
-    _, err = danmClient.DanmV1().DanmNets(dnet.ObjectMeta.Namespace).Update(dnet)
+    _, err = danmClient.DanmV1().DanmNets(dnet.ObjectMeta.Namespace).Update(context.TODO(), dnet, meta_v1.UpdateOptions{})
   } else if dnet.TypeMeta.Kind == TenantNetworkKind {
     tn := ConvertDnetToTnet(dnet)
-    _, err = danmClient.DanmV1().TenantNetworks(dnet.ObjectMeta.Namespace).Update(tn)
+    _, err = danmClient.DanmV1().TenantNetworks(dnet.ObjectMeta.Namespace).Update(context.TODO(), tn, meta_v1.UpdateOptions{})
   } else if dnet.TypeMeta.Kind == ClusterNetworkKind {
     cn := ConvertDnetToCnet(dnet)
-    _, err = danmClient.DanmV1().ClusterNetworks().Update(cn)
+    _, err = danmClient.DanmV1().ClusterNetworks().Update(context.TODO(), cn, meta_v1.UpdateOptions{})
   } else {
     return wasResourceAlreadyUpdated, errors.New("can't refresh network object because it has an invalid type:" + dnet.TypeMeta.Kind)
   }
@@ -377,16 +378,16 @@ func PutNetwork(danmClient danmclientset.Interface, dnet *danmtypes.DanmNet) (bo
 }
 
 func GetDefaultNetwork(danmClient danmclientset.Interface, defaultNetworkName, nameSpace string) (*danmtypes.DanmNet,error) {
-  dnet, err := danmClient.DanmV1().DanmNets(nameSpace).Get(defaultNetworkName, meta_v1.GetOptions{})
+  dnet, err := danmClient.DanmV1().DanmNets(nameSpace).Get(context.TODO(), defaultNetworkName, meta_v1.GetOptions{})
   if err == nil && dnet.ObjectMeta.Name == defaultNetworkName  {
     return dnet, nil
   }
-  tnet, err := danmClient.DanmV1().TenantNetworks(nameSpace).Get(defaultNetworkName, meta_v1.GetOptions{})
+  tnet, err := danmClient.DanmV1().TenantNetworks(nameSpace).Get(context.TODO(), defaultNetworkName, meta_v1.GetOptions{})
   if err == nil && tnet.ObjectMeta.Name == defaultNetworkName  {
     dn := ConvertTnetToDnet(tnet)
     return dn, nil
   }
-  cnet, err := danmClient.DanmV1().ClusterNetworks().Get(defaultNetworkName, meta_v1.GetOptions{})
+  cnet, err := danmClient.DanmV1().ClusterNetworks().Get(context.TODO(), defaultNetworkName, meta_v1.GetOptions{})
   if err == nil && cnet.ObjectMeta.Name == defaultNetworkName  {
     dn := ConvertCnetToDnet(cnet)
     return dn, nil
@@ -399,14 +400,14 @@ func GetNetworkFromInterface(danmClient danmclientset.Interface, iface datastruc
   if iface.Network != "" {
     netName = iface.Network
     netType = DanmNetKind
-    dnet, err := danmClient.DanmV1().DanmNets(nameSpace).Get(iface.Network, meta_v1.GetOptions{})
+    dnet, err := danmClient.DanmV1().DanmNets(nameSpace).Get(context.TODO(), iface.Network, meta_v1.GetOptions{})
     if err == nil && dnet.ObjectMeta.Name == iface.Network  {
       return dnet, nil
     }
   } else if iface.TenantNetwork != "" {
     netName = iface.TenantNetwork
     netType = TenantNetworkKind
-    tnet, err := danmClient.DanmV1().TenantNetworks(nameSpace).Get(iface.TenantNetwork, meta_v1.GetOptions{})
+    tnet, err := danmClient.DanmV1().TenantNetworks(nameSpace).Get(context.TODO(), iface.TenantNetwork, meta_v1.GetOptions{})
     if err == nil && tnet.ObjectMeta.Name == iface.TenantNetwork  {
       dnet := ConvertTnetToDnet(tnet)
       return dnet, nil
@@ -414,7 +415,7 @@ func GetNetworkFromInterface(danmClient danmclientset.Interface, iface datastruc
   } else if iface.ClusterNetwork != "" {
     netName = iface.ClusterNetwork
     netType = ClusterNetworkKind
-    cnet, err := danmClient.DanmV1().ClusterNetworks().Get(iface.ClusterNetwork, meta_v1.GetOptions{})
+    cnet, err := danmClient.DanmV1().ClusterNetworks().Get(context.TODO(), iface.ClusterNetwork, meta_v1.GetOptions{})
     if err == nil && cnet.ObjectMeta.Name == iface.ClusterNetwork  {
       dnet := ConvertCnetToDnet(cnet)
       return dnet, nil

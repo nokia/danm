@@ -1,6 +1,7 @@
 package danm
 
 import (
+  "context"
   "errors"
   "strings"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,23 +18,23 @@ func newEpClientStub(eps []danmtypes.DanmEp) EpClientStub {
   return EpClientStub{TestEps: eps}
 }
   
-func (epClient EpClientStub) Create(obj *danmtypes.DanmEp) (*danmtypes.DanmEp, error) {
+func (epClient EpClientStub) Create(ctx context.Context, obj *danmtypes.DanmEp, options meta_v1.CreateOptions) (*danmtypes.DanmEp, error) {
   return nil, nil
 }
 
-func (epClient EpClientStub) Update(obj *danmtypes.DanmEp) (*danmtypes.DanmEp, error) {
+func (epClient EpClientStub) Update(ctx context.Context, obj *danmtypes.DanmEp, options meta_v1.UpdateOptions) (*danmtypes.DanmEp, error) {
   return nil, nil
 }
 
-func (epClient EpClientStub) Delete(name string, options *meta_v1.DeleteOptions) error {
+func (epClient EpClientStub) Delete(ctx context.Context, name string, options meta_v1.DeleteOptions) error {
   return nil
 }
 
-func (epClient EpClientStub) DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
+func (epClient EpClientStub) DeleteCollection(ctx context.Context, options meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error {
   return nil
 }
 
-func (epClient EpClientStub) Get(epName string, options meta_v1.GetOptions) (*danmtypes.DanmEp, error) {
+func (epClient EpClientStub) Get(ctx context.Context, epName string, options meta_v1.GetOptions) (*danmtypes.DanmEp, error) {
   for _, testNet := range epClient.TestEps {
     if testNet.Spec.NetworkName == epName {
       return &testNet, nil
@@ -42,12 +43,12 @@ func (epClient EpClientStub) Get(epName string, options meta_v1.GetOptions) (*da
   return nil, nil
 }
 
-func (epClient EpClientStub) Watch(opts meta_v1.ListOptions) (watch.Interface, error) {
+func (epClient EpClientStub) Watch(ctx context.Context, opts meta_v1.ListOptions) (watch.Interface, error) {
   watch := watch.NewEmptyWatch()
   return watch, nil
 }
 
-func (epClient EpClientStub) List(opts meta_v1.ListOptions) (*danmtypes.DanmEpList, error) {
+func (epClient EpClientStub) List(ctx context.Context, opts meta_v1.ListOptions) (*danmtypes.DanmEpList, error) {
   if epClient.TestEps == nil {
     return nil, nil
   }
@@ -60,7 +61,7 @@ func (epClient EpClientStub) List(opts meta_v1.ListOptions) (*danmtypes.DanmEpLi
   return &epList, nil
 }
 
-func (epClient EpClientStub) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *danmtypes.DanmEp, err error) {
+func (epClient EpClientStub) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts meta_v1.PatchOptions, subresources ...string) (result *danmtypes.DanmEp, err error) {
   return nil, nil
 }
 

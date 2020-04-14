@@ -1,6 +1,7 @@
 package confman
 
 import (
+  "context"
   "errors"
   "log"
   "strings"
@@ -17,7 +18,7 @@ const (
 )
 
 func GetTenantConfig(danmClient danmclientset.Interface) (*danmtypes.TenantConfig, error) {
-  reply, err := danmClient.DanmV1().TenantConfigs().List(metav1.ListOptions{})
+  reply, err := danmClient.DanmV1().TenantConfigs().List(context.TODO(), metav1.ListOptions{})
   if err != nil {
     return nil, err
   }
@@ -140,9 +141,9 @@ func freeVni(dnet *danmtypes.DanmNet, iface danmtypes.IfaceProfile) (string,erro
 func updateTenantConf(danmClient danmclientset.Interface, tconf *danmtypes.TenantConfig) (*danmtypes.TenantConfig,bool,error) {
   var wasRefreshed bool
   var newConf *danmtypes.TenantConfig
-  _, err := danmClient.DanmV1().TenantConfigs().Update(tconf)
+  _, err := danmClient.DanmV1().TenantConfigs().Update(context.TODO(), tconf, metav1.UpdateOptions{})
   if err != nil && strings.Contains(err.Error(), datastructs.OptimisticLockErrorMsg) {
-    newConf, err = danmClient.DanmV1().TenantConfigs().Get(tconf.ObjectMeta.Name, metav1.GetOptions{})
+    newConf, err = danmClient.DanmV1().TenantConfigs().Get(context.TODO(), tconf.ObjectMeta.Name, metav1.GetOptions{})
     if err != nil {
       return nil, wasRefreshed, err
     }

@@ -19,6 +19,8 @@ limitations under the License.
 package fake
 
 import (
+	"context"
+
 	danmv1 "github.com/nokia/danm/crd/apis/danm/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
@@ -38,7 +40,7 @@ var tenantconfigsResource = schema.GroupVersionResource{Group: "danm.k8s.io", Ve
 var tenantconfigsKind = schema.GroupVersionKind{Group: "danm.k8s.io", Version: "v1", Kind: "TenantConfig"}
 
 // Get takes name of the tenantConfig, and returns the corresponding tenantConfig object, and an error if there is any.
-func (c *FakeTenantConfigs) Get(name string, options v1.GetOptions) (result *danmv1.TenantConfig, err error) {
+func (c *FakeTenantConfigs) Get(ctx context.Context, name string, options v1.GetOptions) (result *danmv1.TenantConfig, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootGetAction(tenantconfigsResource, name), &danmv1.TenantConfig{})
 	if obj == nil {
@@ -48,7 +50,7 @@ func (c *FakeTenantConfigs) Get(name string, options v1.GetOptions) (result *dan
 }
 
 // List takes label and field selectors, and returns the list of TenantConfigs that match those selectors.
-func (c *FakeTenantConfigs) List(opts v1.ListOptions) (result *danmv1.TenantConfigList, err error) {
+func (c *FakeTenantConfigs) List(ctx context.Context, opts v1.ListOptions) (result *danmv1.TenantConfigList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootListAction(tenantconfigsResource, tenantconfigsKind, opts), &danmv1.TenantConfigList{})
 	if obj == nil {
@@ -69,13 +71,13 @@ func (c *FakeTenantConfigs) List(opts v1.ListOptions) (result *danmv1.TenantConf
 }
 
 // Watch returns a watch.Interface that watches the requested tenantConfigs.
-func (c *FakeTenantConfigs) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *FakeTenantConfigs) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
 		InvokesWatch(testing.NewRootWatchAction(tenantconfigsResource, opts))
 }
 
 // Create takes the representation of a tenantConfig and creates it.  Returns the server's representation of the tenantConfig, and an error, if there is any.
-func (c *FakeTenantConfigs) Create(tenantConfig *danmv1.TenantConfig) (result *danmv1.TenantConfig, err error) {
+func (c *FakeTenantConfigs) Create(ctx context.Context, tenantConfig *danmv1.TenantConfig, opts v1.CreateOptions) (result *danmv1.TenantConfig, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootCreateAction(tenantconfigsResource, tenantConfig), &danmv1.TenantConfig{})
 	if obj == nil {
@@ -85,7 +87,7 @@ func (c *FakeTenantConfigs) Create(tenantConfig *danmv1.TenantConfig) (result *d
 }
 
 // Update takes the representation of a tenantConfig and updates it. Returns the server's representation of the tenantConfig, and an error, if there is any.
-func (c *FakeTenantConfigs) Update(tenantConfig *danmv1.TenantConfig) (result *danmv1.TenantConfig, err error) {
+func (c *FakeTenantConfigs) Update(ctx context.Context, tenantConfig *danmv1.TenantConfig, opts v1.UpdateOptions) (result *danmv1.TenantConfig, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootUpdateAction(tenantconfigsResource, tenantConfig), &danmv1.TenantConfig{})
 	if obj == nil {
@@ -95,22 +97,22 @@ func (c *FakeTenantConfigs) Update(tenantConfig *danmv1.TenantConfig) (result *d
 }
 
 // Delete takes name of the tenantConfig and deletes it. Returns an error if one occurs.
-func (c *FakeTenantConfigs) Delete(name string, options *v1.DeleteOptions) error {
+func (c *FakeTenantConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
 		Invokes(testing.NewRootDeleteAction(tenantconfigsResource, name), &danmv1.TenantConfig{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *FakeTenantConfigs) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(tenantconfigsResource, listOptions)
+func (c *FakeTenantConfigs) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
+	action := testing.NewRootDeleteCollectionAction(tenantconfigsResource, listOpts)
 
 	_, err := c.Fake.Invokes(action, &danmv1.TenantConfigList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched tenantConfig.
-func (c *FakeTenantConfigs) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *danmv1.TenantConfig, err error) {
+func (c *FakeTenantConfigs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *danmv1.TenantConfig, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewRootPatchSubresourceAction(tenantconfigsResource, name, pt, data, subresources...), &danmv1.TenantConfig{})
 	if obj == nil {

@@ -19,6 +19,7 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"time"
 
 	v1 "github.com/nokia/danm/crd/apis/danm/v1"
@@ -37,14 +38,14 @@ type DanmNetsGetter interface {
 
 // DanmNetInterface has methods to work with DanmNet resources.
 type DanmNetInterface interface {
-	Create(*v1.DanmNet) (*v1.DanmNet, error)
-	Update(*v1.DanmNet) (*v1.DanmNet, error)
-	Delete(name string, options *metav1.DeleteOptions) error
-	DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	Get(name string, options metav1.GetOptions) (*v1.DanmNet, error)
-	List(opts metav1.ListOptions) (*v1.DanmNetList, error)
-	Watch(opts metav1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.DanmNet, err error)
+	Create(ctx context.Context, danmNet *v1.DanmNet, opts metav1.CreateOptions) (*v1.DanmNet, error)
+	Update(ctx context.Context, danmNet *v1.DanmNet, opts metav1.UpdateOptions) (*v1.DanmNet, error)
+	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.DanmNet, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*v1.DanmNetList, error)
+	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.DanmNet, err error)
 	DanmNetExpansion
 }
 
@@ -63,20 +64,20 @@ func newDanmNets(c *DanmV1Client, namespace string) *danmNets {
 }
 
 // Get takes name of the danmNet, and returns the corresponding danmNet object, and an error if there is any.
-func (c *danmNets) Get(name string, options metav1.GetOptions) (result *v1.DanmNet, err error) {
+func (c *danmNets) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.DanmNet, err error) {
 	result = &v1.DanmNet{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("danmnets").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of DanmNets that match those selectors.
-func (c *danmNets) List(opts metav1.ListOptions) (result *v1.DanmNetList, err error) {
+func (c *danmNets) List(ctx context.Context, opts metav1.ListOptions) (result *v1.DanmNetList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -87,13 +88,13 @@ func (c *danmNets) List(opts metav1.ListOptions) (result *v1.DanmNetList, err er
 		Resource("danmnets").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested danmNets.
-func (c *danmNets) Watch(opts metav1.ListOptions) (watch.Interface, error) {
+func (c *danmNets) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -104,71 +105,74 @@ func (c *danmNets) Watch(opts metav1.ListOptions) (watch.Interface, error) {
 		Resource("danmnets").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a danmNet and creates it.  Returns the server's representation of the danmNet, and an error, if there is any.
-func (c *danmNets) Create(danmNet *v1.DanmNet) (result *v1.DanmNet, err error) {
+func (c *danmNets) Create(ctx context.Context, danmNet *v1.DanmNet, opts metav1.CreateOptions) (result *v1.DanmNet, err error) {
 	result = &v1.DanmNet{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("danmnets").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(danmNet).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a danmNet and updates it. Returns the server's representation of the danmNet, and an error, if there is any.
-func (c *danmNets) Update(danmNet *v1.DanmNet) (result *v1.DanmNet, err error) {
+func (c *danmNets) Update(ctx context.Context, danmNet *v1.DanmNet, opts metav1.UpdateOptions) (result *v1.DanmNet, err error) {
 	result = &v1.DanmNet{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("danmnets").
 		Name(danmNet.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(danmNet).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the danmNet and deletes it. Returns an error if one occurs.
-func (c *danmNets) Delete(name string, options *metav1.DeleteOptions) error {
+func (c *danmNets) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("danmnets").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *danmNets) DeleteCollection(options *metav1.DeleteOptions, listOptions metav1.ListOptions) error {
+func (c *danmNets) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("danmnets").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched danmNet.
-func (c *danmNets) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1.DanmNet, err error) {
+func (c *danmNets) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.DanmNet, err error) {
 	result = &v1.DanmNet{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("danmnets").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

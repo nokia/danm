@@ -76,7 +76,7 @@ func NewWatcher(cfg *rest.Config, stopChan  *chan struct{}) (*NetWatcher,error) 
   if len(netWatcher.Controllers) == 0 {
     return nil, errors.New("no network management APIs are installed in the cluster, netwatcher cannot start!")
   }
-  log.Println("Number of watcher's started for recognized APIs:" + strconv.Itoa(len(netWatcher.Controllers)))
+  log.Println("Number of watchers started for recognized APIs:" + strconv.Itoa(len(netWatcher.Controllers)))
   return netWatcher, nil
 }
 
@@ -93,7 +93,7 @@ func (netWatcher *NetWatcher) WatchErrorHandler(r *cache.Reflector, err error) {
   }
   //The default K8s client retry mechanism expires after a certain amount of time, and just gives-up
   //It is better to shutdown the whole process now and freshly re-build the watchers, than risking becoming a permanent zombie
-  close(*netWatcher.StopChan)
+  *netWatcher.StopChan <- struct{}{}
   //Give some time for gracefully terminating the connections
   time.Sleep(5*time.Second)
   log.Println("ERROR: One of the API watchers closed unexpectedly with error:" + err.Error() + " shutting down NetWatcher!")

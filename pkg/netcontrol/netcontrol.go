@@ -377,6 +377,7 @@ func GetNetworkFromInterface(danmClient danmclientset.Interface, iface datastruc
     netType = DanmNetKind
     dnet, err := danmClient.DanmV1().DanmNets(nameSpace).Get(iface.Network, meta_v1.GetOptions{})
     if err == nil && dnet.ObjectMeta.Name == iface.Network  {
+      dnet.TypeMeta.Kind = netType
       return dnet, nil
     }
   } else if iface.TenantNetwork != "" {

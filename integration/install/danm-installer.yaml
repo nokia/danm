@@ -1,0 +1,30 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: danm-installer
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      serviceAccountName: danm-installer
+      containers:
+        - name: danm-installer
+          volumeMounts:
+            - name: danm-installer-config
+              mountPath: /config
+
+          # Update the next two lines as needed
+          image: damn-installer:latest
+          imagePullPolicy: IfNotPresent
+
+      volumes:
+        - name: danm-installer-config
+          configMap:
+            name: danm-installer-config
+      terminationGracePeriodSeconds: 0
+      restartPolicy: OnFailure
+
+      # Add this if needed:
+#      imagePullSecrets:
+#        - name: my-registry-secret

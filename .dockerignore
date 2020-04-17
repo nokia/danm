@@ -6,11 +6,11 @@
 
 .dockerignore
 scm/build/Dockerfile
+scm/build/Dockerfile.install
 
 build_danm.sh
 run_uts.sh
 
-integration/
 example/
 vendor/
 ut/

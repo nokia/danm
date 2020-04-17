@@ -24,6 +24,9 @@
 #   unit testing, or if a developer wants to run an instance
 #   off the builder image as a work environment.
 #
+# - `IMAGE_PUSH`. If defined, push images to registry right
+#   after building.
+#
 
 # error handling with trap taken from https://unix.stackexchange.com/questions/79648/how-to-trigger-error-using-trap-command/157327
 unset killer_sig 
@@ -70,10 +73,12 @@ if [[ ( "$TRAVIS_PIPELINE" = "buildah" ) || ( "$TRAVIS_PIPELINE" = ""  && -x "$(
 then
   BUILD_COMMAND="buildah bud"
   TAG_COMMAND="buildah tag"
+  PUSH_COMMAND="buildah push"
 elif [[ ( "$TRAVIS_PIPELINE" = "docker" ) || ( "$TRAVIS_PIPELINE" = ""  && -x "$(command -v docker)" ) ]]
 then
   BUILD_COMMAND="docker image build"
   TAG_COMMAND="docker image tag"
+  PUSH_COMMAND="docker image push"
 else
  echo 'The build process requires docker or buildah/podman installed. Please install any of these and make sure these are executable'
  exit 1
@@ -125,6 +130,32 @@ do
   # Tag image as "latest", too
   ${TAG_COMMAND} ${TAG_PREFIX}${plugin}:${COMMIT_HASH} ${TAG_PREFIX}${plugin}:latest
 
+  # Push to registry if configured to do so
+  if [ -n "${IMAGE_PUSH}" ]
+  then
+    ${PUSH_COMMAND} ${TAG_PREFIX}${plugin}:${COMMIT_HASH}
+    ${PUSH_COMMAND} ${TAG_PREFIX}${plugin}:latest
+  fi
+
   # Make sure we use the cache on the 2nd and subsequent iterations.
   unset FIRST_BUILD_EXTRA_BUILD_ARGS
 done
+
+#
+# Build the installer job image. This is a separate Dockerfile as it has no direct
+# overlap with the main binaries.
+#
+echo Building installer, version ${COMMIT_HASH}
+${BUILD_COMMAND} \
+  ${EXTRA_BUILD_ARGS} \
+  --tag ${TAG_PREFIX}damn-installer:${COMMIT_HASH} \
+  --file scm/build/Dockerfile.install \
+  .
+
+${TAG_COMMAND} ${TAG_PREFIX}damn-installer:${COMMIT_HASH} ${TAG_PREFIX}damn-installer:latest
+
+if [ -n "${IMAGE_PUSH}" ]
+then
+  ${PUSH_COMMAND} ${TAG_PREFIX}damn-installer:${COMMIT_HASH}
+  ${PUSH_COMMAND} ${TAG_PREFIX}damn-installer:latest
+fi

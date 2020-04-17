@@ -55,7 +55,15 @@ The result will four container images:
 
 ## Deployment
 
-The method of deploying the whole DANM suite into a Kubernetes cluster is the following.
+As a quicker but currently experimental option, please also take a look at
+[Deploying using an installer job](deployment-installer-job.md). This option integrates all
+of the steps mentioned below, into a single one-stop-shop installer. However, please treat
+this option as experimental for now -- and only apply it on a Kubernetes cluster where you
+feel comfortable with tolerating the impact if something goes wrong. Also, please let
+us know any issues you encounter!
+
+Otherwise, the manual method of deploying the whole DANM suite into a Kubernetes cluster is
+the following:
 
 ### 1. Extend the Kubernetes API
 

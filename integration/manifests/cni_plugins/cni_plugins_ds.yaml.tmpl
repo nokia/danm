@@ -1,0 +1,41 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: danm-cni
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      danm.k8s.io: danm-cni
+  template:
+    metadata:
+      labels:
+        danm.k8s.io: danm-cni
+    spec:
+      containers:
+        - name: danm-cni
+          image: {{ getenv "IMAGE_REGISTRY_PREFIX" }}danm-cni-plugins{{ getenv "IMAGE_TAG" }}
+          volumeMounts:
+            - name: host-cni
+              mountPath: /host/cni
+            - name: host-net-d
+              mountPath: /host/net.d
+            - name: config
+              mountPath: /config
+{{- if getenv "IMAGE_PULL_SECRET" }}
+      imagePullSecrets:
+        - name: {{ getenv "IMAGE_PULL_SECRET" }}
+{{- end }}
+      hostNetwork: true
+      terminationGracePeriodSeconds: 0
+      volumes:
+        - name: host-cni
+          hostPath:
+            path: /opt/cni/bin
+        - name: host-net-d
+          hostPath:
+            path: {{ getenv "CNI_DIR" }}
+        - name: config
+          secret:
+            secretName: danm-config

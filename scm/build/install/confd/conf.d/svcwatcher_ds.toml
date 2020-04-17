@@ -1,0 +1,3 @@
+[template]
+src = "svcwatcher_ds.yaml.tmpl"
+dest = "/integration/manifests/svcwatcher/svcwatcher_ds.yaml"

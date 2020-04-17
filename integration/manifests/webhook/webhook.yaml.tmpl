@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: danm-webhook
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: caas:danm-webhook
+rules:
+- apiGroups:
+  - danm.k8s.io
+  resources:
+  - tenantconfigs
+  - danmeps
+  verbs: [ "*" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: caas:danm-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: caas:danm-webhook
+subjects:
+- kind: ServiceAccount
+  name: danm-webhook
+  namespace: kube-system
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: danm-webhook-config
+  namespace: kube-system
+webhooks:
+  - name: danm-netvalidation.nokia.k8s.io
+    clientConfig:
+      service:
+        name: danm-webhook-svc
+        namespace: kube-system
+        path: "/netvalidation"
+      caBundle: {{ base64Encode (getenv "KUBERNETES_CA_CERTIFICATE") }}
+    rules:
+      # UPDATE IS TEMPORARILY REMOVED DUE TO:https://github.com/nokia/danm/issues/144
+      - operations: ["CREATE"]
+        apiGroups: ["danm.k8s.io"]
+        apiVersions: ["v1"]
+        resources: ["danmnets","clusternetworks","tenantnetworks"]
+    failurePolicy: Fail
+  - name: danm-configvalidation.nokia.k8s.io
+    clientConfig:
+      service:
+        name: danm-webhook-svc
+        namespace: kube-system
+        path: "/confvalidation"
+      caBundle: {{ base64Encode (getenv "KUBERNETES_CA_CERTIFICATE") }}
+    rules:
+      - operations: ["CREATE","UPDATE"]
+        apiGroups: ["danm.k8s.io"]
+        apiVersions: ["v1"]
+        resources: ["tenantconfigs"]
+    failurePolicy: Fail
+  - name: danm-netdeletion.nokia.k8s.io
+    clientConfig:
+      service:
+        name: danm-webhook-svc
+        namespace: kube-system
+        path: "/netdeletion"
+      caBundle: {{ base64Encode (getenv "KUBERNETES_CA_CERTIFICATE") }}
+    rules:
+      - operations: ["DELETE"]
+        apiGroups: ["danm.k8s.io"]
+        apiVersions: ["v1"]
+        resources: ["danmnets","clusternetworks","tenantnetworks"]
+    failurePolicy: Fail
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: danm-webhook-svc
+  namespace: kube-system
+  labels:
+    danm: webhook
+spec:
+  ports:
+  - name: webhook
+    port: 443
+    targetPort: 8443
+  selector:
+    danm: webhook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: danm-webhook-deployment
+  namespace: kube-system
+  labels:
+    danm: webhook
+spec:
+  selector:
+    matchLabels:
+     danm: webhook
+  template:
+    metadata:
+      name: danm-webhook
+      labels:
+        danm: webhook
+    spec:
+      serviceAccountName: danm-webhook
+      containers:
+        - name: danm-webhook
+          image: {{ getenv "IMAGE_REGISTRY_PREFIX" }}webhook{{ getenv "IMAGE_TAG" }}
+          command: [ "/usr/local/bin/webhook", "-tls-cert-bundle=/etc/webhook/certs/cert.pem", "-tls-private-key-file=/etc/webhook/certs/key.pem", "bind-port=8443" ]
+          imagePullPolicy: {{ (getenv "IMAGE_PULL_POLICY") }}
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+{{- if getenv "IMAGE_PULL_SECRET" }}
+      imagePullSecrets:
+        - name: {{ getenv "IMAGE_PULL_SECRET" }}
+{{- end }}
+      # Configure the directory holding the Webhook's server certificates
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: danm-webhook-certs

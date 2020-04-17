@@ -1,0 +1,3 @@
+[template]
+src = "danm-config.yaml.tmpl"
+dest = "/config-out/resources/danm-config.yaml"

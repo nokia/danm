@@ -19,7 +19,9 @@ import (
   "k8s.io/client-go/tools/cache"
 )
 
-const(
+const (
+  MaxRetryCount = 5
+  RetryInterval = 100
   DanmNetKind = "DanmNet"
   TenantNetworkKind = "TenantNetwork"
   ClusterNetworkKind = "ClusterNetwork"
@@ -50,28 +52,49 @@ func NewWatcher(cfg *rest.Config, stopChan  *chan struct{}) (*NetWatcher,error) 
   if err != nil {
     return nil, err
   }
-  _, err = dnetClient.DanmV1().DanmNets("").List(context.TODO(), meta_v1.ListOptions{})
-  if err == nil {
-    log.Println("INFO: DanmNet API seems to be installed in the cluster")
-    netWatcher.createDnetInformer(dnetClient)
+  for i := 0; i < MaxRetryCount; i++ {
+    log.Println("INFO: Trying to discover DanmNet API in the cluster...")
+    _, err = dnetClient.DanmV1().DanmNets("").List(context.TODO(), meta_v1.ListOptions{})
+    if err != nil {
+      log.Println("INFO: DanmNet discovery query failed with error:" + err.Error())
+      time.Sleep(RetryInterval * time.Millisecond)
+    } else {
+      log.Println("INFO: DanmNet API seems to be installed in the cluster")
+      netWatcher.createDnetInformer(dnetClient)
+      break
+    }
   }
   tnetClient, err := danmclientset.NewForConfig(cfg)
   if err != nil {
     return nil, err
   }
-  _, err = tnetClient.DanmV1().TenantNetworks("").List(context.TODO(), meta_v1.ListOptions{})
-  if err == nil {
-    log.Println("INFO: TenantNetwork API seems to be installed in the cluster")
-    netWatcher.createTnetInformer(tnetClient)
+  for i := 0; i < MaxRetryCount; i++ {
+    log.Println("INFO: Trying to discover TenantNetwork API in the cluster...")
+    _, err = tnetClient.DanmV1().TenantNetworks("").List(context.TODO(), meta_v1.ListOptions{})
+    if err != nil {
+      log.Println("INFO: TenantNetwork discovery query failed with error:" + err.Error())
+      time.Sleep(RetryInterval * time.Millisecond)
+    } else {
+      log.Println("INFO: TenantNetwork API seems to be installed in the cluster!")
+      netWatcher.createTnetInformer(tnetClient)
+      break
+    }
   }
   cnetClient, err := danmclientset.NewForConfig(cfg)
   if err != nil {
     return nil, err
   }
-  _, err = cnetClient.DanmV1().ClusterNetworks().List(context.TODO(), meta_v1.ListOptions{})
-  if err == nil {
-    log.Println("INFO: ClusterNetwork API seems to be installed in the cluster")
-    netWatcher.createCnetInformer(cnetClient)
+  for i := 0; i < MaxRetryCount; i++ {
+    log.Println("INFO: Trying to discover ClusterNetwork API in the cluster...")
+    _, err = cnetClient.DanmV1().ClusterNetworks().List(context.TODO(), meta_v1.ListOptions{})
+    if err != nil {
+      log.Println("INFO: ClusterNetwork discovery query failed with error:" + err.Error())
+      time.Sleep(RetryInterval * time.Millisecond)
+    } else {
+      log.Println("INFO: ClusterNetwork API seems to be installed in the cluster")
+      netWatcher.createCnetInformer(cnetClient)
+      break
+    }
   }
   if len(netWatcher.Controllers) == 0 {
     return nil, errors.New("no network management APIs are installed in the cluster, netwatcher cannot start!")

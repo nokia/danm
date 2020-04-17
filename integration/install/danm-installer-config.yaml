@@ -1,0 +1,109 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: kube-system
+  name: danm-installer-config
+data:
+  #
+  # DANM deployment mode. This MUST be either "lightweight" or "production". Please see the DANM user guide for
+  # details on the two modes.
+  #
+  deploy_mode: production
+
+  #
+  # CNI configuration directory. Typically, this is "/etc/cni/net.d". This is the directory where your
+  # current (bootstrap) CNI configuration is located, too.
+  #
+  cni_dir: /etc/cni/net.d
+
+  #
+  # CNI naming scheme. See section "Naming container interfaces" in the user guide for a more detailed
+  # discussion. Set this parameter to "legacy" if you wish container interface names to be set exactly
+  # according to DanmNet.Spec.Options.container_prefix, or to an empty string if you wish the first
+  # interface to always be named "eth0".
+  #
+  cni_naming_scheme: ""
+
+  #
+  # [OPTIONAL] Kubernetes API Root CA certificate. If left blank, the installer will obtain the
+  # API server certificate from the Kubernetes API. Note, however, that placing a certificate here
+  # is technically more secure (as it provides external verification of the CA certificate, rather
+  # than blindly trusting the certificate that we see from the server) and also more future-proof
+  # if the individual API server's certificate ever were to change in the future, to put the Root
+  # CA certificate here. You can obtain this, for example, by running:
+  #
+  # kubectl config view \
+  #   --flatten \
+  #   -o jsonpath='{.clusters[0].cluster.certificate-authority-data} \
+  #   | base64 -d
+  #
+#  api_ca_cert: |
+#    -----BEGIN CERTIFICATE-----
+#    VGhpcyBJcyBBIFBsYWNlaG9sZGVyIFN0cmluZy4uLiBUaGlzIElzIEEgUGxhY2Vo
+#    ...
+#    VGhpcyBpcyB0aGUgZW5kIG9mIGEgcGxhY2Vob2xkZXIgc3RyaW5nCg==
+#    -----END CERTIFICATE-----
+
+  #
+  # This is the type of the CNI plugin used for your default (bootstrap) network.
+  # The value can also be found in the "type" field of your bootstrap CNI configuration
+  # file, eg. "cat ${cni_dir}/${default_cni_network_id}.conf | jq -Mr '.type'"
+  #
+  default_cni_type: flannel
+
+  #
+  # The name of your bootstrap CNI configuration file, without the `.conf` extension.
+  # This means that on each node in your cluster, in the ${cni_dir} directory, a file
+  # with the name of "${default_cni_network_id}.conf" must exist. Alternatively,
+  # a file with this name will be created if the ${default_cni_config_data} parameter
+  # is also provided (below).
+  #
+  default_cni_network_id: 10-flannel
+
+  #
+  # [OPTIONAL] Bootstrap CNI configuration data. Typically, your bootstrap CNI plugin
+  # should already be configured, so using this option should not be necessary. However,
+  # there may be situations where using this option may be useful to distribute an
+  # alternative configuration file for your bootstrap CNI plugin. If provided, the
+  # contents of this variable are going to be written to a file named
+  # "${default_cni_network_id}.conf" as above.
+  #
+#  default_cni_config_data: |
+#    {
+#      "cniVersion": "0.3.1",
+#      "type": "flannel",
+#      "delegate": {
+#        "hairpinMode": true,
+#        "isDefaultGateway": true
+#      }
+#    }
+
+  #
+  # [OPTIONAL] A prefix (such as a registry name) to be included in each container image.
+  # Note that this can be any prefix you like, but if it is a registry name, then
+  # the value specified here needs to include the trailing slash.
+  #
+  # For example, if you wish to pull your "netwatcher" image from
+  # "my-registry.example.com/namespace/netwatcher", then set this value to
+  # "my-registry.example.com/namespace/". The same prefix will be applied for
+  # all images.
+  #
+#  image_registry_prefix: my-registry.example.com/namespace/
+
+  #
+  # [OPTIONAL] Image tag for each image. Defaults to "latest" if none specified.
+  #
+#  image_tag: latest
+
+  #
+  # [OPTIONAL] If your registry needs authentication, then this is the name
+  # of a Kubernetes secret with registry credentials. This secret must already
+  # exist and is not created by the installer.
+  #
+#  image_pull_secret: my-registry-secret
+
+  #
+  # Image Pull policy. Can be "Always", "Never", or "IfNotPresent".
+  #
+  image_pull_policy: IfNotPresent

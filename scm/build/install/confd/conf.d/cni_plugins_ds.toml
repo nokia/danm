@@ -1,0 +1,3 @@
+[template]
+src = "cni_plugins_ds.yaml.tmpl"
+dest = "/integration/manifests/cni_plugins/cni_plugins_ds.yaml"

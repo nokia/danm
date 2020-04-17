@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: svcwatcher
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      danm.k8s.io: svcwatcher
+  template:
+    metadata:
+      labels:
+        danm.k8s.io: svcwatcher
+    spec:
+      serviceAccountName: svcwatcher
+      dnsPolicy: ClusterFirst
+      nodeSelector:
+        "node-role.kubernetes.io/master": ""
+      containers:
+        - name: svcwatcher
+          image: {{ getenv "IMAGE_REGISTRY_PREFIX" }}svcwatcher{{ getenv "IMAGE_TAG" }}
+          imagePullPolicy: {{ (getenv "IMAGE_PULL_POLICY") }}
+          args:
+            - "--logtostderr"
+{{- if getenv "IMAGE_PULL_SECRET" }}
+      imagePullSecrets:
+        - name: {{ getenv "IMAGE_PULL_SECRET" }}
+{{- end }}
+      tolerations:
+       - effect: NoSchedule
+         operator: Exists
+       - effect: NoExecute
+         operator: Exists
+      terminationGracePeriodSeconds: 0

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: netwatcher
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      danm.k8s.io: netwatcher
+  template:
+    metadata:
+      labels:
+        danm.k8s.io: netwatcher
+    spec:
+      serviceAccountName: netwatcher
+      hostNetwork: true
+      dnsPolicy: ClusterFirst
+      hostIPC: true
+      hostPID: true
+      containers:
+        - name: netwatcher
+          image: {{ getenv "IMAGE_REGISTRY_PREFIX" }}netwatcher{{ getenv "IMAGE_TAG" }}
+          imagePullPolicy: {{ (getenv "IMAGE_PULL_POLICY") }}
+          securityContext:
+            capabilities:
+              add:
+                - SYS_PTRACE
+                - SYS_ADMIN
+                - NET_ADMIN
+                - NET_RAW
+{{- if getenv "IMAGE_PULL_SECRET" }}
+      imagePullSecrets:
+        - name: {{ getenv "IMAGE_PULL_SECRET" }}
+{{- end }}
+      tolerations:
+       - effect: NoSchedule
+         operator: Exists
+       - effect: NoExecute
+         operator: Exists
+      terminationGracePeriodSeconds: 0

@@ -1,0 +1,41 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: kube-system
+  name: danm-config
+type: Opaque
+stringData:
+  bootstrap_network: {{ getenv "DEFAULT_CNI_NETWORK_ID" }}
+  00-danm.conf: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "danm_meta_cni",
+      "type": "danm",
+      "kubeconfig": "{{ getenv "CNI_DIR" }}/danm-kubeconfig",
+      "cniDir": "{{ getenv "CNI_DIR" }}",
+      "namingScheme": "{{ getenv "CNI_NAMING_SCHEME" }}"
+    }
+  danm-kubeconfig: |
+    ---
+    apiVersion: v1
+    kind: Config
+    current-context: default
+    clusters:
+      - cluster:
+          certificate-authority-data: {{ base64Encode (getenv "KUBERNETES_CA_CERTIFICATE") }}
+          server: https://{{ getenv "KUBERNETES_HOST_PORT" }}
+        name: kubernetes
+    contexts:
+      - context:
+          cluster: kubernetes
+          user: danm
+        name: default
+    users:
+      - name: danm
+        user:
+          token: {{ getenv "SERVICEACCOUNT_TOKEN" }}
+    preferences: {}
+{{- if getenv "DEFAULT_CNI_CONFIG_DATA" }}
+  bootstrap_cni_config_data: {{ base64Encode (getenv "DEFAULT_CNI_CONFIG_DATA") }}
+{{- end }}

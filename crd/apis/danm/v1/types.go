@@ -96,7 +96,6 @@ type DanmEpIface struct {
   Name        string            `json:"Name"`
   Address     string            `json:"Address"`
   AddressIPv6 string            `json:"AddressIPv6"`
-  //DEPRECATED, WILL BE REMOVED
   MacAddress  string            `json:"MacAddress"`
   Proutes     map[string]string `json:"proutes"`
   Proutes6    map[string]string `json:"proutes6"`

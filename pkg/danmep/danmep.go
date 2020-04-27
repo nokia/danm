@@ -4,6 +4,7 @@ import (
   "context"
   "errors"
   "fmt"
+  "net"
   "os"
   "log"
   "runtime"
@@ -19,6 +20,7 @@ import (
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/netcontrol"
   "github.com/satori/go.uuid"
+  "github.com/vishvananda/netlink"
 )
 
 type sysctlFunction func(*danmtypes.DanmEp) bool
@@ -251,12 +253,24 @@ func CreateDanmEp(danmClient danmclientset.Interface, namingScheme string, isIpR
       return nil, netInfo, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }
   }
+  var hwAddress net.HardwareAddr
+  if iface.Device != "" {
+    vfLinkName, err := sriov_utils.GetVFLinkNames(iface.Device)
+    if err == nil {
+      vf, _ := netlink.LinkByName(vfLinkName)
+      if vf.Attrs() != nil {
+        hwAddress = vf.Attrs().HardwareAddr
+      }
+    }
+  }
   epSpec := danmtypes.DanmEpIface {
     Name: calculateIfaceName(namingScheme, netInfo.Spec.Options.Prefix, iface.DefaultIfaceName, iface.SequenceId),
     Address:     ip4,
     AddressIPv6: ip6,
     Proutes:     iface.Proutes,
     Proutes6:    iface.Proutes6,
+    DeviceID:    iface.Device,
+    MacAddress:  hwAddress.String(),
   }
   ep, err := createDanmEp(danmClient, epSpec, netInfo, args)
   if err != nil {

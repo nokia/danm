@@ -174,7 +174,7 @@ func PostProcessInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   }
   isVfAttachedToDpdkDriver,_ := sriov_utils.HasDpdkDriver(ep.Spec.Iface.DeviceID)
   if isVfAttachedToDpdkDriver {
-    err = createDummyInterface(ep)
+    err = createDummyInterface(ep, dnet)
     if err != nil {
       return errors.New("failed to create dummy kernel interface for " + ep.Spec.Iface.Name + " because:" + err.Error())
     }

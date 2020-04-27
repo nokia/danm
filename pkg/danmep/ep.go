@@ -261,15 +261,39 @@ func deleteEp(ep *danmtypes.DanmEp) error {
   return deleteContainerIface(ep)
 }
 
-func createDummyInterface(ep *danmtypes.DanmEp) error {
+func createDummyInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
+  origDummyName := ep.Spec.Iface.Name
+  if dnet.Spec.Options.Vlan != 0 {
+    origDummyName = ep.ObjectMeta.Name
+  }
   dummy := &netlink.Dummy {
     LinkAttrs: netlink.LinkAttrs {
-      Name: ep.Spec.Iface.Name,
+      Name: origDummyName,
+      Alias: ep.Spec.Iface.DeviceID,
     },
   }
   err := netlink.LinkAdd(dummy)
   if err != nil {
     return errors.New("cannot create dummy interface for DPDK because:" + err.Error())
+  }
+  //To convey VLAN ID assigment we create a VLAN on top of the dummy, and tag it with the desired name instead of the underlying dummy
+  if dnet.Spec.Options.Vlan != 0 {
+    iface, err := netlink.LinkByName(origDummyName)
+    if err != nil {
+      return errors.New("cannot find freshly created dummy interface because:" + err.Error())
+    }
+    dummyVlan := &netlink.Vlan {
+      VlanId: dnet.Spec.Options.Vlan,
+      LinkAttrs: netlink.LinkAttrs {
+        ParentIndex: iface.Attrs().Index,
+        Name: ep.Spec.Iface.Name,
+        Alias: ep.Spec.Iface.DeviceID,
+      },
+    }
+    err = netlink.LinkAdd(dummyVlan)
+    if err != nil {
+      return errors.New("cannot create VLAN on dummy interface for DPDK because:" + err.Error())
+    }
   }
   iface, err := netlink.LinkByName(ep.Spec.Iface.Name)
   if err != nil {

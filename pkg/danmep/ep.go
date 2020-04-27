@@ -263,36 +263,55 @@ func deleteEp(ep *danmtypes.DanmEp) error {
 
 func createDummyInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   origDummyName := ep.Spec.Iface.Name
+  origDummyMac,_  := net.ParseMAC(ep.Spec.Iface.MacAddress)
   if dnet.Spec.Options.Vlan != 0 {
-    origDummyName = ep.ObjectMeta.Name
+    origDummyName = ep.ObjectMeta.Name[0:14]
   }
   dummy := &netlink.Dummy {
     LinkAttrs: netlink.LinkAttrs {
       Name: origDummyName,
-      Alias: ep.Spec.Iface.DeviceID,
     },
+  }
+  if origDummyMac.String() != "" {
+    dummy.LinkAttrs.HardwareAddr = origDummyMac
   }
   err := netlink.LinkAdd(dummy)
   if err != nil {
     return errors.New("cannot create dummy interface for DPDK because:" + err.Error())
   }
-  //To convey VLAN ID assigment we create a VLAN on top of the dummy, and tag it with the desired name instead of the underlying dummy
-  if dnet.Spec.Options.Vlan != 0 {
+  if dnet.Spec.Options.Vlan == 0 {
+    err = netlink.LinkSetAlias(dummy, ep.Spec.Iface.DeviceID)
+    if err != nil {
+      return errors.New("cannot add PCI ID alias to dummy interface for DPDK because:" + err.Error())
+    }
+  } else {
+  //To convey VLAN ID assigment we create a VLAN on top of the dummy, and tag that with the desired final iface name
+    err = netlink.LinkSetUp(dummy)
+    if err != nil {
+      return errors.New("cannot set dummy link UP because:" + err.Error())
+    }
     iface, err := netlink.LinkByName(origDummyName)
     if err != nil {
       return errors.New("cannot find freshly created dummy interface because:" + err.Error())
     }
+    vfMac, _ := net.ParseMAC(ep.Spec.Iface.MacAddress)
     dummyVlan := &netlink.Vlan {
       VlanId: dnet.Spec.Options.Vlan,
       LinkAttrs: netlink.LinkAttrs {
         ParentIndex: iface.Attrs().Index,
         Name: ep.Spec.Iface.Name,
-        Alias: ep.Spec.Iface.DeviceID,
       },
+    }
+    if vfMac.String() != "" {
+      dummyVlan.LinkAttrs.HardwareAddr = vfMac
     }
     err = netlink.LinkAdd(dummyVlan)
     if err != nil {
       return errors.New("cannot create VLAN on dummy interface for DPDK because:" + err.Error())
+    }
+    err = netlink.LinkSetAlias(dummyVlan, ep.Spec.Iface.DeviceID)
+    if err != nil {
+      return errors.New("cannot add PCI ID alias to VLAN dummy interface for DPDK because:" + err.Error())
     }
   }
   iface, err := netlink.LinkByName(ep.Spec.Iface.Name)

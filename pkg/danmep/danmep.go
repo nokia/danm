@@ -253,16 +253,6 @@ func CreateDanmEp(danmClient danmclientset.Interface, namingScheme string, isIpR
       return nil, netInfo, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
     }
   }
-  var hwAddress net.HardwareAddr
-  if iface.Device != "" {
-    vfLinkName, err := sriov_utils.GetVFLinkNames(iface.Device)
-    if err == nil {
-      vf, _ := netlink.LinkByName(vfLinkName)
-      if vf.Attrs() != nil {
-        hwAddress = vf.Attrs().HardwareAddr
-      }
-    }
-  }
   epSpec := danmtypes.DanmEpIface {
     Name: calculateIfaceName(namingScheme, netInfo.Spec.Options.Prefix, iface.DefaultIfaceName, iface.SequenceId),
     Address:     ip4,
@@ -270,7 +260,13 @@ func CreateDanmEp(danmClient danmclientset.Interface, namingScheme string, isIpR
     Proutes:     iface.Proutes,
     Proutes6:    iface.Proutes6,
     DeviceID:    iface.Device,
-    MacAddress:  hwAddress.String(),
+  }
+  var hwAddress net.HardwareAddr
+  if iface.Device != "" {
+    hwAddress = getVfMac(iface.Device)
+    if hwAddress.String() != "" {
+      epSpec.MacAddress = hwAddress.String()
+    }
   }
   ep, err := createDanmEp(danmClient, epSpec, netInfo, args)
   if err != nil {
@@ -375,4 +371,20 @@ func DeleteDanmEp(danmClient danmclientset.Interface, ep *danmtypes.DanmEp, dnet
     }
   }
   return danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(context.TODO(), ep.ObjectMeta.Name, meta_v1.DeleteOptions{})
+}
+
+func getVfMac(pciId string) net.HardwareAddr {
+  pfName,_ := sriov_utils.GetPfName(pciId)
+  vfId, err := sriov_utils.GetVfid(pciId, pfName)
+  if err != nil {
+    return net.HardwareAddr{}
+  }
+  pfLink, err := netlink.LinkByName(pfName)
+  if err != nil {
+    return net.HardwareAddr{}
+  } 
+  if pfLink.Attrs() != nil && len(pfLink.Attrs().Vfs) >= vfId {
+    return pfLink.Attrs().Vfs[vfId].Mac
+  }
+  return net.HardwareAddr{}
 }

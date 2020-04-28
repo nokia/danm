@@ -334,14 +334,19 @@ spec:
 ```
 ##### DPDK support
 DANM's SR-IOV integration supports -and is tested with- both Intel, and Mellanox manufactured physical functions.
-Moreover Pods can use the allocated Virtual Functions for either kernel, or userspace networking.
-The only restriction to keep in mind is when a DPDK using application requests VFs from an Intel NIC for the purpose of userspace networking,
+Moreover Pods can use the allocated Virtual Functions for either kernel, or user space networking.
+The only restriction to keep in mind is when a DPDK using application requests VFs from an Intel NIC for the purpose of user space networking (i.e. DPDK),
 those VFs shall be already bound to the vfio-pci kernel driver before the Pod is instantiated.
 To guarantee such VFs are always available on the Node the Pod is scheduled to, we strongly suggest advertising vfio-pci bound VFs as a separate Device Pool.
 When an already vfio bound function is mounted to an application, DANM also creates a dummy kernel interface in its stead in the Pod's network namespace.
-The dummy interface can be easily identified by the application, because it's named exactly as the VF would be.
-The dummy interface is used to communicate the IPAM details belonging to the non-kernel managed device, such as IP addresses, IP routes etc.
-Userspace applications can interrogate this information via the usual kernel APIs, and then configure the allocated resources into their own IP stack!
+The dummy interface can be easily identified by the application, because it's named exactly as the VF would be, following the standard DANM interface naming conventions.
+The dummy interface is used to convey all the information the user space application requires to start its own networking stack in a standardized manner.
+The list includes:
+ - the IPAM details belonging to the user space device, such as IP addresses, IP routes etc.
+ - VLAN tag of the VF, if any
+ - PCI address of the specific device -as a link alias- so applications know which IPs/VLANs belong to which user space device
+ - the original MAC address of the VF
+User space applications can interrogate this information via the usual kernel APIs, and then configure the allocated resources into their own network stack without the need of requesting any extra kernel privileges!
 
 ### Usage of DANM's Webhook component
 #### Responsibilities

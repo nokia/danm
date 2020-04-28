@@ -3,22 +3,27 @@ dist: xenial
 arch:
   - arm64
   - amd64
-env:
- - USE_CACHE=true TRAVIS_PIPELINE=docker
- - USE_CACHE=true TRAVIS_PIPELINE=buildah BUILDAH_LAYERS=true
+services: docker
 
 language: go
 
 go:
  - 1.13.x
 
-services: docker
+env:
+ - USE_CACHE=true TRAVIS_PIPELINE=docker
+ - USE_CACHE=true TRAVIS_PIPELINE=podman
+# - USE_CACHE=true TRAVIS_PIPELINE=buildah
+
+before_install:
+ - [[ "${TRAVIS_PIPELINE}" == "podman" ]] && ./.travis/install_podman.sh
+ # - [[ "${TRAVIS_PIPELINE}" == "buildah" ]] && ./.travis/install_buildah.sh
 
 install:
- - [[ "${TRAVIS_PIPELINE}" == "buildah" ]] && ./.travis/install_buildah.sh
  - go get golang.org/x/tools/cmd/cover
  - go get github.com/mattn/goveralls
 
 script:
+  - ./build_danm.sh
   - ./run_uts.sh
   - $GOPATH/bin/goveralls -coverprofile=ut/coverage/coverage3.out -service=travis-ci -repotoken ZY6MA490QABNKGnJgYLi53QTDuTC4H69K

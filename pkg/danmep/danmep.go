@@ -183,7 +183,11 @@ func PostProcessInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   }
   err = setDanmEpSysctls(ep)
   if err != nil {
-    return errors.New("failed to set kernel configs for interface" + ep.Spec.Iface.Name + " beause:" + err.Error())
+    return errors.New("failed to set kernel configs for interface" + ep.Spec.Iface.Name + " because:" + err.Error())
+  }
+  err = disableDadOnIface(ep, isVfAttachedToDpdkDriver)
+  if err != nil {
+    return errors.New("failed to disable DAD for address" + ep.Spec.Iface.AddressIPv6 + " because:" + err.Error())
   }
   return addIpRoutes(ep,dnet)
 }
@@ -382,7 +386,7 @@ func getVfMac(pciId string) net.HardwareAddr {
   pfLink, err := netlink.LinkByName(pfName)
   if err != nil {
     return net.HardwareAddr{}
-  } 
+  }
   if pfLink.Attrs() != nil && len(pfLink.Attrs().Vfs) >= vfId {
     return pfLink.Attrs().Vfs[vfId].Mac
   }

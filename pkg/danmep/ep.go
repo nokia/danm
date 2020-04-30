@@ -7,6 +7,7 @@ import (
   "os"
   "runtime"
   "strconv"
+  "syscall"
   "github.com/vishvananda/netlink"
   "github.com/containernetworking/plugins/pkg/ns"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
@@ -128,6 +129,10 @@ func addIpToLink(ip string, iface netlink.Link) error {
     return errors.New("cannot parse IP address because:" + err.Error())
   }
   ipAddr := &netlink.Addr{IPNet: &net.IPNet{IP: addr, Mask: pref.Mask}}
+  if addr.To4() == nil {
+    //Disable unnecessary DAD for IPv6 addresses managed by DANM
+    ipAddr.Flags = syscall.IFA_F_NODAD
+  }
   err = netlink.AddrAdd(iface, ipAddr)
   if err != nil {
     return errors.New("cannot add IP address to link because:" + err.Error())

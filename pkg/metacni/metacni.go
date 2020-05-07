@@ -219,6 +219,7 @@ func setupNetworking(args *datastructs.CniArgs) (*current.Result, error) {
   if err != nil {
     return nil, err
   }
+  cleanOutdatedAllocations(danmClient, args)
   if args.DefaultNetwork != nil {
     syncher.ExpectedNumOfResults++
     defParam := datastructs.Interface{SequenceId: 0, Ip: "dynamic",}
@@ -491,4 +492,18 @@ func deleteNic(netInfo *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
 
 func GetInterfaces(args *skel.CmdArgs) error {
   return nil
+}
+
+// I'm tired of cleaning up after Kubelet, but what can we do? :)
+// After a full cluster restart Kubelet invokes a CNI_ADD for the same Pod, with the same UID.
+// We need to take care of clearing old, invalid allocations for the same UID ourselves during ADD.
+func cleanOutdatedAllocations(danmClient danmclientset.Interface, args *datastructs.CniArgs){
+  deps, _ := danmep.FindByPodName(danmClient, args.Pod.ObjectMeta.Name, args.Pod.ObjectMeta.Namespace)
+  for _, dep := range deps {
+    if dep.Spec.PodUID == args.Pod.ObjectMeta.UID {
+      dnet, _ := netcontrol.GetNetworkFromEp(danmClient, &dep)
+      danmep.DeleteDanmEp(danmClient, &dep, dnet)
+      log.Println("WARNING: DANM needed to reconcile inconsistent cluster state during CNI ADD, as DanmEps already existed for Pod:" + args.Pod.ObjectMeta.Name + " in namespace:" + args.Pod.ObjectMeta.Namespace)
+    }
+  }
 }

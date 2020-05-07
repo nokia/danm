@@ -15,7 +15,7 @@ spec:
   # For static delegates, the parameter configures which CNI configuration file is to be used if NetworkType points to a static-level CNI backend.
   # VxLAN host interfaces are suffixed, while VLAN host interfaces are prefixed with the NetworkID.
   # This allows deployment administrators to separate their own interfaces from others' in a multi-tenant environment, i.e. by setting NetworkID to "name_namespace" value.
-  # OPTIONAL - STRING, MAXIMUM 11 CHARACTERS
+  # OPTIONAL - STRING, MAXIMUM 10 CHARACTERS
   NetworkID: ## NETWORK_ID  ##
   # This parameter, denotes which backend is used to provision the container interface connected to this network.
   # Currently supported values with dynamic integration level are IPVLAN (default), SRIOV, or MACVLAN.

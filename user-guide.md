@@ -417,7 +417,7 @@ Every CREATE, and ~~PUT~~ (see [https://github.com/nokia/danm/issues/144](https:
  15. spec.Options.Allocation_pool_V6.Cidr must be supplied in a valid IPv6 CIDR notation, and must be in the provided IPv6 CIDR
  16. The combined number of allocatable IP addresses of the manually provided IPv4 and IPv6 allocation CIDRs cannot be higher than 8 million
  17. spec.Options.Vlan and spec.Options.Vxlan cannot be provided together
- 18. spec.NetworkID cannot be longer than 11 characters for dynamic backends
+ 18. spec.NetworkID cannot be longer than 10 characters for dynamic backends
  19. spec.AllowedTenants is not a valid parameter for this API type
  20. spec.Options.Device_pool must be, and spec.Options.Host_device mustn't be provided for K8s Devices based networks (such as SR-IOV)
  21. Any of spec.Options.Device, spec.Options.Vlan, or spec.Options.Vxlan attributes cannot be changed if there are any Pods currently connected to the network
@@ -452,7 +452,7 @@ Every CREATE, and PUT TenantConfig operation is subject to the following validat
  1. Either HostDevices, or NetworkIDs must not be empty
  2. VniType and VniRange must be defined together for every HostDevices entry
  3. Both key, and value must not be empty in every NetworkType: NetworkID mapping entry
- 4. A NetworkID cannot be longer than 11 characters in a NetworkType: NetworkID mapping belonging to a dynamic NetworkType
+ 4. A NetworkID cannot be longer than 10 characters in a NetworkType: NetworkID mapping belonging to a dynamic NetworkType
 
 ### Usage of DANM's Netwatcher component
 Netwatcher is a mandatory component of the DANM networking suite.

@@ -78,12 +78,26 @@ rules:
   - "certificates.k8s.io"
   resources:
   - certificatesigningrequests
-  - certificatesigningrequests/approval
   verbs:
-  - delete
   - get
+  - list
+  - watch
   - create
   - update
+- apiGroups:
+  - "certificates.k8s.io"
+  resources:
+  - certificatesigningrequests/approval
+  verbs:
+  - update
+- apiGroups:
+  - "certificates.k8s.io"
+  resources:
+  - signers
+  resourceNames:
+  - kubernetes.io/legacy-unknown
+  verbs:
+  - approve
 - apiGroups:
   - "admissionregistration.k8s.io"
   resources:

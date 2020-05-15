@@ -86,7 +86,6 @@ spec:
   groups:
   - system:authenticated
   request: $(cat ${tmpdir}/server.csr | base64 | tr -d '\n')
-  signerName: kubernetes.io/legacy-unknown
   usages:
   - digital signature
   - key encipherment

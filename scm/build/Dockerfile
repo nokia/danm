@@ -32,7 +32,7 @@ RUN scm/build/build.sh \
 # (Intermediate) Stage: Alping base image. Includes common user account and environment
 #                       for netwatcher, svcwatcher, webhook
 #
-FROM alpine:latest AS base-alpine
+FROM alpine:3.11 AS base-alpine
 ARG USERNAME
 ARG UID
 ARG GID
@@ -80,7 +80,7 @@ ENTRYPOINT ["/usr/local/bin/webhook"]
 # Note that unlike the other containers, this needs to run as root as
 # it places CNI plugins into the host's filesystem.
 #
-FROM alpine:latest AS danm-cni-plugins
+FROM alpine:3.11 AS danm-cni-plugins
 
 VOLUME ["/host/cni"]
 

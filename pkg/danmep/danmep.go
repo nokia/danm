@@ -40,6 +40,7 @@ var sysctls = []sysctlTask {
       {"net.ipv6.conf.%s.disable_ipv6", "0"},
       {"net.ipv6.conf.%s.autoconf", "0"},
       {"net.ipv6.conf.%s.accept_ra", "0"},
+      {"net.ipv6.conf.%s.ndisc_notify", "1"},
     },
   },
   {

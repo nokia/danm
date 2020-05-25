@@ -139,11 +139,7 @@ type TenantConfigList struct {
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type TenantNetwork struct {
-  meta_v1.TypeMeta   `json:",inline"`
-  meta_v1.ObjectMeta `json:"metadata"`
-  Spec               DanmNetSpec `json:"spec"`
-}
+type TenantNetwork DanmNet
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type TenantNetworkList struct {
@@ -158,11 +154,7 @@ type TenantNetworkList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +genclient
-type ClusterNetwork struct {
-  meta_v1.TypeMeta   `json:",inline"`
-  meta_v1.ObjectMeta `json:"metadata"`
-  Spec               DanmNetSpec `json:"spec"`
-}
+type ClusterNetwork DanmNet
 
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

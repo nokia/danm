@@ -10,6 +10,10 @@ Want to hang-out with us? Join our Slack under https://danmws.slack.com/!
 
 Feel yourself officially invited by clicking on [this](https://join.slack.com/t/danmws/shared_invite/enQtNzEzMTQ4NDM2NTMxLTA3MDM4NGM0YTRjYzlhNGRiMDVlZWRlMjdlNTkwNTBjNWUyNjM0ZDQ3Y2E4YjE3NjVhNTE1MmEyYzkyMDRlNWU) link!
 
+# Want to get more bang for the buck? Check out DANM Utils too!
+DANM Utils is the home to independet Operators built on top of the DANM network management platform, providing value added services to your cluster!
+Interested in adding outage resiliency to your IPAM, or universal network policy support? Look no further and hop over to https://github.com/nokia/danm-utils today!
+
 ## Table of Contents
 * [Table of Contents](#table-of-contents)
 * [Introduction](#introduction)

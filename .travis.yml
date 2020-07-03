@@ -1,6 +1,8 @@
 sudo: required
 dist: xenial
-
+arch:
+  - arm64
+  - amd64
 env:
  - TRAVIS_PIPELINE=docker
 ## TODO: figure out why buildah pipeline is flaky, even with sudo

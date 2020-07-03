@@ -8,11 +8,12 @@ ARG CONFD_VERSION=0.16.0
 
 RUN adduser -u ${UID} -D -H -s /bin/sh ${USERNAME} \
  && apk add --no-cache jq openssl \
- && wget https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/amd64/kubectl \
+ && if [ `uname -m` == "aarch64" ] ; then KUBECTL_ARCH="arm64"; else KUBECTL_ARCH="amd64"; fi \
+ && wget https://storage.googleapis.com/kubernetes-release/release/v${KUBECTL_VERSION}/bin/linux/${KUBECTL_ARCH}/kubectl \
  && mv kubectl /usr/local/bin/kubectl \
  && chmod 755 /usr/local/bin/kubectl \
- && wget https://github.com/kelseyhightower/confd/releases/download/v${CONFD_VERSION}/confd-${CONFD_VERSION}-linux-amd64 \
- && mv confd-${CONFD_VERSION}-linux-amd64 /usr/local/bin/confd \
+ && wget https://github.com/kelseyhightower/confd/releases/download/v${CONFD_VERSION}/confd-${CONFD_VERSION}-linux-${KUBECTL_ARCH} \
+ && mv confd-${CONFD_VERSION}-linux-${KUBECTL_ARCH} /usr/local/bin/confd \
  && chmod 755 /usr/local/bin/confd
 
 COPY integration /integration

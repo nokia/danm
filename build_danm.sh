@@ -148,14 +148,14 @@ done
 echo Building installer, version ${COMMIT_HASH}
 ${BUILD_COMMAND} \
   ${EXTRA_BUILD_ARGS} \
-  --tag ${TAG_PREFIX}damn-installer:${COMMIT_HASH} \
+  --tag ${TAG_PREFIX}danm-installer:${COMMIT_HASH} \
   --file scm/build/Dockerfile.install \
   .
 
-${TAG_COMMAND} ${TAG_PREFIX}damn-installer:${COMMIT_HASH} ${TAG_PREFIX}damn-installer:latest
+${TAG_COMMAND} ${TAG_PREFIX}danm-installer:${COMMIT_HASH} ${TAG_PREFIX}danm-installer:latest
 
 if [ -n "${IMAGE_PUSH}" ]
 then
-  ${PUSH_COMMAND} ${TAG_PREFIX}damn-installer:${COMMIT_HASH}
-  ${PUSH_COMMAND} ${TAG_PREFIX}damn-installer:latest
+  ${PUSH_COMMAND} ${TAG_PREFIX}danm-installer:${COMMIT_HASH}
+  ${PUSH_COMMAND} ${TAG_PREFIX}danm-installer:latest
 fi

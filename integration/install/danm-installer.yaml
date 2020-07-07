@@ -15,7 +15,7 @@ spec:
               mountPath: /config
 
           # Update the next two lines as needed
-          image: damn-installer:latest
+          image: danm-installer:latest
           imagePullPolicy: IfNotPresent
 
       volumes:

@@ -1,3 +1,7 @@
+// Copyright 2020 Nokia
+// Licensed under the BSD 3-Clause License.
+// SPDX-License-Identifier: BSD-3-Clause
+
 //go:generate bash -c "cg(){ go list -m -f {{.Dir}} k8s.io/code-generator;}; crd(){ cat<<<'github.com/nokia/danm/crd';}; GOFLAGS='' bash $(cg)/generate-groups.sh all $(crd)/client $(crd)/apis danm:v1 --go-header-file $(cg)/hack/boilerplate.go.txt"
 // +k8s:deepcopy-gen=package
 

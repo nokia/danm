@@ -142,26 +142,30 @@ func addIpToLink(ip string, iface netlink.Link) error {
 
 func addIpRoutes(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   defaultRoutingTable := 0
-  err := addRoutes(dnet.Spec.Options.Routes, ep.Spec.Iface.Address, defaultRoutingTable)
+  link, err := netlink.LinkByName(ep.Spec.Iface.Name)
+  if err != nil {
+    return errors.New("cannot find Pod interface: " + ep.Spec.Iface.Name + " for adding IP route because:" + err.Error())
+  }
+  err = addRouteForLink(dnet.Spec.Options.Routes, ep.Spec.Iface.Address, defaultRoutingTable, link)
   if err != nil {
     return err
   }
-  err = addRoutes(dnet.Spec.Options.Routes6, ep.Spec.Iface.AddressIPv6, defaultRoutingTable)
+  err = addRouteForLink(dnet.Spec.Options.Routes6, ep.Spec.Iface.AddressIPv6, defaultRoutingTable, link)
   if err != nil {
     return err
   }
-  err = addPolicyRoute(dnet.Spec.Options.RTables, ep.Spec.Iface.Address, ep.Spec.Iface.Proutes)
+  err = addPolicyRouteForLink(dnet.Spec.Options.RTables, ep.Spec.Iface.Address, ep.Spec.Iface.Proutes, link)
   if err != nil {
     return err
   }
-  err = addPolicyRoute(dnet.Spec.Options.RTables, ep.Spec.Iface.AddressIPv6, ep.Spec.Iface.Proutes6)
+  err = addPolicyRouteForLink(dnet.Spec.Options.RTables, ep.Spec.Iface.AddressIPv6, ep.Spec.Iface.Proutes6, link)
   if err != nil {
     return err
   }
   return nil
 }
 
-func addRoutes(routes map[string]string, allocatedIp string, rtable int) error {
+func addRouteForLink(routes map[string]string, allocatedIp string, rtable int, link netlink.Link) error {
   if routes == nil || allocatedIp == "" || allocatedIp == ipam.NoneAllocType {
     return nil
   }
@@ -176,7 +180,8 @@ func addRoutes(routes map[string]string, allocatedIp string, rtable int) error {
       //Bad gateway in IP route, ignoring the route
       continue
     }
-    route := netlink.Route{
+    route := netlink.Route {
+      LinkIndex: link.Attrs().Index,
       Dst:   ipnet,
       Gw:    ip,
     }
@@ -193,7 +198,7 @@ func addRoutes(routes map[string]string, allocatedIp string, rtable int) error {
   return nil
 }
 
-func addPolicyRoute(rtable int, cidr string, proutes map[string]string) error {
+func addPolicyRouteForLink(rtable int, cidr string, proutes map[string]string, link netlink.Link) error {
   if rtable == 0 || cidr == "" || cidr == ipam.NoneAllocType || proutes == nil {
     return nil
   }
@@ -206,7 +211,7 @@ func addPolicyRoute(rtable int, cidr string, proutes map[string]string) error {
   if err != nil {
     return errors.New("cannot add rule for policy-based IP routes because:" + err.Error())
   }
-  err = addRoutes(proutes, cidr, rtable)
+  err = addRouteForLink(proutes, cidr, rtable, link)
   if err != nil {
     return err
   }

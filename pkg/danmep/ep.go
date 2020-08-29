@@ -302,11 +302,15 @@ func createDummyInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
       return errors.New("cannot add PCI ID alias to dummy interface for DPDK because:" + err.Error())
     }
   } else {
-  //To convey VLAN ID assigment we create a VLAN on top of the dummy, and tag that with the desired final iface name
+   //To convey VLAN ID assigment we create a VLAN on top of the dummy, and tag that with the desired final iface name
     err = netlink.LinkSetUp(dummy)
     if err != nil {
       return errors.New("cannot set dummy link UP because:" + err.Error())
     }
+    //Sysctl setting during post-process phase are only applied on the VLAN interface in this case, so need to call this manually for the underlying dummy
+    dummyEp := ep.DeepCopy()
+    dummyEp.Spec.Iface.Name = ep.ObjectMeta.Name[0:14]
+    err = setDanmEpSysctls(dummyEp)
     iface, err := netlink.LinkByName(origDummyName)
     if err != nil {
       return errors.New("cannot find freshly created dummy interface because:" + err.Error())

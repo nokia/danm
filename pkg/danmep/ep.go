@@ -15,6 +15,10 @@ import (
   "github.com/j-keck/arping"
 )
 
+const (
+  InvalidMacAddress = "00:00:00:00:00:00"
+)
+
 func createIpvlanInterface(dnet *danmtypes.DanmNet, ep *danmtypes.DanmEp) error {
   host, err := os.Hostname()
   if err != nil {
@@ -273,7 +277,6 @@ func deleteEp(ep *danmtypes.DanmEp) error {
 
 func createDummyInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   origDummyName := ep.Spec.Iface.Name
-  origDummyMac,_  := net.ParseMAC(ep.Spec.Iface.MacAddress)
   if dnet.Spec.Options.Vlan != 0 {
     origDummyName = ep.ObjectMeta.Name[0:14]
   }
@@ -282,12 +285,16 @@ func createDummyInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
       Name: origDummyName,
     },
   }
-  if origDummyMac.String() != "" {
+  origDummyMac,_  := net.ParseMAC(ep.Spec.Iface.MacAddress)
+  origDummyMacStr := origDummyMac.String()
+  //It is observed VFIO bound VFs do not always retain their original MAC address for some reason
+  //To avoid failing Pod instantiation in this case we only force MAC address on dummy if the VF looks "healthy"
+  if origDummyMacStr != "" && origDummyMacStr != InvalidMacAddress {
     dummy.LinkAttrs.HardwareAddr = origDummyMac
   }
   err := netlink.LinkAdd(dummy)
   if err != nil {
-    return errors.New("cannot create dummy interface for DPDK because:" + err.Error())
+    return errors.New("cannot create dummy interface with MAC:" + origDummyMacStr + "for DPDK because:" + err.Error())
   }
   if dnet.Spec.Options.Vlan == 0 {
     err = netlink.LinkSetAlias(dummy, ep.Spec.Iface.DeviceID)
@@ -304,7 +311,6 @@ func createDummyInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
     if err != nil {
       return errors.New("cannot find freshly created dummy interface because:" + err.Error())
     }
-    vfMac, _ := net.ParseMAC(ep.Spec.Iface.MacAddress)
     dummyVlan := &netlink.Vlan {
       VlanId: dnet.Spec.Options.Vlan,
       LinkAttrs: netlink.LinkAttrs {
@@ -312,12 +318,12 @@ func createDummyInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
         Name: ep.Spec.Iface.Name,
       },
     }
-    if vfMac.String() != "" {
-      dummyVlan.LinkAttrs.HardwareAddr = vfMac
+    if origDummyMacStr != "" && origDummyMacStr != InvalidMacAddress {
+      dummyVlan.LinkAttrs.HardwareAddr = origDummyMac
     }
     err = netlink.LinkAdd(dummyVlan)
     if err != nil {
-      return errors.New("cannot create VLAN on dummy interface for DPDK because:" + err.Error())
+      return errors.New("cannot create VLAN on dummy interface with MAC:" + origDummyMacStr + " for DPDK because:" + err.Error())
     }
     err = netlink.LinkSetAlias(dummyVlan, ep.Spec.Iface.DeviceID)
     if err != nil {

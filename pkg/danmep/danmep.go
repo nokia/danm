@@ -110,7 +110,7 @@ func CidsByHost(client danmclientset.Interface, host string)(map[string]danmtype
 }
 
 // FindByPodName returns a map of DanmEps which belong to the same Pod in a given namespace
-// If no Pod name is provided, function returns all DanmEps
+// If no Pod name is provided, function returns no DanmEps
 func FindByPodName(client danmclientset.Interface, podName, ns string) ([]danmtypes.DanmEp, error) {
   result, err := client.DanmV1().DanmEps(ns).List(context.TODO(), meta_v1.ListOptions{})
   if err != nil {
@@ -123,6 +123,27 @@ func FindByPodName(client danmclientset.Interface, podName, ns string) ([]danmty
   eplist := result.Items
   for _, ep := range eplist {
     if podName != "" && ep.Spec.Pod != podName {
+      continue
+    }
+    ret = append(ret, ep)
+  }
+  return ret, nil
+}
+
+// FindByPodUid returns a map of DanmEps which belong to the same Pod instance in a given namespace
+// If no Pod name is provided, function returns no DanmEps
+func FindByPodUid(client danmclientset.Interface, podUid, ns string) ([]danmtypes.DanmEp, error) {
+  result, err := client.DanmV1().DanmEps(ns).List(context.TODO(), meta_v1.ListOptions{})
+  if err != nil {
+    return nil, errors.New("cannot list DanmEps because:" + err.Error())
+  }
+  ret := make([]danmtypes.DanmEp, 0)
+  if result == nil {
+    return ret, nil
+  }
+  eplist := result.Items
+  for _, ep := range eplist {
+    if podUid != "" && string(ep.Spec.PodUID) != podUid {
       continue
     }
     ret = append(ret, ep)

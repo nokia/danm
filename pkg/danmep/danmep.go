@@ -1,6 +1,7 @@
 package danmep
 
 import (
+"strings"
   "context"
   "errors"
   "fmt"
@@ -17,6 +18,7 @@ import (
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   "github.com/nokia/danm/pkg/datastructs"
+  "github.com/nokia/danm/pkg/bitarray"
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/netcontrol"
   "github.com/satori/go.uuid"
@@ -391,10 +393,25 @@ func DeleteDanmEp(danmClient danmclientset.Interface, ep *danmtypes.DanmEp, dnet
   }
   //We only need to Free an IP if it was allocated by DANM IPAM, and it was allocated by DANM only if it falls into any of the defined subnets
   if ipam.WasIpAllocatedByDanm(ep.Spec.Iface.Address, dnet.Spec.Options.Cidr) || ipam.WasIpAllocatedByDanm(ep.Spec.Iface.AddressIPv6, dnet.Spec.Options.Pool6.Cidr) {
+    log.Println("DEBUG: we think " + ep.Spec.Iface.Address + " and " + ep.Spec.Iface.AddressIPv6 + " were allocated by DANM IPAM")
     err = ipam.GarbageCollectIps(danmClient, dnet, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
     if err != nil {
       return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because freeing its reserved IP addresses failed with error:" + err.Error())
     }
+    newNetwork, err := netcontrol.GetNetworkFromEp(danmClient, ep)
+    if err!= nil {
+      log.Println("DEBUG: could not refresh network because of error:" + err.Error())
+    }
+    ripParts := strings.Split(ep.Spec.Iface.Address, "/")
+    ip := net.ParseIP(ripParts[0])
+    _, allocSubnet, _   := net.ParseCIDR(newNetwork.Spec.Options.Cidr)
+    allocatedV4Index := ipam.GetIndexOfIp(ip, allocSubnet)
+    ba := bitarray.NewBitArrayFromBase64(newNetwork.Spec.Options.Alloc)
+    if ba.Get(allocatedV4Index) {
+      log.Println("DEBUG: this IP: " + ep.Spec.Iface.Address + " is still set AFTER we have explicitly Freed it!!!")
+    }
+  } else {
+    log.Println("DEBUG: we kinda think " + ep.Spec.Iface.Address + " and " + ep.Spec.Iface.AddressIPv6 + " were not allocated by DANM IPAM")
   }
   return danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(context.TODO(), ep.ObjectMeta.Name, meta_v1.DeleteOptions{})
 }

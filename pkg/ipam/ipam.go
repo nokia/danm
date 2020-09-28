@@ -1,6 +1,7 @@
 package ipam
 
 import (
+"log"
   "errors"
   "math"
   "net"
@@ -377,10 +378,17 @@ func GetBroadcastAddress(subnet *net.IPNet) (net.IP) {
 }
 
 func WasIpAllocatedByDanm(ip, cidr string) bool {
-  _, subnet, _ := net.ParseCIDR(cidr)
+  _, subnet, err := net.ParseCIDR(cidr)
+  log.Println("DEBUG: WasIpAllocated called with IP:" + ip + " and CIDR:" + cidr)
+  if subnet == nil {
+    log.Println("DEBUG: WasIpAllocated subnet is kinda nil for some reason:" + err.Error())
+  }
   parsedIp := net.ParseIP(ip)
   if parsedIp == nil {
-    parsedIp,_,_ = net.ParseCIDR(ip)
+    parsedIp,_,err = net.ParseCIDR(ip)
+    if parsedIp == nil {
+      log.Println("DEBUG: WasIpAllocated parsedIp is kinda nil for some reason:" + err.Error())
+    } 
   }
   if parsedIp != nil && (subnet != nil && subnet.Contains(parsedIp)) {
     return true

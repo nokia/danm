@@ -446,6 +446,7 @@ func DeleteInterfaces(args *skel.CmdArgs) error {
   syncher := syncher.NewSyncher(len(eplist))
   //Note to self: NEVER change this to pass-by-pointer. It totally breaks CNI DEL for all but one interface
   for _, ep := range eplist {
+    log.Println("DEBUG: starting delete procedure for DanmEp belonging to " + ep.Spec.NetworkName + " , type:" + ep.Spec.NetworkType + " ,having IP:" + ep.Spec.Iface.Address)
     go deleteInterface(danmClient, cniArgs, syncher, ep)
   }
   deleteErrors := syncher.GetAggregatedResult()
@@ -469,6 +470,7 @@ func deleteInterface(danmClient danmclientset.Interface, args *datastructs.CniAr
       aggregatedError += "failed to delete container NIC:" + err.Error() + "; "
     }
   }
+  log.Println("DEBUG: Before deleting EP belonging to network:" + ep.Spec.NetworkName + " , type:" + ep.Spec.NetworkType + " ,having IP:" + ep.Spec.Iface.Address+ " ;with network:" + netInfo.ObjectMeta.Name + " and type:" + netInfo.Spec.NetworkType + " and CIDR:" + netInfo.Spec.Options.Cidr)
   err = danmep.DeleteDanmEp(danmClient, &ep, netInfo)
   if err != nil {
     aggregatedError += "failed to delete DanmEp:" + err.Error() + "; "

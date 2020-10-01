@@ -391,6 +391,7 @@ func DeleteDanmEp(danmClient danmclientset.Interface, ep *danmtypes.DanmEp, dnet
   if (ep.Spec.Iface.Address != "" || ep.Spec.Iface.AddressIPv6 != "") && dnet == nil {
     return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because its linked network is not available to free DANM IPAM allocated IPs")
   }
+  log.Println("DEBUG: handling deletion of DanmEp belonging to network:" + ep.Spec.NetworkName + " ,type:" + ep.Spec.NetworkType + " and having IP:" + ep.Spec.Iface.Address+ " ;for network:" + dnet.ObjectMeta.Name + " with type:" + dnet.Spec.NetworkType + " and CIDR:" + dnet.Spec.Options.Cidr)
   //We only need to Free an IP if it was allocated by DANM IPAM, and it was allocated by DANM only if it falls into any of the defined subnets
   if ipam.WasIpAllocatedByDanm(ep.Spec.Iface.Address, dnet.Spec.Options.Cidr) || ipam.WasIpAllocatedByDanm(ep.Spec.Iface.AddressIPv6, dnet.Spec.Options.Pool6.Cidr) {
     log.Println("DEBUG: we think " + ep.Spec.Iface.Address + " and " + ep.Spec.Iface.AddressIPv6 + " were allocated by DANM IPAM")

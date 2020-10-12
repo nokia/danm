@@ -54,6 +54,7 @@ var sysctls = []sysctlTask {
 const (
   MaxRetryCount = 10
   RetryInterval = 100
+  V6SysPath     = "/proc/sys/net/ipv6/conf/"
 )
 
 // DeleteIpvlanInterface deletes a Pod's IPVLAN network interface based on the related DanmEp
@@ -231,14 +232,16 @@ func setDanmEpSysctls(ep *danmtypes.DanmEp) error {
 }
 
 func isIPv6Needed(ep *danmtypes.DanmEp) bool {
-  if ep.Spec.Iface.AddressIPv6 != "" {
+  _, err := os.Stat(V6SysPath + ep.Spec.Iface.Name)
+  if err == nil && ep.Spec.Iface.AddressIPv6 != "" {
     return true
   }
   return false
 }
 
 func isIPv6NotNeeded(ep *danmtypes.DanmEp) bool {
-  if ep.Spec.Iface.AddressIPv6 == "" {
+  _, err := os.Stat(V6SysPath + ep.Spec.Iface.Name)
+  if err == nil && ep.Spec.Iface.AddressIPv6 == "" {
     return true
   }
   return false

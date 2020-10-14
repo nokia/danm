@@ -144,13 +144,9 @@ func addIpToLink(ip string, iface netlink.Link) error {
   return nil
 }
 
-func addIpRoutes(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
+func addIpRoutes(link netlink.Link, ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   defaultRoutingTable := 0
-  link, err := netlink.LinkByName(ep.Spec.Iface.Name)
-  if err != nil {
-    return errors.New("cannot find Pod interface: " + ep.Spec.Iface.Name + " for adding IP route because:" + err.Error())
-  }
-  err = addRouteForLink(dnet.Spec.Options.Routes, ep.Spec.Iface.Address, defaultRoutingTable, link)
+  err := addRouteForLink(dnet.Spec.Options.Routes, ep.Spec.Iface.Address, defaultRoutingTable, link)
   if err != nil {
     return err
   }
@@ -341,13 +337,9 @@ func createDummyInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
   return configureLink(iface, ep)
 }
 
-func disableDadOnIface(ep *danmtypes.DanmEp, isDummyIface bool) error {
-  if isDummyIface || ep.Spec.NetworkType == "ipvlan" || ep.Spec.Iface.AddressIPv6 == "" || ep.Spec.Iface.AddressIPv6 == ipam.NoneAllocType {
+func disableDadOnIface(link netlink.Link, ep *danmtypes.DanmEp) error {
+  if  ep.Spec.NetworkType == "ipvlan" || ep.Spec.Iface.AddressIPv6 == "" || ep.Spec.Iface.AddressIPv6 == ipam.NoneAllocType {
     return nil
-  }
-  link, err := netlink.LinkByName(ep.Spec.Iface.Name)
-  if err != nil {
-    return errors.New("cannot find interface to disable DAD on its V6 address because:" + err.Error())
   }
   addr, pref, _ := net.ParseCIDR(ep.Spec.Iface.AddressIPv6)
   dadlessAddress := &netlink.Addr{IPNet: &net.IPNet{IP: addr, Mask: pref.Mask}, Flags: syscall.IFA_F_NODAD,}

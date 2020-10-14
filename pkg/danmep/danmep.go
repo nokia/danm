@@ -54,7 +54,6 @@ var sysctls = []sysctlTask {
 const (
   MaxRetryCount = 10
   RetryInterval = 100
-  V6SysPath     = "/proc/sys/net/ipv6/conf/"
 )
 
 // DeleteIpvlanInterface deletes a Pod's IPVLAN network interface based on the related DanmEp
@@ -204,15 +203,20 @@ func PostProcessInterface(ep *danmtypes.DanmEp, dnet *danmtypes.DanmNet) error {
       return errors.New("failed to create dummy kernel interface for " + ep.Spec.Iface.Name + " because:" + err.Error())
     }
   }
+  link, err := netlink.LinkByName(ep.Spec.Iface.Name)
+  if err != nil {
+    log.Println("WARNING: Interface post-processing was skipped for Pod:" + ep.Spec.Pod + " and link:" + ep.Spec.Iface.Name + " because it does not exist in the kernel. If it is not a user space interface, you should investigate!!!")
+    return nil
+  }
   err = setDanmEpSysctls(ep)
   if err != nil {
     return errors.New("failed to set kernel configs for interface" + ep.Spec.Iface.Name + " because:" + err.Error())
   }
-  err = disableDadOnIface(ep, isVfAttachedToDpdkDriver)
+  err = disableDadOnIface(link, ep)
   if err != nil {
     return errors.New("failed to disable DAD for address" + ep.Spec.Iface.AddressIPv6 + " because:" + err.Error())
   }
-  return addIpRoutes(ep,dnet)
+  return addIpRoutes(link, ep, dnet)
 }
 
 func setDanmEpSysctls(ep *danmtypes.DanmEp) error {
@@ -232,16 +236,14 @@ func setDanmEpSysctls(ep *danmtypes.DanmEp) error {
 }
 
 func isIPv6Needed(ep *danmtypes.DanmEp) bool {
-  _, err := os.Stat(V6SysPath + ep.Spec.Iface.Name)
-  if err == nil && ep.Spec.Iface.AddressIPv6 != "" {
+  if ep.Spec.Iface.AddressIPv6 != "" {
     return true
   }
   return false
 }
 
 func isIPv6NotNeeded(ep *danmtypes.DanmEp) bool {
-  _, err := os.Stat(V6SysPath + ep.Spec.Iface.Name)
-  if err == nil && ep.Spec.Iface.AddressIPv6 == "" {
+  if ep.Spec.Iface.AddressIPv6 == "" {
     return true
   }
   return false

@@ -4,15 +4,15 @@ import (
   "context"
   "errors"
   "fmt"
+  "log"
   "net"
   "os"
-  "log"
   "runtime"
   "strconv"
   "time"
+
   "github.com/containernetworking/plugins/pkg/ns"
   "github.com/containernetworking/plugins/pkg/utils/sysctl"
-  meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
@@ -21,6 +21,7 @@ import (
   "github.com/nokia/danm/pkg/netcontrol"
   "github.com/satori/go.uuid"
   "github.com/vishvananda/netlink"
+  meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type sysctlFunction func(*danmtypes.DanmEp) bool
@@ -394,12 +395,8 @@ func DeleteDanmEp(danmClient danmclientset.Interface, ep *danmtypes.DanmEp, dnet
   if (ep.Spec.Iface.Address != "" || ep.Spec.Iface.AddressIPv6 != "") && dnet == nil {
     return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because its linked network is not available to free DANM IPAM allocated IPs")
   }
-  //We only need to Free an IP if it was allocated by DANM IPAM, and it was allocated by DANM only if it falls into any of the defined subnets
-  if ipam.WasIpAllocatedByDanm(ep.Spec.Iface.Address, dnet.Spec.Options.Cidr) || ipam.WasIpAllocatedByDanm(ep.Spec.Iface.AddressIPv6, dnet.Spec.Options.Pool6.Cidr) {
-    err = ipam.GarbageCollectIps(danmClient, dnet, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
-    if err != nil {
-      return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because freeing its reserved IP addresses failed with error:" + err.Error())
-    }
+  if err = ipam.FindAndCallFirstIpamReleaseHandlerIfAny(danmClient, ep, dnet); err != nil {
+    return err
   }
   return danmClient.DanmV1().DanmEps(ep.ObjectMeta.Namespace).Delete(context.TODO(), ep.ObjectMeta.Name, meta_v1.DeleteOptions{})
 }

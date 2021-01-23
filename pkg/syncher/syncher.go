@@ -11,7 +11,8 @@ import (
 )
 
 const (
-  MaximumAllowedTime = 3000
+  MaximumAllowedTime = 3000  // Timeout = MaximumAllowedTime * RetryInterval[ms] = 30s
+  RetryInterval = 10         // [ms]
 )
 
 type cniOpResult struct {
@@ -47,7 +48,7 @@ func (synch *Syncher) GetAggregatedResult() error {
   //Time-out Pod creation if plugins did not provide results within the configured timeframe
   for i := 0; i < MaximumAllowedTime; i++ {
     if synch.ExpectedNumOfResults > len(synch.CniResults) {
-      time.Sleep(10 * time.Millisecond)
+      time.Sleep(RetryInterval * time.Millisecond)
       continue
     }
     if synch.wasAnyOperationErroneous() {
@@ -55,7 +56,7 @@ func (synch *Syncher) GetAggregatedResult() error {
     }
     return nil
   }
-  return errors.New("CNI operation timed-out after " + strconv.Itoa(MaximumAllowedTime) + " seconds")
+  return errors.New("CNI operation timed-out after " + strconv.Itoa(MaximumAllowedTime * RetryInterval / 1000) + " seconds")
 }
 
 func (synch *Syncher) wasAnyOperationErroneous() bool {

@@ -9,7 +9,7 @@ import (
 )
 
 const (
-  timeout = syncher.MaximumAllowedTime/100
+  timeout = syncher.MaximumAllowedTime * syncher.RetryInterval / 1000
 )
 
 type result struct {

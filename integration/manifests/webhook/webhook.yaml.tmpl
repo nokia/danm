@@ -49,6 +49,7 @@ webhooks:
         apiVersions: ["v1"]
         resources: ["danmnets","clusternetworks","tenantnetworks"]
     failurePolicy: Fail
+    timeoutSeconds: 25
   - name: danm-configvalidation.nokia.k8s.io
     clientConfig:
       service:
@@ -62,6 +63,7 @@ webhooks:
         apiVersions: ["v1"]
         resources: ["tenantconfigs"]
     failurePolicy: Fail
+    timeoutSeconds: 25
   - name: danm-netdeletion.nokia.k8s.io
     clientConfig:
       service:
@@ -75,6 +77,7 @@ webhooks:
         apiVersions: ["v1"]
         resources: ["danmnets","clusternetworks","tenantnetworks"]
     failurePolicy: Fail
+    timeoutSeconds: 25
 ---
 apiVersion: v1
 kind: Service

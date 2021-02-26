@@ -22,9 +22,12 @@ var (
 
 type NetConf struct {
   types.NetConf
-  Kubeconfig          string `json:"kubeconfig"`
-  CniConfigDir        string `json:"cniDir"`
-  NamingScheme        string `json:"namingScheme"`
+  Kubeconfig          string `json:"kubeconfig,omitempty"`
+  CniConfigDir        string `json:"cniDir,omitempty"`
+  NamingScheme        string `json:"namingScheme,omitempty"`
+  Master              string `json:"master,omitempty"`
+  Vlan                int    `json:"vlan,omitempty"`
+  Vxlan               int    `json:"vxlan,omitempty"`
 }
 
 type CniConfigReader func(netInfo *danmtypes.DanmNet, ipam IpamConfig, ep *danmtypes.DanmEp, cniVersion string) ([]byte, error)

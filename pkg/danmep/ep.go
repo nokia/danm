@@ -12,6 +12,7 @@ import (
   "github.com/containernetworking/plugins/pkg/ns"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   "github.com/nokia/danm/pkg/ipam"
+  "github.com/nokia/danm/pkg/netcontrol"
   "github.com/j-keck/arping"
 )
 
@@ -31,7 +32,7 @@ func createIpvlanInterface(dnet *danmtypes.DanmNet, ep *danmtypes.DanmEp) error 
   if ns.IsNSorErr(ep.Spec.Netns) != nil {
     return errors.New("Cannot get container pid!")
   }
-  device := DetermineHostDeviceName(dnet)
+  device := netcontrol.DetermineHostDeviceName(dnet)
   return createContainerIface(ep, dnet, device)
 }
 

@@ -13,12 +13,22 @@ metadata:
     kubernetes.io/bootstrapping: rbac-defaults
   name: system:netwatcher
 rules:
+rules:
 - apiGroups:
-  - "danm.k8s.io"
+  - danm.k8s.io
   resources:
   - danmnets
   - clusternetworks
   - tenantnetworks
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - k8s.cni.cncf.io
+  resources:
+  - network-attachment-definitions
   verbs:
   - get
   - list

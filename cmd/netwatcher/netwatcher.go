@@ -29,7 +29,7 @@ func main() {
     return
   }
   log.SetOutput(os.Stdout)
-  log.Println("Starting DANM Watcher...")
+  log.Println("Starting DANM NetWatcher...")
   kubeConfig := flag.String("kubeconf", "", "Path to a kube config. Only required if out-of-cluster.")
   flag.Parse()
   config, err := getClientConfig(kubeConfig)

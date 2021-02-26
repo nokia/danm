@@ -5,7 +5,7 @@ import (
   "encoding/json"
   "io/ioutil"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
-  "github.com/nokia/danm/pkg/danmep"
+  "github.com/nokia/danm/pkg/netcontrol"
   "github.com/nokia/danm/pkg/datastructs"
   sriov_utils "github.com/intel/sriov-cni/pkg/utils"
 )
@@ -65,7 +65,7 @@ func getMacvlanCniConfig(netInfo *danmtypes.DanmNet, ipamOptions datastructs.Ipa
   macvlanConfig.CNIVersion = cniVersion
   macvlanConfig.Name       = netInfo.Spec.NetworkID
   // initialize MacvlanNet specific fields:
-  macvlanConfig.Master = danmep.DetermineHostDeviceName(netInfo)
+  macvlanConfig.Master = netcontrol.DetermineHostDeviceName(netInfo)
   macvlanConfig.Mode   = "bridge" //TODO: make these params configurable if required
   macvlanConfig.MTU    = 1500
   if len(ipamOptions.Ips) > 0 {

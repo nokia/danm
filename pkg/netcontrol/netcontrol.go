@@ -3,16 +3,21 @@ package netcontrol
 import (
   "context"
   "errors"
+  "encoding/json"
   "io"
   "log"
   "os"
   "strconv"
   "strings"
   "time"
+  nadtypes "github.com/nokia/danm/crd/apis/k8s.cni.cncf.io/v1"
+  nadclientset "github.com/nokia/danm/crd/client/nad/clientset/versioned"
+  nadinformers "github.com/nokia/danm/crd/client/nad/informers/externalversions"
   danmtypes "github.com/nokia/danm/crd/apis/danm/v1"
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
   "github.com/nokia/danm/pkg/datastructs"
+  multustypes "gopkg.in/intel/multus-cni.v3/types"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   apierrors "k8s.io/apimachinery/pkg/api/errors"
   "k8s.io/client-go/rest"
@@ -25,13 +30,16 @@ const (
   DanmNetKind = "DanmNet"
   TenantNetworkKind = "TenantNetwork"
   ClusterNetworkKind = "ClusterNetwork"
+  NadKind = "NetworkAttachmentDefinition"
 )
 
 // NetWatcher represents an object watching the K8s API for changes in all three network management API paths
 // Upon the reception of a notification it handles the related VxLAN/VLAN/RT creation/deletions on the host
 type NetWatcher struct {
-  Factories map[string]danminformers.SharedInformerFactory
-  Clients map[string]danmclientset.Interface
+  DanmFactories map[string]danminformers.SharedInformerFactory
+  DanmClients map[string]danmclientset.Interface
+  NadFactory nadinformers.SharedInformerFactory
+  NadClient nadclientset.Interface
   Controllers map[string]cache.Controller
   StopChan *chan struct{}
 }
@@ -41,8 +49,8 @@ type NetWatcher struct {
 // Watcher stores all K8s Clients, Factories, and Informeres of the DANM network management APIs
 func NewWatcher(cfg *rest.Config, stopChan  *chan struct{}) (*NetWatcher,error) {
   netWatcher := &NetWatcher{
-    Factories: make(map[string]danminformers.SharedInformerFactory),
-    Clients: make(map[string]danmclientset.Interface),
+    DanmFactories: make(map[string]danminformers.SharedInformerFactory),
+    DanmClients: make(map[string]danmclientset.Interface),
     Controllers: make(map[string]cache.Controller),
     StopChan: stopChan,
   }
@@ -59,7 +67,7 @@ func NewWatcher(cfg *rest.Config, stopChan  *chan struct{}) (*NetWatcher,error) 
       log.Println("INFO: DanmNet discovery query failed with error:" + err.Error())
       time.Sleep(RetryInterval * time.Millisecond)
     } else {
-      log.Println("INFO: DanmNet API seems to be installed in the cluster")
+      log.Println("INFO: DanmNet API seems to be installed in the cluster!")
       netWatcher.createDnetInformer(dnetClient)
       break
     }
@@ -91,8 +99,24 @@ func NewWatcher(cfg *rest.Config, stopChan  *chan struct{}) (*NetWatcher,error) 
       log.Println("INFO: ClusterNetwork discovery query failed with error:" + err.Error())
       time.Sleep(RetryInterval * time.Millisecond)
     } else {
-      log.Println("INFO: ClusterNetwork API seems to be installed in the cluster")
+      log.Println("INFO: ClusterNetwork API seems to be installed in the cluster!")
       netWatcher.createCnetInformer(cnetClient)
+      break
+    }
+  }
+  nadClient, err := nadclientset.NewForConfig(cfg)
+  if err != nil {
+    return nil, err
+  }
+  for i := 0; i < MaxRetryCount; i++ {
+    log.Println("INFO: Trying to discover NetworkAttachmentDefinition API in the cluster...")
+    _, err = nadClient.K8sCniCncfIoV1().NetworkAttachmentDefinitions("").List(context.TODO(), meta_v1.ListOptions{})
+    if err != nil {
+      log.Println("INFO: NetworkAttachmentDefinition discovery query failed with error:" + err.Error())
+      time.Sleep(RetryInterval * time.Millisecond)
+    } else {
+      log.Println("INFO: NetworkAttachmentDefinition API seems to be installed in the cluster!")
+      netWatcher.createNadInformer(nadClient)
       break
     }
   }
@@ -115,7 +139,7 @@ func (netWatcher *NetWatcher) WatchErrorHandler(r *cache.Reflector, err error) {
     return
   }
   //The default K8s client retry mechanism expires after a certain amount of time, and just gives-up
-  //It is better to shutdown the whole process now and freshly re-build the watchers, than risking becoming a permanent zombie
+  //It is better to shutdown the whole process now and freshly re-build the watchers, rather than risking becoming a permanent zombie
   *netWatcher.StopChan <- struct{}{}
   //Give some time for gracefully terminating the connections
   time.Sleep(5*time.Second)
@@ -124,9 +148,9 @@ func (netWatcher *NetWatcher) WatchErrorHandler(r *cache.Reflector, err error) {
 }
 
 func (netWatcher *NetWatcher) createDnetInformer(dnetClient danmclientset.Interface) {
-  netWatcher.Clients[DanmNetKind] = dnetClient
+  netWatcher.DanmClients[DanmNetKind] = dnetClient
   dnetInformerFactory := danminformers.NewSharedInformerFactory(dnetClient, time.Minute*10)
-  netWatcher.Factories[DanmNetKind] = dnetInformerFactory
+  netWatcher.DanmFactories[DanmNetKind] = dnetInformerFactory
   dnetController := dnetInformerFactory.Danm().V1().DanmNets().Informer()
   dnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: AddDanmNet,
@@ -138,9 +162,9 @@ func (netWatcher *NetWatcher) createDnetInformer(dnetClient danmclientset.Interf
 }
 
 func (netWatcher *NetWatcher) createTnetInformer(tnetClient danmclientset.Interface) {
-  netWatcher.Clients[TenantNetworkKind] = tnetClient
+  netWatcher.DanmClients[TenantNetworkKind] = tnetClient
   tnetInformerFactory := danminformers.NewSharedInformerFactory(tnetClient, time.Minute*10)
-  netWatcher.Factories[TenantNetworkKind] = tnetInformerFactory
+  netWatcher.DanmFactories[TenantNetworkKind] = tnetInformerFactory
   tnetController := tnetInformerFactory.Danm().V1().TenantNetworks().Informer()
   tnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: AddTenantNetwork,
@@ -152,9 +176,9 @@ func (netWatcher *NetWatcher) createTnetInformer(tnetClient danmclientset.Interf
 }
 
 func (netWatcher *NetWatcher) createCnetInformer(cnetClient danmclientset.Interface) {
-  netWatcher.Clients[ClusterNetworkKind] = cnetClient
+  netWatcher.DanmClients[ClusterNetworkKind] = cnetClient
   cnetInformerFactory := danminformers.NewSharedInformerFactory(cnetClient, time.Minute*10)
-  netWatcher.Factories[ClusterNetworkKind] = cnetInformerFactory
+  netWatcher.DanmFactories[ClusterNetworkKind] = cnetInformerFactory
   cnetController := cnetInformerFactory.Danm().V1().ClusterNetworks().Informer()
   cnetController.AddEventHandler(cache.ResourceEventHandlerFuncs{
       AddFunc: AddClusterNetwork,
@@ -163,6 +187,20 @@ func (netWatcher *NetWatcher) createCnetInformer(cnetClient danmclientset.Interf
   })
   cnetController.SetWatchErrorHandler(netWatcher.WatchErrorHandler)
   netWatcher.Controllers[ClusterNetworkKind] = cnetController
+}
+
+func (netWatcher *NetWatcher) createNadInformer(nadClient nadclientset.Interface) {
+  netWatcher.NadClient = nadClient
+  nadInformerFactory := nadinformers.NewSharedInformerFactory(nadClient, time.Minute*10)
+  netWatcher.NadFactory = nadInformerFactory
+  nadController := nadInformerFactory.K8sCniCncfIo().V1().NetworkAttachmentDefinitions().Informer()
+  nadController.AddEventHandler(cache.ResourceEventHandlerFuncs{
+      AddFunc:    netWatcher.AddNad,
+      UpdateFunc: netWatcher.UpdateNad,
+      DeleteFunc: DeleteNad,
+  })
+  nadController.SetWatchErrorHandler(netWatcher.WatchErrorHandler)
+  netWatcher.Controllers[NadKind] = nadController
 }
 
 func AddDanmNet(obj interface{}) {
@@ -338,6 +376,110 @@ func DeleteClusterNetwork(obj interface{}) {
   }
 }
 
+func (netWatcher *NetWatcher) AddNad(obj interface{}) {
+  nad, isNetwork := obj.(*nadtypes.NetworkAttachmentDefinition)
+  if !isNetwork {
+    log.Println("ERROR: Can't create interfaces for NetworkAttachmentDefinition, 'cause we have received an invalid object from the K8s API server")
+    return
+  }
+  dnet, err := convertNadToDnet(nad)
+  if err != nil {
+    log.Println("INFO: Creating host interfaces for NetworkAttachmentDefinition:" + nad.ObjectMeta.Name + " failed with error:" + err.Error())
+    return
+  }
+  err = setupHost(dnet)
+  if err != nil {
+    log.Println("INFO: Creating host interfaces for NetworkAttachmentDefinition:" + nad.ObjectMeta.Name + " failed with error:" + err.Error())
+    return
+  }
+  //Upstream IPVLAN/MACVLAN plugins are dumb animals, so we need to modify parent device in their NAD to the exact VLAN/VxLAN host interface
+  //TODO: on one hand this would make much more sense to be done in an admission controller, on the other one it makes sense for netwatcher to be self-containing
+  //      Let's see if this causes issues in production. A random initial Pod restart here and there when the network and a Pod using it are created the same time we can live with IMO
+  if dnet.Spec.Options.Vlan != 0 ||dnet.Spec.Options.Vxlan != 0 {
+    //TODO: copy-paste of cniconfs, need refactoring if works
+    transparentCniConf := map[string]interface{}{}
+    json.Unmarshal([]byte(nad.Spec.Config), &transparentCniConf)
+    transparentCniConf["master"] = DetermineHostDeviceName(dnet)
+    moddedCniConf,_ := json.Marshal(transparentCniConf)
+    nad.Spec.Config = string(moddedCniConf)
+    _, err = netWatcher.NadClient.K8sCniCncfIoV1().NetworkAttachmentDefinitions(nad.ObjectMeta.Namespace).Update(context.TODO(), nad, meta_v1.UpdateOptions{})
+    if err != nil {
+      log.Println("INFO: Could not update NetworkAttachmentDefinition:" + nad.ObjectMeta.Name + " with the new parent interface name because:" + err.Error())
+    }
+  }
+}
+
+func (netWatcher *NetWatcher) UpdateNad(oldObj, newObj interface{}) {
+  oldNad, isNetwork := oldObj.(*nadtypes.NetworkAttachmentDefinition)
+  if !isNetwork {
+    log.Println("ERROR: Can't update interfaces for NetworkAttachmentDefinition change, 'cause we have received an invalid old object from the K8s API server")
+    return
+  }
+  newNad, isNetwork := newObj.(*nadtypes.NetworkAttachmentDefinition)
+  if !isNetwork {
+    log.Println("ERROR: Can't update interfaces for NetworkAttachmentDefinition change, 'cause we have received an invalid new object from the K8s API server")
+    return
+  }
+  oldDn, err := convertNadToDnet(oldNad)
+  if err != nil {
+    log.Println("INFO: Modifying host interfaces for NetworkAttachmentDefinition:" + oldNad.ObjectMeta.Name + " failed with error:" + err.Error())
+    return
+  }
+  newdDn, err := convertNadToDnet(newNad)
+  if err != nil {
+    log.Println("INFO: Modifying host interfaces for NetworkAttachmentDefinition:" + newNad.ObjectMeta.Name + " failed with error:" + err.Error())
+    return
+  }
+  parentUpdateNeeded := (DetermineHostDeviceName(oldDn) != DetermineHostDeviceName(newdDn))
+  zeroVnis(oldDn,newdDn)
+  err = deleteNetworks(oldDn)
+  if err != nil {
+    log.Println("INFO: Deletion of old host interfaces for NetworkAttachmentDefinition:" + oldNad.ObjectMeta.Name + " after update failed with error:" + err.Error())
+  }
+  err = setupHost(newdDn)
+  if err != nil {
+    log.Println("INFO: Creating host interfaces for modified NetworkAttachmentDefinition:" + newNad.ObjectMeta.Name + " after update failed with error:" + err.Error())
+  }
+  if parentUpdateNeeded {
+    //TODO: copy-paste of cniconfs, need refactoring if works
+    transparentCniConf := map[string]interface{}{}
+    json.Unmarshal([]byte(newNad.Spec.Config), &transparentCniConf)
+    transparentCniConf["master"] = DetermineHostDeviceName(newdDn)
+    moddedCniConf,_ := json.Marshal(transparentCniConf)
+    newNad.Spec.Config = string(moddedCniConf)
+    _, err = netWatcher.NadClient.K8sCniCncfIoV1().NetworkAttachmentDefinitions(newNad.ObjectMeta.Namespace).Update(context.TODO(), newNad, meta_v1.UpdateOptions{})
+    if err != nil {
+      log.Println("INFO: Could not update NetworkAttachmentDefinition:" + newNad.ObjectMeta.Name + " with the new parent interface name because:" + err.Error())
+    }
+  }
+}
+
+func DeleteNad(obj interface{}) {
+  nad, isNetwork := obj.(*nadtypes.NetworkAttachmentDefinition)
+  if !isNetwork {
+    tombStone, objIsTombstone := obj.(cache.DeletedFinalStateUnknown)
+      if !objIsTombstone {
+        log.Println("ERROR: Can't delete interfaces for NetworkAttachmentDefinition, 'cause we have received an invalid object from the K8s API server")
+        return
+    }
+    var isObjectInTombStoneNetwork bool
+    nad, isObjectInTombStoneNetwork = tombStone.Obj.(*nadtypes.NetworkAttachmentDefinition)
+    if !isObjectInTombStoneNetwork {
+      log.Println("ERROR: Can't delete interfaces for NetworkAttachmentDefinition, 'cause we have received an invalid object from the K8s API server in the Event tombstone")
+      return
+    }
+  }
+  dnet, err := convertNadToDnet(nad)
+  if err != nil {
+    log.Println("INFO: Deleting host interfaces for NetworkAttachmentDefinition:" + nad.ObjectMeta.Name + " failed with error:" + err.Error())
+    return
+  }
+  err = deleteNetworks(dnet)
+  if err != nil {
+    log.Println("INFO: Deletion of host interfaces for NetworkAttachmentDefinition:" + nad.ObjectMeta.Name + " failed with error:" + err.Error())
+  }
+}
+
 func ConvertTnetToDnet(tnet *danmtypes.TenantNetwork) *danmtypes.DanmNet {
   dnet := danmtypes.DanmNet {
     TypeMeta: tnet.TypeMeta,
@@ -358,6 +500,38 @@ func ConvertCnetToDnet(cnet *danmtypes.ClusterNetwork) *danmtypes.DanmNet {
   }
   dnet.TypeMeta.Kind = ClusterNetworkKind
   return &dnet
+}
+
+func convertNadToDnet(nad *nadtypes.NetworkAttachmentDefinition) (*danmtypes.DanmNet,error) {
+  dnet := danmtypes.DanmNet {
+    TypeMeta: nad.TypeMeta,
+    ObjectMeta: nad.ObjectMeta,
+  }
+  dnet.TypeMeta.Kind = NadKind
+  delegateConf, err := multustypes.LoadDelegateNetConf([]byte(nad.Spec.Config), nil, "")
+  if err != nil {
+    return &dnet, errors.New("could not parse CNI config from Nad.Spec.Config into delegate type because:" + err.Error())
+  }
+  //TODO: support conflist type
+  if delegateConf.Conf.Type == "" {
+    return &dnet, nil
+  }
+  var netConf datastructs.NetConf
+  err = json.Unmarshal([]byte(nad.Spec.Config), &netConf)
+  if err != nil {
+    return &dnet, errors.New("could not parse CNI config from Nad.Spec.Config into netconf type because:" + err.Error())
+  }
+  spec := danmtypes.DanmNetSpec {
+    NetworkID:   netConf.Name,
+    NetworkType: netConf.Type,
+    Options: danmtypes.DanmNetOption {
+      Device: netConf.Master,
+      Vlan:   netConf.Vlan,
+      Vxlan:  netConf.Vxlan,
+    },
+  }
+  dnet.Spec = spec
+  return &dnet, nil
 }
 
 func ConvertDnetToTnet(dnet *danmtypes.DanmNet) *danmtypes.TenantNetwork {
@@ -462,6 +636,21 @@ func RefreshNetwork(danmClient danmclientset.Interface, netInfo danmtypes.DanmNe
   if netInfo.TypeMeta.Kind == TenantNetworkKind  {dummyIface.TenantNetwork = netInfo.ObjectMeta.Name}
   if netInfo.TypeMeta.Kind == ClusterNetworkKind {dummyIface.ClusterNetwork = netInfo.ObjectMeta.Name}
   return GetNetworkFromInterface(danmClient, dummyIface, netInfo.ObjectMeta.Namespace)
+}
+
+func DetermineHostDeviceName(dnet *danmtypes.DanmNet) string {
+  var device string
+  isVlanDefined := (dnet.Spec.Options.Vlan!=0)
+  isVxlanDefined := (dnet.Spec.Options.Vxlan!=0)
+  if isVxlanDefined {
+    device = "vx_" + dnet.Spec.NetworkID
+  } else if isVlanDefined {
+    vlanId := strconv.Itoa(dnet.Spec.Options.Vlan)
+    device = dnet.Spec.NetworkID + "." + vlanId
+  } else {
+    device = dnet.Spec.Options.Device
+  }
+  return device
 }
 
 //Little trickery: if there was no change in the VNI+host_device combo during the update we set it to 0 in the manifests.

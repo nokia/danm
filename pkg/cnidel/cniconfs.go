@@ -20,16 +20,10 @@ func readCniConfigFile(cniconfDir string, netInfo *danmtypes.DanmNet, ipamOption
   }
   //Only overwrite "ipam" of the static CNI config if user wants
   if len(ipamOptions.Ips) > 0 {
-    genericCniConf := map[string]interface{}{}
-    err = json.Unmarshal(rawConfig, &genericCniConf)
-    if err != nil {
-      return nil, errors.New("could not Unmarshal CNI config file:" + cniConfig + ".conf for plugin: " + netInfo.Spec.NetworkType + ", because:" + err.Error())
-    }
     ipamRaw,_ := json.Marshal(ipamOptions)
     ipamInGenericFormat := map[string]interface{}{}
     json.Unmarshal(ipamRaw, &ipamInGenericFormat)
-    genericCniConf["ipam"] = ipamInGenericFormat
-    rawConfig,_ = json.Marshal(genericCniConf)
+    rawConfig = netcontrol.PatchCniConf(rawConfig, "ipam", ipamInGenericFormat)
   }
   return rawConfig, nil
 }

@@ -36,6 +36,9 @@
       * [ClusterNetwork](#clusternetwork)
       * [TenantConfig](#tenantconfig)
 * [Usage of DANM's Netwatcher component](#usage-of-danms-netwatcher-component)
+  * [Feature description](#feature-description)
+  * [Usage with DANM APIs](#usage-with-danm-apis)
+  * [Usage with NetworkAttachmentDefinition API](#usage-with-networkattachmentdefinition-api)
 * [Usage of DANM's Svcwatcher component](#usage-of-danms-svcwatcher-component)
   * [Feature description](#feature-description)
   * [Svcwatcher compatible Service descriptors](#svcwatcher-compatible-service-descriptors)
@@ -75,7 +78,7 @@ To satisfy the needs of this complex ecosystem, DANM provides different APIs for
 **TenantNetworks** is a namespaced API, and can be freely created by tenant users. It basically is the same API as DanmNet, with one big difference: parameters any way related to host settings cannot be freely configured through this API. These parameters are automatically filled by DANM instead!
 Wonder how? Refer to chapter [Connecting TenantNetworks to TenantConfigs](#connecting-tenantnetworks-to-tenantconfigs) for more information.
 
- **ClusterNetworks** on the other hand is a cluster-wide API, and as such, can be -or should be- only provisioned by administrator level users. Administrators can freely set all available configuration options, even the physical parameters.
+**ClusterNetworks** on the other hand is a cluster-wide API, and as such, can be -or should be- only provisioned by administrator level users. Administrators can freely set all available configuration options, even the physical parameters.
  The other nice thing in ClusterNetworks is that all Pods, in any namespace can connect to them - unless the network administrator forbade it via the newly introduced **AllowedTenants** configuration list.
 
 Interested user can find reference manifests showcasing the features of the new APIs under [DANM V4 example manifests](https://github.com/nokia/danm/tree/master/example/4_0_examples).
@@ -455,17 +458,76 @@ Every CREATE, and PUT TenantConfig operation is subject to the following validat
  4. A NetworkID cannot be longer than 10 characters in a NetworkType: NetworkID mapping belonging to a dynamic NetworkType
 
 ### Usage of DANM's Netwatcher component
-Netwatcher is a mandatory component of the DANM networking suite.
-It is implemented using Kubernetes' Informer paradigm, and is deployed as a DaemonSet.
-It shall be running on all hosts where DANM CNI is the configured CNI plugin.
+#### Feature description
+Netwatcher is a standalone Network Operator responsible for dynamically managing (i.e. creation and deletion) VxLAN and VLAN interfaces on all the hosts based on dynamic network management K8s APIs.
+Netwatcher is a mandatory component of the DANM networking suite, but can be a great standalone add to Multus, or any other NetworkAttachmentDefinition driven K8s clusters!
+When netwatcher is deployed it runs as a DaemonSet, brought-up on all hosts where a meta CNI plugin is configured.
 
-The netwatcher component is responsible for dynamically managing (i.e. creation and deletion) VxLAN and VLAN interfaces on all the hosts based on the dynamic network management APIs.
-
-Whenever a network is created, modified, or deleted -any network, belonging to any of the supported API types- within the Kubernetes cluster, netwatcher will be triggered.
+#### Usage with DANM APIs
+Whenever a DANM network is created, modified, or deleted -any network, belonging to any of the supported API types- within the Kubernetes cluster, netwatcher will be triggered.
 If the network in question contained either the "vxlan", or the "vlan" attributes; then netwatcher immediately creates, or deletes the VLAN or VxLAN host interface with the matching VID.
 If the Spec.Options.host_device, .vlan, or .vxlan attributes are modified netwatcher first deletes the old, and then creates the new host interface.
 
 This feature is the most beneficial when used together with a dynamic network provisioning backend supporting connecting Pod interfaces to virtual host devices (IPVLAN, MACVLAN, SR-IOV for VLANs). Whenever a Pod is connected to such a network containing a virtual network identifier, the CNI component automatically connects the created interface to the VxLAN or VLAN host interface created by the netwatcher; instead of directly connecting it to the configured host device.
+
+#### Usage with NetworkAttachmentDefinition API
+But wait that's not all - Netwatcher is an API agnostic standalone Operator! This means all of its supported features can be used even in clusters where DANM is not the configured meta CNI solution!
+If your cluster uses a CNI solution driven by the NetworkAttachmentDefinition API -such as Multus, or Genie-, you can deploy netwatcher as-is to automate various network management operatios of TelCo workloads.
+
+Whenever you deploy a NAD Netwatcher will inspect the CNI config portion stored under Spec.Config. If there is a VLAN, or VxLAN identifier added to a CNI configuration it will trigger Netwatcher to create the necessary host interfaces, the exact same way as if these attributes were added to a DANM API object.
+For example if you want your IPVLAN type NAD to be connected to a specific VLAN just add the tag to your object the following way:
+```
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: ipvlan-conf
+spec: 
+  config: '{
+      "name": "vlantest",
+      "cniVersion": "0.3.1",
+      "type": "ipvlan",
+      "master": "tenant-bond",
+      "vlan": 500,
+      "ipam": {
+        "type": "static",
+        "routes": [
+          {
+            "dst": "0.0.0.0/0",
+            "gw": "10.1.1.1"
+          }
+        ] 
+      }
+    }'
+```
+When it comes to dealing with NADs Netwatcher understands that these extra tags are not recognized by the existing CNI eco-system. So to achieve E2E automation Netwatcher will also modify the CNI configuration of the NAD to point to the right host interface!
+Let's use the above example to show how this works!
+First, upon seeing this network Netwatcher creates the appropriate host interface with the tag:
+```
+# ip l | grep vlantest
+568: vlantest.500@tenant-bond: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc noqueue state UP mode DEFAULT group default
+```
+Then it also initiates an Update operation on the NAD, exchanging the old host interface reference to the correct one:
+```
+# kubectl get network-attachment-definitions.k8s.cni.cncf.io ipvlan-conf  -o yaml
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+...
+  - apiVersion: k8s.cni.cncf.io/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:spec:
+        f:config: {}
+    manager: netwatcher
+    operation: Update
+    time: "2021-03-01T17:21:11Z"
+  name: ipvlan-conf
+  namespace: default
+spec:
+  config: '{"cniVersion":"0.3.1","ipam":{"routes":[{"dst":"0.0.0.0/0","gw":"10.1.1.1"}],"type":"static"},"master":"vlantest.500","name":"vlantest","type":"ipvlan","vlan":500}'
+```
+This approach ensures users can seamlessly integrate Netwatcher into their existing clusters and enjoy its extra capabilities without any extra hassle - just the way we like it!
+
 ### Usage of DANM's Svcwatcher component
 #### Feature description
 Svcwatcher component showcases the whole reason why DANM exists, and is designed the way it is. It is the first higher-level feature accomplishing our true goal described in the introduction section, that is, extending basic Kubernetes constructs to seamlessly work with multiple network interfaces.

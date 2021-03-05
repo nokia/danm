@@ -395,13 +395,8 @@ func (netWatcher *NetWatcher) AddNad(obj interface{}) {
   //Upstream IPVLAN/MACVLAN plugins are dumb animals, so we need to modify parent device in their NAD to the exact VLAN/VxLAN host interface
   //TODO: on one hand this would make much more sense to be done in an admission controller, on the other one it makes sense for netwatcher to be self-containing
   //      Let's see if this causes issues in production. A random initial Pod restart here and there when the network and a Pod using it are created the same time we can live with IMO
-  if dnet.Spec.Options.Vlan != 0 ||dnet.Spec.Options.Vxlan != 0 {
-    //TODO: copy-paste of cniconfs, need refactoring if works
-    transparentCniConf := map[string]interface{}{}
-    json.Unmarshal([]byte(nad.Spec.Config), &transparentCniConf)
-    transparentCniConf["master"] = DetermineHostDeviceName(dnet)
-    moddedCniConf,_ := json.Marshal(transparentCniConf)
-    nad.Spec.Config = string(moddedCniConf)
+  if dnet.Spec.Options.Vlan != 0 || dnet.Spec.Options.Vxlan != 0 {
+    nad.Spec.Config = string(PatchCniConf([]byte(nad.Spec.Config), "master", DetermineHostDeviceName(dnet)))
     _, err = netWatcher.NadClient.K8sCniCncfIoV1().NetworkAttachmentDefinitions(nad.ObjectMeta.Namespace).Update(context.TODO(), nad, meta_v1.UpdateOptions{})
     if err != nil {
       log.Println("INFO: Could not update NetworkAttachmentDefinition:" + nad.ObjectMeta.Name + " with the new parent interface name because:" + err.Error())
@@ -441,12 +436,7 @@ func (netWatcher *NetWatcher) UpdateNad(oldObj, newObj interface{}) {
     log.Println("INFO: Creating host interfaces for modified NetworkAttachmentDefinition:" + newNad.ObjectMeta.Name + " after update failed with error:" + err.Error())
   }
   if parentUpdateNeeded {
-    //TODO: copy-paste of cniconfs, need refactoring if works
-    transparentCniConf := map[string]interface{}{}
-    json.Unmarshal([]byte(newNad.Spec.Config), &transparentCniConf)
-    transparentCniConf["master"] = DetermineHostDeviceName(newdDn)
-    moddedCniConf,_ := json.Marshal(transparentCniConf)
-    newNad.Spec.Config = string(moddedCniConf)
+    newNad.Spec.Config = string(PatchCniConf([]byte(newNad.Spec.Config), "master", DetermineHostDeviceName(newdDn)))
     _, err = netWatcher.NadClient.K8sCniCncfIoV1().NetworkAttachmentDefinitions(newNad.ObjectMeta.Namespace).Update(context.TODO(), newNad, meta_v1.UpdateOptions{})
     if err != nil {
       log.Println("INFO: Could not update NetworkAttachmentDefinition:" + newNad.ObjectMeta.Name + " with the new parent interface name because:" + err.Error())
@@ -651,6 +641,14 @@ func DetermineHostDeviceName(dnet *danmtypes.DanmNet) string {
     device = dnet.Spec.Options.Device
   }
   return device
+}
+
+func PatchCniConf(rawConf []byte, patchKey string, patchValue interface{}) []byte {
+  transparentCniConf := map[string]interface{}{}
+  json.Unmarshal(rawConf, &transparentCniConf)
+  transparentCniConf[patchKey] = patchValue
+  moddedCniConf,_ := json.Marshal(transparentCniConf)
+  return moddedCniConf
 }
 
 //Little trickery: if there was no change in the VNI+host_device combo during the update we set it to 0 in the manifests.

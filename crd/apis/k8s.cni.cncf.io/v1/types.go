@@ -10,6 +10,9 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +resourceName=network-attachment-definitions
 
+//NetworkAttachmentDefinition is an API defined by the K8s plumbing workgroup in their effort to standardize K8s network management experience
+//This spec is directly taken from the upstream specification defined in https://github.com/k8snetworkplumbingwg/multi-net-spec
+//Current spec is based on the latest, 1.2 version
 type NetworkAttachmentDefinition struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

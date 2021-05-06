@@ -26,8 +26,10 @@ import (
 )
 
 // DanmEpLister helps list DanmEps.
+// All objects returned here must be treated as read-only.
 type DanmEpLister interface {
 	// List lists all DanmEps in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.DanmEp, err error)
 	// DanmEps returns an object that can list and get DanmEps.
 	DanmEps(namespace string) DanmEpNamespaceLister
@@ -58,10 +60,13 @@ func (s *danmEpLister) DanmEps(namespace string) DanmEpNamespaceLister {
 }
 
 // DanmEpNamespaceLister helps list and get DanmEps.
+// All objects returned here must be treated as read-only.
 type DanmEpNamespaceLister interface {
 	// List lists all DanmEps in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.DanmEp, err error)
 	// Get retrieves the DanmEp from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.DanmEp, error)
 	DanmEpNamespaceListerExpansion
 }

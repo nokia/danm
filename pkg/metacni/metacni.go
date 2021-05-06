@@ -17,6 +17,8 @@ import (
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/plugins/pkg/ns"
   "github.com/containernetworking/plugins/pkg/utils/sysctl"
+  podresclient "gopkg.in/intel/multus-cni.v3/pkg/kubeletclient"
+  multus_types "gopkg.in/intel/multus-cni.v3/pkg/types"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/clientcmd"
@@ -29,8 +31,6 @@ import (
   "github.com/nokia/danm/pkg/ipam"
   "github.com/nokia/danm/pkg/netcontrol"
   "github.com/nokia/danm/pkg/syncher"
-  checkpoint_utils "github.com/intel/multus-cni/checkpoint"
-  multus_types "github.com/intel/multus-cni/types"
 )
 
 const (
@@ -283,11 +283,11 @@ func createIface(args *datastructs.CniArgs, danmClient danmclientset.Interface, 
   var err error
   if cnidel.IsDeviceNeeded(netInfo.Spec.NetworkType) {
     if _, ok := allocatedDevices[netInfo.Spec.Options.DevicePool]; !ok {
-      checkpoint, err := checkpoint_utils.GetCheckpoint()
+      presClient, err := podresclient.GetResourceClient()
       if err != nil {
-        return errors.New("failed to instantiate checkpoint object due to:" + err.Error())
+        return errors.New("failed to instantiate Kubelet Pord Resource client due to:" + err.Error())
       }
-      allocatedDevices[netInfo.Spec.Options.DevicePool], err = getAllocatedDevices(args, checkpoint, netInfo.Spec.Options.DevicePool)
+      allocatedDevices[netInfo.Spec.Options.DevicePool], err = getAllocatedDevices(args, presClient, netInfo.Spec.Options.DevicePool)
       if err != nil {
         return errors.New("failed to get allocated devices due to:" + err.Error())
       }
@@ -315,10 +315,10 @@ func isTenantAllowed(args *datastructs.CniArgs, netInfo *danmtypes.DanmNet) bool
   return isTenantAllowed
 }
 
-func getAllocatedDevices(args *datastructs.CniArgs, checkpoint multus_types.ResourceClient, devicePool string)(*[]string, error){
-  resourceMap, err := checkpoint.GetPodResourceMap(args.Pod)
+func getAllocatedDevices(args *datastructs.CniArgs, presClient multus_types.ResourceClient, devicePool string)(*[]string, error){
+  resourceMap, err := presClient.GetPodResourceMap(args.Pod)
   if err != nil {
-    return nil, errors.New("failed to retrieve Pod info from checkpoint object due to:" + err.Error())
+    return nil, errors.New("failed to retrieve Pod info from Kubelet Pod Resource client due to:" + err.Error())
   }
   if len(resourceMap) == 0 {
     return nil, errors.New("there were no Devices allocated for the Pod")

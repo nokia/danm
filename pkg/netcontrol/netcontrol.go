@@ -17,7 +17,7 @@ import (
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
   "github.com/nokia/danm/pkg/datastructs"
-  multustypes "gopkg.in/intel/multus-cni.v3/types"
+  multustypes "gopkg.in/intel/multus-cni.v3/pkg/types"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   apierrors "k8s.io/apimachinery/pkg/api/errors"
   "k8s.io/client-go/rest"
@@ -498,7 +498,7 @@ func convertNadToDnet(nad *nadtypes.NetworkAttachmentDefinition) (*danmtypes.Dan
     ObjectMeta: nad.ObjectMeta,
   }
   dnet.TypeMeta.Kind = NadKind
-  delegateConf, err := multustypes.LoadDelegateNetConf([]byte(nad.Spec.Config), nil, "")
+  delegateConf, err := multustypes.LoadDelegateNetConf([]byte(nad.Spec.Config), nil, "", "")
   if err != nil {
     return &dnet, errors.New("could not parse CNI config from Nad.Spec.Config into delegate type because:" + err.Error())
   }

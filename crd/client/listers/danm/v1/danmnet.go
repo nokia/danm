@@ -26,8 +26,10 @@ import (
 )
 
 // DanmNetLister helps list DanmNets.
+// All objects returned here must be treated as read-only.
 type DanmNetLister interface {
 	// List lists all DanmNets in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.DanmNet, err error)
 	// DanmNets returns an object that can list and get DanmNets.
 	DanmNets(namespace string) DanmNetNamespaceLister
@@ -58,10 +60,13 @@ func (s *danmNetLister) DanmNets(namespace string) DanmNetNamespaceLister {
 }
 
 // DanmNetNamespaceLister helps list and get DanmNets.
+// All objects returned here must be treated as read-only.
 type DanmNetNamespaceLister interface {
 	// List lists all DanmNets in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.DanmNet, err error)
 	// Get retrieves the DanmNet from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.DanmNet, error)
 	DanmNetNamespaceListerExpansion
 }

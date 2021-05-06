@@ -26,8 +26,10 @@ import (
 )
 
 // NetworkAttachmentDefinitionLister helps list NetworkAttachmentDefinitions.
+// All objects returned here must be treated as read-only.
 type NetworkAttachmentDefinitionLister interface {
 	// List lists all NetworkAttachmentDefinitions in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.NetworkAttachmentDefinition, err error)
 	// NetworkAttachmentDefinitions returns an object that can list and get NetworkAttachmentDefinitions.
 	NetworkAttachmentDefinitions(namespace string) NetworkAttachmentDefinitionNamespaceLister
@@ -58,10 +60,13 @@ func (s *networkAttachmentDefinitionLister) NetworkAttachmentDefinitions(namespa
 }
 
 // NetworkAttachmentDefinitionNamespaceLister helps list and get NetworkAttachmentDefinitions.
+// All objects returned here must be treated as read-only.
 type NetworkAttachmentDefinitionNamespaceLister interface {
 	// List lists all NetworkAttachmentDefinitions in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.NetworkAttachmentDefinition, err error)
 	// Get retrieves the NetworkAttachmentDefinition from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.NetworkAttachmentDefinition, error)
 	NetworkAttachmentDefinitionNamespaceListerExpansion
 }

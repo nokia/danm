@@ -26,10 +26,13 @@ import (
 )
 
 // TenantConfigLister helps list TenantConfigs.
+// All objects returned here must be treated as read-only.
 type TenantConfigLister interface {
 	// List lists all TenantConfigs in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1.TenantConfig, err error)
 	// Get retrieves the TenantConfig from the index for a given name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1.TenantConfig, error)
 	TenantConfigListerExpansion
 }

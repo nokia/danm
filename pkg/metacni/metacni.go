@@ -225,7 +225,7 @@ func setupNetworking(args *datastructs.CniArgs) (*current.Result, error) {
     defParam := datastructs.Interface{SequenceId: 0, Ip: "dynamic",}
     err = createIface(args, danmClient, args.DefaultNetwork, defParam, syncher, allocatedDevices)
     if err != nil {
-      syncher.PushResult(args.DefaultNetwork.ObjectMeta.Name, err, nil)
+      syncher.PushResult(args.DefaultNetwork.ObjectMeta.Name, err, nil, "")
     }
   }
   for nicID, nicParams := range args.Interfaces {
@@ -234,12 +234,12 @@ func setupNetworking(args *datastructs.CniArgs) (*current.Result, error) {
     netInfo, err := netcontrol.GetNetworkFromInterface(danmClient, nicParams, args.Pod.ObjectMeta.Namespace)
     if err != nil {
       syncher.PushResult("", errors.New("failed to get network object for Pod:" + args.Pod.ObjectMeta.Name +
-                             "'s connection no.:" + strconv.Itoa(nicID) + " due to:" + err.Error()), nil)
+                             "'s connection no.:" + strconv.Itoa(nicID) + " due to:" + err.Error()), nil, "")
       continue
     }
     err = createIface(args, danmClient, netInfo, nicParams, syncher, allocatedDevices)
     if err != nil {
-      syncher.PushResult(netInfo.ObjectMeta.Name, err, nil)
+      syncher.PushResult(netInfo.ObjectMeta.Name, err, nil, "")
       continue
     }
   }
@@ -345,7 +345,7 @@ func createNic(syncher *syncher.Syncher, danmClient danmclientset.Interface, ifa
     if ep != nil {
       danmep.DeleteDanmEp(danmClient, ep, netInfo)
     }
-    syncher.PushResult(netInfo.ObjectMeta.Name, err, nil)
+    syncher.PushResult(netInfo.ObjectMeta.Name, err, nil, "")
     return
   }
   var cniResult *current.Result
@@ -356,16 +356,16 @@ func createNic(syncher *syncher.Syncher, danmClient danmclientset.Interface, ifa
   }
   if err != nil {
     danmep.DeleteDanmEp(danmClient, ep, netInfo)
-    syncher.PushResult(ep.Spec.NetworkName, err, cniResult)
+    syncher.PushResult(ep.Spec.NetworkName, err, cniResult, "")
     return
   }
   err = danmep.PostProcessInterface(ep, netInfo)
   if err != nil {
     danmep.DeleteDanmEp(danmClient, ep, netInfo)
-    syncher.PushResult(ep.Spec.NetworkName, errors.New("Post-processing failed for interface:" + ep.Spec.Iface.Name + " because:" + err.Error()), nil)
+    syncher.PushResult(ep.Spec.NetworkName, errors.New("Post-processing failed for interface:" + ep.Spec.Iface.Name + " because:" + err.Error()), nil, "")
     return
   }
-  syncher.PushResult(ep.Spec.NetworkName, nil, cniResult)
+  syncher.PushResult(ep.Spec.NetworkName, nil, cniResult, ep.Spec.Iface.Name)
 }
 
 func createDelegatedInterface(danmClient danmclientset.Interface, wasIpReservedByDanmIpam bool, ep *danmtypes.DanmEp, netInfo *danmtypes.DanmNet, args *datastructs.CniArgs) (*current.Result,error) {
@@ -396,15 +396,15 @@ func createDanmInterface(danmClient danmclientset.Interface, ep *danmtypes.DanmE
     return nil, errors.New("IPVLAN interface could not be created due to error:" + err.Error())
   }
   danmResult := &current.Result{}
-  AddIfaceToResult(ep.Spec.EndpointID, args.ContainerId, danmResult)
+  AddIfaceToResult(ep.Spec.Iface.Name, args.ContainerId, danmResult)
   AddIpToResult(ep.Spec.Iface.Address,"4",danmResult)
   AddIpToResult(ep.Spec.Iface.AddressIPv6,"6",danmResult)
   return danmResult, nil
 }
 
-func AddIfaceToResult(epid string, sandBox string, cniResult *current.Result) {
-  iface := &current.Interface{
-    Name: epid,
+func AddIfaceToResult(ifName string, sandBox string, cniResult *current.Result) {
+  iface := &current.Interface {
+    Name: ifName,
     Sandbox: sandBox,
   }
   cniResult.Interfaces = append(cniResult.Interfaces, iface)
@@ -474,9 +474,9 @@ func deleteInterface(danmClient danmclientset.Interface, args *datastructs.CniAr
     aggregatedError += "failed to delete DanmEp:" + err.Error() + "; "
   }
   if aggregatedError != "" {
-    syncher.PushResult(ep.Spec.NetworkName, errors.New(aggregatedError), nil)
+    syncher.PushResult(ep.Spec.NetworkName, errors.New(aggregatedError), nil, "")
   } else {
-    syncher.PushResult(ep.Spec.NetworkName, nil, nil)
+    syncher.PushResult(ep.Spec.NetworkName, nil, nil, ep.Spec.Iface.Name)
   }
 }
 

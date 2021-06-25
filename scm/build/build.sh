@@ -1,4 +1,8 @@
 #!/bin/sh -ex
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
 export GOOS=linux
 # Force turn off CGO enables building pure static binaries, otherwise
 # built binary still depends on and dinamically linked against the build

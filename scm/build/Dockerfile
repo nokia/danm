@@ -1,3 +1,7 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Set defaults for USERNAME, UID, GID
 ARG USERNAME=danm
 ARG UID=147

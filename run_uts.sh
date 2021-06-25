@@ -1,4 +1,8 @@
 #!/bin/bash -e
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
 DIR="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 # Build DANM container images and keep the builder container. Use the cache, which is especially

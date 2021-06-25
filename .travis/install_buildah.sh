@@ -1,4 +1,8 @@
 #!/bin/bash
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
     sudo apt-get -y install software-properties-common
     sudo add-apt-repository -y ppa:alexlarsson/flatpak
     sudo add-apt-repository -y ppa:gophers/archive

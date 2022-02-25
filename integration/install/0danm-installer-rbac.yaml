@@ -22,6 +22,7 @@ rules:
   verbs:
   - get
   - create
+  - bind
   - patch
 - apiGroups:
   - "*"
@@ -84,6 +85,9 @@ rules:
   - watch
   - create
   - update
+  - patch
+  - approve
+  - delete
 - apiGroups:
   - "certificates.k8s.io"
   resources:
@@ -106,6 +110,15 @@ rules:
   - get
   - create
   - patch
+- apiGroups:
+  - k8s.cni.cncf.io
+  resources:
+  - network-attachment-definitions
+  verbs:
+  - get
+  - list
+  - watch
+  - update
 - apiGroups:
   - ""
   resources:

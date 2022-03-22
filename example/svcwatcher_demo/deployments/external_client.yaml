@@ -13,7 +13,7 @@ spec:
       labels:
         app: external-client
       annotations:
-        danm.k8s.io/interfaces: |
+        danm.io/interfaces: |
           [
             {"network":"external", "ip":"dynamic"}
           ]

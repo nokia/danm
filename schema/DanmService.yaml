@@ -17,22 +17,22 @@ metadata:
     # This field replaces the spec.selector field from the core Service API, which must be omitted to make the Service selectorless.
     # DANM uses the information for the same purpose as teh default Service controller - for every Pod matching all key-value pairs in the selector field, one Endpoint will be created.
     # MANDATORY - JSON FORMATTED LIST OF STRING:STRING ASSOCIATIONS (e.g. '{"app":"loadbalancer"},{"type":"sctp"}')
-    danm.k8s.io/selector: ## POD_SELECTORS ##
+    danm.io/selector: ## POD_SELECTORS ##
     # When DANM creates an Endpoint for a selected Pod, it populates it with the selected interface's IP.
     # If you want a Service to select an interface connected to a DanmNet, set the name of the DanmNet object into this attribute.
     # Pods, DanmNets, and Services are all namespaced resources, so an Endpoint is created only if all three are within the same K8s namespace.
     # OPTIONAL {AT LEAST ONE OF "network", "tenantNetwork", AND "clusterNetwork" shall be defined } - STRING
-    danm.k8s.io/network: ## NETWORK_SELECTOR ##
+    danm.io/network: ## NETWORK_SELECTOR ##
     # When DANM creates an Endpoint for a selected Pod, it populates it with the selected interface's IP.
     # If you want a Service to select an interface connected to a TenantNetwork, set the name of the TenantNetwork object into this attribute.
     # Pods, TenantNetworks, and Services are all namespaced resources, so an Endpoint is created only if all three are within the same K8s namespace.
     # OPTIONAL {AT LEAST ONE OF "network", "tenantNetwork", AND "clusterNetwork" shall be defined } - STRING
-    danm.k8s.io/tenantNetwork: ## NETWORK_SELECTOR ##
+    danm.io/tenantNetwork: ## NETWORK_SELECTOR ##
     # When DANM creates an Endpoint for a selected Pod, it populates it with the selected interface's IP.
     # If you want a Service to select an interface connected to a ClusterNetwork, set the name of the ClusterNetwork object into this attribute.
     # As ClusterNetworks are not namespaced resources, EndPoints are created whenever a Pod connects to a matching ClusterNetwork in the same namespace as this Service.
     # OPTIONAL {AT LEAST ONE OF "network", "tenantNetwork", AND "clusterNetwork" shall be defined } - STRING
-    danm.k8s.io/clusterNetwork: ## NETWORK_SELECTOR ##
+    danm.io/clusterNetwork: ## NETWORK_SELECTOR ##
 spec:
   # DANM recognized Services are selectorless Services, because we want to avoid default Kubernetes controllers to create an Endpoint to a wrong network interface.
   # Selectorless Services don't have a spec.selector present in their object.

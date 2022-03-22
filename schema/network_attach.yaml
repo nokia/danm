@@ -21,7 +21,7 @@ spec:
     metadata:
       annotations:
       # DANM shall be driven with networking related requirements stated in this JSON formatted field.
-      # Each entry listed in danm.k8s.io/interfaces annotation results in a network interface provisioned into every Pod's network namespace created based on this template.
+      # Each entry listed in danm.io/interfaces annotation results in a network interface provisioned into every Pod's network namespace created based on this template.
       # The interface is provisioned via the backend specified in the referenced network object (or with DANM's in-built IPVLAN CNI by default).
       # MANDATORY - LIST OF REQUIRED NETWORK INTERFACES
       #   One network connection can have the following attributes:
@@ -53,7 +53,7 @@ spec:
       #     Generally supported parameter, works with all NetworkTypes.
       #     OPTIONAL PARAMETER
       #     possible value: {"DESTINATION_IPV6_CIDR1":"IPV6_GW1","DESTINATION_IPV6_CIDR2":"IPV6_GW2"...}
-        danm.k8s.io/interfaces: |
+        danm.io/interfaces: |
           [
             {
               "network":"<NETWORK1_NAME>",

@@ -36,9 +36,9 @@ type FakeDanmNets struct {
 	ns   string
 }
 
-var danmnetsResource = schema.GroupVersionResource{Group: "danm.k8s.io", Version: "v1", Resource: "danmnets"}
+var danmnetsResource = schema.GroupVersionResource{Group: "danm.io", Version: "v1", Resource: "danmnets"}
 
-var danmnetsKind = schema.GroupVersionKind{Group: "danm.k8s.io", Version: "v1", Kind: "DanmNet"}
+var danmnetsKind = schema.GroupVersionKind{Group: "danm.io", Version: "v1", Kind: "DanmNet"}
 
 // Get takes name of the danmNet, and returns the corresponding danmNet object, and an error if there is any.
 func (c *FakeDanmNets) Get(ctx context.Context, name string, options v1.GetOptions) (result *danmv1.DanmNet, err error) {

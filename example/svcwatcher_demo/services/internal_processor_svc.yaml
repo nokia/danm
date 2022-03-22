@@ -4,8 +4,8 @@ metadata:
   name: vnf-internal-processor
   namespace: example-vnf
   annotations:
-    danm.k8s.io/selector: '{"app":"internal-processor"}'
-    danm.k8s.io/network: internal
+    danm.io/selector: '{"app":"internal-processor"}'
+    danm.io/network: internal
 spec:
   clusterIP: None
   ports:

@@ -7,11 +7,11 @@ metadata:
 spec:
   selector:
     matchLabels:
-      danm.k8s.io: danm-cni
+      danm.io: danm-cni
   template:
     metadata:
       labels:
-        danm.k8s.io: danm-cni
+        danm.io: danm-cni
     spec:
       containers:
         - name: danm-cni

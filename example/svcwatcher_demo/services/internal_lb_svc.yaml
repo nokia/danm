@@ -4,8 +4,8 @@ metadata:
   name: vnf-internal-lb
   namespace: example-vnf
   annotations:
-    danm.k8s.io/selector: '{"app":"loadbalancer"}'
-    danm.k8s.io/network: internal
+    danm.io/selector: '{"app":"loadbalancer"}'
+    danm.io/network: internal
 spec:
   clusterIP: None
   ports:

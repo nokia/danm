@@ -14,7 +14,7 @@ spec:
         app: loadbalancer
         vnf-type: example-vnf
       annotations:
-        danm.k8s.io/interfaces: |
+        danm.io/interfaces: |
           [
             {"network":"management", "ip":"dynamic"},
             {"network":"external", "ip":"dynamic"},

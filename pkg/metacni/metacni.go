@@ -34,7 +34,7 @@ import (
 )
 
 const (
-  danmApiPath = "danm.k8s.io"
+  danmApiPath = "danm.io"
   danmIfDefinitionSyntax = danmApiPath + "/interfaces"
   v1Endpoint = "/api/v1/"
   cniVersion = "0.3.1"

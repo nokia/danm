@@ -17,7 +17,7 @@ as "bootstrap CNI") is already installed. In the setup deployed by this installe
 the bootstrap CNI will both be used by DANM components themselves (ie. netwatcher
 and svcwatcher will utilize that bootstrap CNI for their own network connectivity),
 as well as being configured as a DanmNet or ClusterNetwork with the name "default",
-that will be used by any Kubernetes applications without a `danm.k8s.io` annotation.
+that will be used by any Kubernetes applications without a `danm.io` annotation.
 
 Please be aware that the existing (bootstrap) CNI configuration must be a single
 CNI, *not* a list of CNIs. This means that in your CNI configuration directory,

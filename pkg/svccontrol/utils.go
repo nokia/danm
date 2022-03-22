@@ -10,10 +10,10 @@ import (
 )
 
 const (
-  PodSelector = "danm.k8s.io/selector"
-  DanmNetSelector = "danm.k8s.io/network"
-  TenantNetSelector = "danm.k8s.io/tenantNetwork"
-  ClusterNetSelector = "danm.k8s.io/clusterNetwork"
+  PodSelector = "danm.io/selector"
+  DanmNetSelector = "danm.io/network"
+  TenantNetSelector = "danm.io/tenantNetwork"
+  ClusterNetSelector = "danm.io/clusterNetwork"
   TolerateUnreadyEps = "service.alpha.kubernetes.io/tolerate-unready-endpoints"
 )
 

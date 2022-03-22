@@ -42,7 +42,7 @@ rules:
   - update
   - get
 - apiGroups:
-  - "danm.k8s.io"
+  - "danm.io"
   resources:
   - danmeps
   verbs:

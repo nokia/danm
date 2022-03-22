@@ -35,9 +35,9 @@ type FakeClusterNetworks struct {
 	Fake *FakeDanmV1
 }
 
-var clusternetworksResource = schema.GroupVersionResource{Group: "danm.k8s.io", Version: "v1", Resource: "clusternetworks"}
+var clusternetworksResource = schema.GroupVersionResource{Group: "danm.io", Version: "v1", Resource: "clusternetworks"}
 
-var clusternetworksKind = schema.GroupVersionKind{Group: "danm.k8s.io", Version: "v1", Kind: "ClusterNetwork"}
+var clusternetworksKind = schema.GroupVersionKind{Group: "danm.io", Version: "v1", Kind: "ClusterNetwork"}
 
 // Get takes name of the clusterNetwork, and returns the corresponding clusterNetwork object, and an error if there is any.
 func (c *FakeClusterNetworks) Get(ctx context.Context, name string, options v1.GetOptions) (result *danmv1.ClusterNetwork, err error) {

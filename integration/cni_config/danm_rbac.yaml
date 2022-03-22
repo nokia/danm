@@ -5,7 +5,7 @@ metadata:
   name: caas:danm
 rules:
   - apiGroups:
-    - danm.k8s.io
+    - danm.io
     resources:
     - danmnets
     - danmeps

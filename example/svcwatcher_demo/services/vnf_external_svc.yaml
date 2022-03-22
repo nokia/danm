@@ -4,8 +4,8 @@ metadata:
   name: vnf-external-svc
   namespace: example-vnf
   annotations:
-    danm.k8s.io/selector: '{"vnf-type":"example-vnf"}'
-    danm.k8s.io/network: external
+    danm.io/selector: '{"vnf-type":"example-vnf"}'
+    danm.io/network: external
 spec:
   clusterIP: None
   ports:

@@ -1,5 +1,5 @@
 ---
-apiVersion: danm.k8s.io/v1
+apiVersion: danm.io/v1
 kind: {{ if eq (getenv "DANM_DEPLOY_MODE") "lightweight" }}DanmNet{{ else }}ClusterNetwork{{ end }}
 metadata:
   name: default

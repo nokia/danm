@@ -33,7 +33,7 @@ type DanmV1Interface interface {
 	TenantNetworksGetter
 }
 
-// DanmV1Client is used to interact with features provided by the danm.k8s.io group.
+// DanmV1Client is used to interact with features provided by the danm.io group.
 type DanmV1Client struct {
 	restClient rest.Interface
 }

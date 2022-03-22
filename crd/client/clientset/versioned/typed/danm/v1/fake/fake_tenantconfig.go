@@ -35,9 +35,9 @@ type FakeTenantConfigs struct {
 	Fake *FakeDanmV1
 }
 
-var tenantconfigsResource = schema.GroupVersionResource{Group: "danm.k8s.io", Version: "v1", Resource: "tenantconfigs"}
+var tenantconfigsResource = schema.GroupVersionResource{Group: "danm.io", Version: "v1", Resource: "tenantconfigs"}
 
-var tenantconfigsKind = schema.GroupVersionKind{Group: "danm.k8s.io", Version: "v1", Kind: "TenantConfig"}
+var tenantconfigsKind = schema.GroupVersionKind{Group: "danm.io", Version: "v1", Kind: "TenantConfig"}
 
 // Get takes name of the tenantConfig, and returns the corresponding tenantConfig object, and an error if there is any.
 func (c *FakeTenantConfigs) Get(ctx context.Context, name string, options v1.GetOptions) (result *danmv1.TenantConfig, err error) {

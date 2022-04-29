@@ -6,19 +6,19 @@ metadata:
 spec:
   selector:
     matchLabels:
-      danm.k8s.io: svcwatcher
+      danm.io: svcwatcher
   template:
     metadata:
       annotations:
         # Adapt to your own network environment!
-        danm.k8s.io/interfaces: |
+        danm.io/interfaces: |
           [
             {
               "network":"flannel"
             }
           ]
       labels:
-        danm.k8s.io: svcwatcher
+        danm.io: svcwatcher
     spec:
       serviceAccountName: svcwatcher
       dnsPolicy: ClusterFirst

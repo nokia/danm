@@ -1,5 +1,5 @@
 ### K8s CRD TenantConfig API schema description ###
-apiVersion: danm.k8s.io/v1
+apiVersion: danm.io/v1
 # A TenantConfig object represents the environment specific physical properties of the internal networks usable by tenant users.
 # These properties are:
 # - name of the host network devices allowed to be used by tenants

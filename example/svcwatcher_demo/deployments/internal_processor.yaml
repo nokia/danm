@@ -13,7 +13,7 @@ spec:
       labels:
         app: internal-processor
       annotations:
-        danm.k8s.io/interfaces: |
+        danm.io/interfaces: |
           [
             {"network":"management", "ip":"dynamic"},
             {"network":"internal", "ip":"dynamic"}

@@ -1,5 +1,5 @@
 ### K8s CRD TenantNetwork API schema description ###
-apiVersion: danm.k8s.io/v1
+apiVersion: danm.io/v1
 # A TenantNetwork object represents a physical network together with its resources and configuration.
 # TenantNetworks are namespaced objects and are an abstraction for application internal networks used only within a tenant, or in K8s terminology, namespace.
 # This results in the following characteristics:

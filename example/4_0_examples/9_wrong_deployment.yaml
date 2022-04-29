@@ -13,7 +13,7 @@ spec:
       labels:
         app: test-deployment
       annotations:
-        danm.k8s.io/interfaces: |
+        danm.io/interfaces: |
           [
             {"tenantNetwork":"management", "clusterNetwork":"external", "ip":"dynamic"}
           ]

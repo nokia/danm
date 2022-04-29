@@ -1,15 +1,104 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: danmeps.danm.k8s.io
+  name: danmeps.danm.io
 spec:
-  scope: Namespaced
-  group: danm.k8s.io
-  version: v1
+  group: danm.io
   names:
     kind: DanmEp
+    listKind: DanmEpList
     plural: danmeps
     singular: danmep
     shortNames:
     - de
     - dep
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              CID:
+                type: string
+              EndpointID:
+                type: string
+              Host:
+                type: string
+              Interface:
+                properties:
+                  Address:
+                    type: string
+                  AddressIPv6:
+                    type: string
+                  DeviceID:
+                    type: string
+                  MacAddress:
+                    type: string
+                  Name:
+                    type: string
+                  proutes:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  proutes6:
+                    additionalProperties:
+                      type: string
+                    type: object
+                required:
+                - Address
+                - AddressIPv6
+                - MacAddress
+                - Name
+                - proutes
+                - proutes6
+                type: object
+              NetworkName:
+                type: string
+              NetworkType:
+                type: string
+              Pod:
+                type: string
+              PodUID:
+                description: UID is a type that holds unique ID values, including
+                  UUIDs.  Because we don't ONLY use UUIDs, this is an alias to string.  Being
+                  a type captures intent and helps make sure that UIDs and names do
+                  not get conflated.
+                type: string
+              apiType:
+                type: string
+              netns:
+                type: string
+            required:
+            - EndpointID
+            - Interface
+            - NetworkName
+            - NetworkType
+            - Pod
+            - apiType
+            type: object
+        required:
+        - metadata
+        - spec
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

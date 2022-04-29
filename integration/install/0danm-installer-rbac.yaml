@@ -47,7 +47,7 @@ rules:
   - watch
   - list
 - apiGroups:
-  - danm.k8s.io
+  - danm.io
   resources:
   - clusternetworks
   - danmeps

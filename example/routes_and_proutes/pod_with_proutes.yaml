@@ -12,7 +12,7 @@ spec:
       labels:
         app: routed
       annotations:
-        danm.k8s.io/interfaces: |
+        danm.io/interfaces: |
           [
             {"clusterNetwork":"network-with-route", "ip":"dynamic", "proutes":{"10.10.1.0/24": "10.0.0.65"}}
           ]

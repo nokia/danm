@@ -15,7 +15,7 @@ metadata:
 rules:
 rules:
 - apiGroups:
-  - danm.k8s.io
+  - danm.io
   resources:
   - danmnets
   - clusternetworks

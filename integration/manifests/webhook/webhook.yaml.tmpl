@@ -10,7 +10,7 @@ metadata:
   name: caas:danm-webhook
 rules:
 - apiGroups:
-  - danm.k8s.io
+  - danm.io
   resources:
   - tenantconfigs
   - danmeps
@@ -45,7 +45,7 @@ webhooks:
     rules:
       # UPDATE IS TEMPORARILY REMOVED DUE TO:https://github.com/nokia/danm/issues/144
       - operations: ["CREATE"]
-        apiGroups: ["danm.k8s.io"]
+        apiGroups: ["danm.io"]
         apiVersions: ["v1"]
         resources: ["danmnets","clusternetworks","tenantnetworks"]
     failurePolicy: Fail
@@ -59,7 +59,7 @@ webhooks:
       caBundle: {{ base64Encode (getenv "KUBERNETES_CA_CERTIFICATE") }}
     rules:
       - operations: ["CREATE","UPDATE"]
-        apiGroups: ["danm.k8s.io"]
+        apiGroups: ["danm.io"]
         apiVersions: ["v1"]
         resources: ["tenantconfigs"]
     failurePolicy: Fail
@@ -73,7 +73,7 @@ webhooks:
       caBundle: {{ base64Encode (getenv "KUBERNETES_CA_CERTIFICATE") }}
     rules:
       - operations: ["DELETE"]
-        apiGroups: ["danm.k8s.io"]
+        apiGroups: ["danm.io"]
         apiVersions: ["v1"]
         resources: ["danmnets","clusternetworks","tenantnetworks"]
     failurePolicy: Fail

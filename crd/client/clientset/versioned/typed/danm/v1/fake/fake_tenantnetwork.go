@@ -36,9 +36,9 @@ type FakeTenantNetworks struct {
 	ns   string
 }
 
-var tenantnetworksResource = schema.GroupVersionResource{Group: "danm.k8s.io", Version: "v1", Resource: "tenantnetworks"}
+var tenantnetworksResource = schema.GroupVersionResource{Group: "danm.io", Version: "v1", Resource: "tenantnetworks"}
 
-var tenantnetworksKind = schema.GroupVersionKind{Group: "danm.k8s.io", Version: "v1", Kind: "TenantNetwork"}
+var tenantnetworksKind = schema.GroupVersionKind{Group: "danm.io", Version: "v1", Kind: "TenantNetwork"}
 
 // Get takes name of the tenantNetwork, and returns the corresponding tenantNetwork object, and an error if there is any.
 func (c *FakeTenantNetworks) Get(ctx context.Context, name string, options v1.GetOptions) (result *danmv1.TenantNetwork, err error) {

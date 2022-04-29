@@ -1,120 +1,126 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: clusternetworks.danm.k8s.io
+  name: clusternetworks.danm.io
 spec:
   scope: Cluster
-  group: danm.k8s.io
-  version: v1
+  group: danm.io
   names:
     kind: ClusterNetwork
+    listKind: ClusterNetworkList
     plural: clusternetworks
     singular: clusternetwork
     shortNames:
     - cn
     - cnet
-    categories:
-    - all
-  validation:
-    openAPIV3Schema:
-      properties:
-        spec:
-          properties:
-            NetworkID:
-              type: string
-            NetworkType:
-              type: string
-            AllowedTenants:
-              type: array
-              items:
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              AllowedTenants:
+                items:
+                  type: string
+                type: array
+              NetworkID:
                 type: string
-            Options:
-              properties:
-                cidr:
-                  oneOf:
-                  - type: string
-                    maxLength: 0
-                  - type: string
-                    format: cidr
-                    pattern: '^\d+\.'
-                allocation_pool:
-                  properties:
-                    start:
-                      oneOf:
-                      - type: string
-                        maxLength: 0
-                      - type: string
-                        format: ipv4
-                    end:
-                      oneOf:
-                      - type: string
-                        maxLength: 0
-                      - type: string
-                        format: ipv4
-                    lastIp:
-                      oneOf:
-                      - type: string
-                        maxLength: 0
-                      - type: string
-                        format: cidr
-                        pattern: '^\d+\.'
-                container_prefix:
-                  type: string
-                host_device:
-                  type: string
-                device_pool:
-                  type: string
-                vxlan:
-                  type: integer
-                  format: int32
-                  minimum: 1
-                  maximum: 16777214
-                vlan:
-                  type: integer
-                  format: int32
-                  minimum: 1
-                  maximum: 4094
-                rt_tables:
-                  type: integer
-                  format: int32
-                  minimum: 0
-                  maximum: 255
-                net6:
-                  oneOf:
-                  - type: string
-                    maxLength: 0
-                  - type: string
-                    format: cidr
-                    pattern: ':'
-                allocation_pool_v6:
-                  properties:
-                    start:
-                      oneOf:
-                      - type: string
-                        maxLength: 0
-                      - type: string
-                        format: ipv6
-                    end:
-                      oneOf:
-                      - type: string
-                        maxLength: 0
-                      - type: string
-                        format: ipv6
-                    lastIp:
-                      oneOf:
-                      - type: string
-                        maxLength: 0
-                      - type: string
-                        format: cidr
-                        pattern: ':'
-                    cidr:
-                      oneOf:
-                      - type: string
-                        maxLength: 0
-                      - type: string
-                        format: cidr
-                        pattern: ':'
-                routes:
-                  type: object
-                routes6:
-                  type: object
+              NetworkType:
+                type: string
+              Options:
+                properties:
+                  alloc:
+                    description: bit array of tracking address allocation
+                    type: string
+                  alloc6:
+                    description: bit array tracking IPv6 allocations
+                    type: string
+                  allocation_pool:
+                    description: subset of the IPv4 subnet from which IPs can be allocated
+                    properties:
+                      end:
+                        type: string
+                      lastIp:
+                        type: string
+                      start:
+                        type: string
+                    required:
+                    - end
+                    - start
+                    type: object
+                  allocation_pool_v6:
+                    description: subset of the IPv6 subnet from which IPs can be allocated
+                    properties:
+                      cidr:
+                        type: string
+                    required:
+                    - cidr
+                    type: object
+                  cidr:
+                    description: IPv4 specific parameters IPv4 network address
+                    type: string
+                  container_prefix:
+                    description: The name of the interface in the container
+                    type: string
+                  device_pool:
+                    description: The resource_pool contains allocated device IDs
+                    type: string
+                  host_device:
+                    description: The device to where the network is attached
+                    type: string
+                  net6:
+                    description: IPv6 specific parameters IPv6 unique global address
+                      prefix
+                    type: string
+                  routes:
+                    additionalProperties:
+                      type: string
+                    description: IPv4 routes for this network
+                    type: object
+                  routes6:
+                    additionalProperties:
+                      type: string
+                    description: IPv6 routes for this network
+                    type: object
+                  rt_tables:
+                    description: Routing table number for policy routing
+                    type: integer
+                  vlan:
+                    description: the VLAN id of the VLAN interface created on top
+                      of the host device
+                    type: integer
+                  vxlan:
+                    description: the vxlan id on the host device (creation of vxlan
+                      interface)
+                    type: integer
+                required:
+                - allocation_pool
+                type: object
+            required:
+            - NetworkID
+            type: object
+        required:
+        - metadata
+        - spec
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

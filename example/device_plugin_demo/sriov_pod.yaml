@@ -6,7 +6,7 @@ metadata:
   labels:
     env: test
   annotations:
-    danm.k8s.io/interfaces: |
+    danm.io/interfaces: |
       [
         {"network":"management", "ip":"dynamic"},
         {"network":"sriov-a", "ip":"none"},

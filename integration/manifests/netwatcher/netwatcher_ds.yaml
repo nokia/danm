@@ -6,11 +6,11 @@ metadata:
 spec:
   selector:
     matchLabels:
-      danm.k8s.io: netwatcher
+      danm.io: netwatcher
   template:
     metadata:
       labels:
-        danm.k8s.io: netwatcher
+        danm.io: netwatcher
     spec:
       serviceAccountName: netwatcher
       hostNetwork: true

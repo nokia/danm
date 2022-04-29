@@ -291,7 +291,7 @@ Before DANM invokes a CNI which expects a given resource to be attached to the P
 
 The following example network definition shows how to configure device_pool parameter for sriov network type.
 ```
-apiVersion: danm.k8s.io/v1
+apiVersion: danm.io/v1
 kind: DanmNet
 metadata:
   name: sriov-a
@@ -312,7 +312,7 @@ metadata:
   labels:
     env: test
   annotations:
-    danm.k8s.io/interfaces: |
+    danm.io/interfaces: |
       [
         {"network":"management", "ip":"dynamic"},
         {"network":"sriov-a", "ip":"none"},
@@ -554,10 +554,10 @@ This is possible by leveraging the so-called "headless and selectorless Services
 
 DANM svcwatcher is triggered when such a service is created, if it contains the DANM "core API" attributes in their annotation.
 These extra attributes are the following:
-"danm.k8s.io/selector": this selector serves the exact same purpose as the default Pod selector field (which is missing from a selectorless Service by definition). Endpoints are created for Pods which match all labels provided in this list
-"danm.k8s.io/network": this is the "special sauce" of DANM. When svcwatcher creates an Endpoint, it's IP will be taken from the selected Pod's physical interface connected to the DanmNet with the matching name
-"danm.k8s.io/tenantNetwork": serves the exact same purpose as the network selector, but it selects interfaces connected to TenantNetworks, rather than DanmNets
-"danm.k8s.io/clusterNetwork": serves the exact same purpose as the network selector, but it selects interfaces connected to ClusterNetworks, rather than DanmNets
+"danm.io/selector": this selector serves the exact same purpose as the default Pod selector field (which is missing from a selectorless Service by definition). Endpoints are created for Pods which match all labels provided in this list
+"danm.io/network": this is the "special sauce" of DANM. When svcwatcher creates an Endpoint, it's IP will be taken from the selected Pod's physical interface connected to the DanmNet with the matching name
+"danm.io/tenantNetwork": serves the exact same purpose as the network selector, but it selects interfaces connected to TenantNetworks, rather than DanmNets
+"danm.io/clusterNetwork": serves the exact same purpose as the network selector, but it selects interfaces connected to ClusterNetworks, rather than DanmNets
 
 This means that DANM controlled Services behave exactly as in Kubernetes: a selected Pod's availability is advertised through one of its network interfaces.
 The big difference is that operators can now decide through which interface(s) they want the Pod to be discoverable! (Of course nothing forbids the creation of multiple Services selecting different interfaces of the same Pod, in case a Pod should be discoverable by different kind of communication partners).

@@ -36,9 +36,9 @@ type Validator struct {
   Client danmclientset.Interface
 }
 
-func CreateNewValidator(kubeconfig string) (*Validator, error) {
+func CreateNewValidator() (*Validator, error) {
   validator := Validator{}
-  danmClient, err := metacni.CreateDanmClient(kubeconfig)
+  danmClient, err := metacni.CreateDanmClient("")
   if err != nil {
     return nil, err
   }

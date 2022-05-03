@@ -19,7 +19,6 @@ func main() {
   key := flag.String("tls-private-key-file", "", "file containing the x509 private key matching --tls-cert-bundle.")
   port := flag.Int("bind-port", 8443, "the port on which to serve. Default is 8443.")
   address := flag.String("bind-address", "", "the IP address on which to listen. Default is all interfaces.")
-  kubeconfig := flag.String("kubeconfig", "", "the kubeconfig for the conection. Default is empty and use incluster config.")
   printVersion := flag.Bool("version", false, "prints Git version information of the binary to standard out")
   flag.Parse()
   if *printVersion {
@@ -36,7 +35,7 @@ func main() {
     log.Println("ERROR: TLS configuration could not be initialized, because:" + err.Error())
     return
   }
-  validator, err := admit.CreateNewValidator(*kubeconfig)
+  validator, err := admit.CreateNewValidator()
   if err != nil {
     log.Println("ERROR: Cannot create DANM REST client, because:" + err.Error())
     return

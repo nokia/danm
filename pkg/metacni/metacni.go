@@ -141,15 +141,16 @@ func extractCniArgs(args *skel.CmdArgs) (*datastructs.CniArgs,error) {
   if err != nil {
     return nil,err
   }
-  cmdArgs := datastructs.CniArgs{string(kubeArgs.K8S_POD_NAMESPACE),
-                     args.Netns,
-                     string(kubeArgs.K8S_POD_NAME),
-                     string(kubeArgs.K8S_POD_INFRA_CONTAINER_ID),
-                     args.StdinData,
-                     nil,
-                     nil,
-                     nil,
-                    }
+  cmdArgs := datastructs.CniArgs{
+  	Namespace:      string(kubeArgs.K8S_POD_NAMESPACE),
+  	Netns:          args.Netns,
+  	PodName:        string(kubeArgs.K8S_POD_NAME),
+  	ContainerId:    string(kubeArgs.K8S_POD_INFRA_CONTAINER_ID),
+  	StdIn:           args.StdinData,
+  	Interfaces:     nil,
+  	Pod:            nil,
+  	DefaultNetwork: nil,
+  }
   return &cmdArgs, nil
 }
 

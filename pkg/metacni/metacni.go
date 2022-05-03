@@ -17,8 +17,8 @@ import (
   "github.com/containernetworking/cni/pkg/types/current"
   "github.com/containernetworking/plugins/pkg/ns"
   "github.com/containernetworking/plugins/pkg/utils/sysctl"
-  podresclient "gopkg.in/intel/multus-cni.v3/pkg/kubeletclient"
-  multus_types "gopkg.in/intel/multus-cni.v3/pkg/types"
+  podresclient "gopkg.in/k8snetworkplumbingwg/multus-cni.v3/pkg/kubeletclient"
+  multus_types "gopkg.in/k8snetworkplumbingwg/multus-cni.v3/pkg/types"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   "k8s.io/client-go/rest"
   "k8s.io/client-go/tools/clientcmd"
@@ -284,7 +284,7 @@ func createIface(args *datastructs.CniArgs, danmClient danmclientset.Interface, 
   var err error
   if cnidel.IsDeviceNeeded(netInfo.Spec.NetworkType) {
     if _, ok := allocatedDevices[netInfo.Spec.Options.DevicePool]; !ok {
-      presClient, err := podresclient.GetResourceClient()
+      presClient, err := podresclient.GetResourceClient("")
       if err != nil {
         return errors.New("failed to instantiate Kubelet Pord Resource client due to:" + err.Error())
       }

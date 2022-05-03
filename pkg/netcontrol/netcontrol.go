@@ -17,7 +17,7 @@ import (
   danmclientset "github.com/nokia/danm/crd/client/clientset/versioned"
   danminformers "github.com/nokia/danm/crd/client/informers/externalversions"
   "github.com/nokia/danm/pkg/datastructs"
-  multustypes "gopkg.in/intel/multus-cni.v3/pkg/types"
+  multustypes "gopkg.in/k8snetworkplumbingwg/multus-cni.v3/pkg/types"
   meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
   apierrors "k8s.io/apimachinery/pkg/api/errors"
   "k8s.io/client-go/rest"

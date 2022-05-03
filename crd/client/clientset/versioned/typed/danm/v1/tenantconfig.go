@@ -107,7 +107,7 @@ func (c *tenantConfigs) Watch(ctx context.Context, opts metav1.ListOptions) (wat
 func (c *tenantConfigs) Create(ctx context.Context, tenantConfig *v1.TenantConfig, opts metav1.CreateOptions) (result *v1.TenantConfig, err error) {
 	result = &v1.TenantConfig{}
 	err = c.client.Post().
-		Resource("tenantconfigs").
+		Resource("tenantconfigs").Namespace(tenantConfig.Namespace).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(tenantConfig).
 		Do(ctx).
@@ -120,7 +120,7 @@ func (c *tenantConfigs) Update(ctx context.Context, tenantConfig *v1.TenantConfi
 	result = &v1.TenantConfig{}
 	err = c.client.Put().
 		Resource("tenantconfigs").
-		Name(tenantConfig.Name).
+		Name(tenantConfig.Name).Namespace(tenantConfig.Namespace).
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(tenantConfig).
 		Do(ctx).

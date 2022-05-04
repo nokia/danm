@@ -59,12 +59,8 @@ spec:
                       type: string
                     type: object
                 required:
-                - Address
-                - AddressIPv6
                 - MacAddress
                 - Name
-                - proutes
-                - proutes6
                 type: object
               NetworkName:
                 type: string

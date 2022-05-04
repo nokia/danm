@@ -15,7 +15,6 @@ import (
 	"github.com/nokia/danm/pkg/confman"
 	"github.com/nokia/danm/pkg/metacni"
 	"k8s.io/api/admission/v1beta1"
-	// "k8s.io/kubernetes/cmd/kubeadm/test/kubeconfig"
 )
 
 var (

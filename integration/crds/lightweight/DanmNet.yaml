@@ -53,36 +53,54 @@ spec:
                     properties:
                       end:
                         type: string
-                        pattern: '^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$'
                       lastIp:
                         type: string
-                        pattern: '^\d+\.'
                       start:
                         type: string
-                        pattern: '^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$'
-                    required:
-                    - start
-                    - end
                     type: object
+                    oneOf:
+                    - properties:
+                        start:
+                          format: ipv4
+                          maxLength: 0
+                        end:
+                          format: ipv4
+                          maxLength: 0
+                        lastIp:
+                          maxLength: 0
+                          format: cidr
+                          pattern: '^\d+\.'
                   allocation_pool_v6:
                     description: subset of the IPv6 subnet from which IPs can be allocated
                     properties:
                       end:
                         type: string
-                        pattern: '(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))'
                       lastIp:
                         type: string
-                        pattern: '^\d+\.'
                       start:
                         type: string
-                        pattern: '(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))'
                       cidr:
                         type: string
                     type: object
+                    oneOf:
+                    - properties:
+                        start:
+                          format: ipv6
+                          maxLength: 0
+                        end:
+                          format: ipv6
+                          maxLength: 0
+                        lastIp:
+                          maxLength: 0
+                          format: cidr
+                          pattern: ':'
+                        cidr:
+                          maxLength: 0
+                          format: cidr
+                          pattern: ':'
                   cidr:
                     description: IPv4 specific parameters IPv4 network address
                     type: string
-                    pattern: '^\d+\.'
                   container_prefix:
                     description: The name of the interface in the container
                     type: string
@@ -96,7 +114,6 @@ spec:
                     description: IPv6 specific parameters IPv6 unique global address
                       prefix
                     type: string
-                    pattern: ':'
                   routes:
                     additionalProperties:
                       type: string
@@ -110,29 +127,35 @@ spec:
                   rt_tables:
                     description: Routing table number for policy routing
                     type: integer
+                    format: int32
                     minimum: 0
                     maximum: 255
                   vlan:
                     description: the VLAN id of the VLAN interface created on top
                       of the host device
                     type: integer
+                    format: int32
                     minimum: 1
                     maximum: 4094
                   vxlan:
                     description: the vxlan id on the host device (creation of vxlan
                       interface)
                     type: integer
+                    format: int32
                     minimum: 1
                     maximum: 16777214
-                required:
-                - allocation_pool
                 type: object
-            required:
-            - NetworkID
+                oneOf:
+                - properties:
+                    cidr:
+                      format: cidr
+                      pattern: '^\d+\.'
+                      maxLength: 0
+                    net6:
+                      maxLength: 0
+                      format: cidr
+                      pattern: ':'    
             type: object
-        required:
-        - metadata
-        - spec
         type: object
     served: true
     storage: true

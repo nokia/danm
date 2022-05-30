@@ -58,9 +58,6 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
-                required:
-                - MacAddress
-                - Name
                 type: object
               NetworkName:
                 type: string
@@ -78,13 +75,6 @@ spec:
                 type: string
               netns:
                 type: string
-            required:
-            - EndpointID
-            - Interface
-            - NetworkName
-            - NetworkType
-            - Pod
-            - apiType
             type: object
         required:
         - metadata

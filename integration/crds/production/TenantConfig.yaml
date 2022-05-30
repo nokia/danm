@@ -12,7 +12,7 @@ spec:
     shortNames:
     - tc
     - tconf
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1
     schema:
@@ -49,8 +49,6 @@ spec:
             additionalProperties:
               type: string
             type: object
-        required:
-        - metadata
         type: object
     served: true
     storage: true

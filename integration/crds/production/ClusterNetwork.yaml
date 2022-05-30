@@ -57,18 +57,47 @@ spec:
                         type: string
                       start:
                         type: string
-                    required:
-                    - end
-                    - start
                     type: object
+                    oneOf:
+                    - properties:
+                        start:
+                          format: ipv4
+                          maxLength: 0
+                        end:
+                          format: ipv4
+                          maxLength: 0
+                        lastIp:
+                          maxLength: 0
+                          format: cidr
+                          pattern: '^\d+\.'
                   allocation_pool_v6:
                     description: subset of the IPv6 subnet from which IPs can be allocated
                     properties:
+                      end:
+                        type: string
+                      lastIp:
+                        type: string
+                      start:
+                        type: string
                       cidr:
                         type: string
-                    required:
-                    - cidr
                     type: object
+                    oneOf:
+                    - properties:
+                        start:
+                          format: ipv6
+                          maxLength: 0
+                        end:
+                          format: ipv6
+                          maxLength: 0
+                        lastIp:
+                          maxLength: 0
+                          format: cidr
+                          pattern: ':'
+                        cidr:
+                          maxLength: 0
+                          format: cidr
+                          pattern: ':'
                   cidr:
                     description: IPv4 specific parameters IPv4 network address
                     type: string
@@ -98,23 +127,35 @@ spec:
                   rt_tables:
                     description: Routing table number for policy routing
                     type: integer
+                    format: int32
+                    minimum: 0
+                    maximum: 255
                   vlan:
                     description: the VLAN id of the VLAN interface created on top
                       of the host device
                     type: integer
+                    format: int32
+                    minimum: 1
+                    maximum: 4094
                   vxlan:
                     description: the vxlan id on the host device (creation of vxlan
                       interface)
                     type: integer
-                required:
-                - allocation_pool
+                    format: int32
+                    minimum: 1
+                    maximum: 16777214
                 type: object
-            required:
-            - NetworkID
+                oneOf:
+                - properties:
+                    cidr:
+                      format: cidr
+                      pattern: '^\d+\.'
+                      maxLength: 0
+                    net6:
+                      maxLength: 0
+                      format: cidr
+                      pattern: ':'    
             type: object
-        required:
-        - metadata
-        - spec
         type: object
     served: true
     storage: true

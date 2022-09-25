@@ -69,11 +69,11 @@ fi
 #
 # Identify if we need to run docker or buildah
 #
-if [[ ( "$TRAVIS_PIPELINE" = "buildah" ) || ( "$TRAVIS_PIPELINE" = ""  && -x "$(command -v buildah)" ) ]]
+if [[ ( "$TRAVIS_PIPELINE" = "podman" ) || ( "$TRAVIS_PIPELINE" = ""  && -x "$(command -v podman)" ) ]]
 then
-  BUILD_COMMAND="buildah bud"
-  TAG_COMMAND="buildah tag"
-  PUSH_COMMAND="buildah push"
+  BUILD_COMMAND="podman image build"
+  TAG_COMMAND="podman image tag"
+  PUSH_COMMAND="podman push"
 elif [[ ( "$TRAVIS_PIPELINE" = "docker" ) || ( "$TRAVIS_PIPELINE" = ""  && -x "$(command -v docker)" ) ]]
 then
   BUILD_COMMAND="docker image build"
@@ -116,7 +116,7 @@ fi
 #
 for plugin in ${build_targets[@]}
 do
-  echo Building: ${plugin}, version ${COMMIT_HASH}
+  echo "Building: ${plugin}, version ${COMMIT_HASH}"
   ${BUILD_COMMAND} \
     ${EXTRA_BUILD_ARGS} \
     ${FIRST_BUILD_EXTRA_BUILD_ARGS} \

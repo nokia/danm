@@ -24,14 +24,16 @@ var (
 )
 
 type TestArtifacts struct {
-	TestNets      []danmtypes.DanmNet
-	TestTnets     []danmtypes.TenantNetwork
-	TestCnets     []danmtypes.ClusterNetwork
-	TestEps       []danmtypes.DanmEp
-	ReservedIps   []ReservedIpsList
-	TestTconfs    []danmtypes.TenantConfig
-	ReservedVnis  []ReservedVnisList
-	ExhaustAllocs []int
+	TestNets               []danmtypes.DanmNet
+	TestTnets              []danmtypes.TenantNetwork
+	TestCnets              []danmtypes.ClusterNetwork
+	TestEps                []danmtypes.DanmEp
+	TestRips               []danmtypes.ReservedIP
+	ReservedIps            []ReservedIpsList
+	TestTconfs             []danmtypes.TenantConfig
+	ReservedVnis           []ReservedVnisList
+	ExhaustAllocs          []int
+	IsRipListErrorExpected bool
 }
 
 type ReservedIpsList struct {
@@ -71,9 +73,7 @@ func InitAllocPool(dnet *danmtypes.DanmNet) {
 	dnet.Spec.Options.Alloc = ""
 	dnet.Spec.Options.Pool.Start, dnet.Spec.Options.Pool.End, dnet.Spec.Options.Alloc =
 		ipam.InitAllocPool(dnet.Spec.Options.Cidr, dnet.Spec.Options.Pool.Start, dnet.Spec.Options.Pool.End, dnet.Spec.Options.Alloc, dnet.Spec.Options.Routes)
-	if strings.Contains(dnet.ObjectMeta.Name, "initv6") {
-		ipam.InitV6AllocFields(dnet)
-	}
+	ipam.InitV6AllocFields(dnet)
 	if strings.HasPrefix(dnet.ObjectMeta.Name, "full") {
 		exhaustNetwork(dnet)
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/danm-cni/danm/pkg/confman"
 	"github.com/danm-cni/danm/pkg/danmep"
+	"github.com/danm-cni/danm/pkg/datastructs"
 	"k8s.io/api/admission/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,8 +63,8 @@ func (validator *Validator) DeleteNetwork(responseWriter http.ResponseWriter, re
 	if !isDryRun && len(oldManifest.Status.ReservedIPs) != 0 {
 		for _, rip := range oldManifest.Status.ReservedIPs {
 			labelSelectorListOpt := meta_v1.ListOptions{LabelSelector: labels.Set{
-				NetworkNameLabel: oldManifest.Name,
-				NetworkTypeLabel: oldManifest.Kind,
+				datastructs.NetworkNameLabel: oldManifest.Name,
+				datastructs.NetworkTypeLabel: oldManifest.Kind,
 			}.String()}
 			validator.Client.DanmV1().ReservedIPs(rip.Namespace).DeleteCollection(context.TODO(),
 				meta_v1.DeleteOptions{}, labelSelectorListOpt)

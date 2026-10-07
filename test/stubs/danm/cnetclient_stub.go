@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	danmtypes "github.com/danm-cni/danm/crd/apis/danm/v1"
+	"github.com/danm-cni/danm/pkg/datastructs"
+	"github.com/danm-cni/danm/test/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -13,13 +15,15 @@ import (
 )
 
 type CnetClientStub struct {
-	TestCnets          []danmtypes.ClusterNetwork
-	Statuses           map[string]danmtypes.DanmNetStatus
-	UpdateStatusCalled int
+	TestCnets            []danmtypes.ClusterNetwork
+	ReservedIpsList      []utils.ReservedIpsList
+	Statuses             map[string]danmtypes.DanmNetStatus
+	TimesUpdateWasCalled int
+	UpdateStatusCalled   int
 }
 
-func newCnetClientStub(nets []danmtypes.ClusterNetwork) *CnetClientStub {
-	return &CnetClientStub{TestCnets: nets}
+func newCnetClientStub(nets []danmtypes.ClusterNetwork, ips []utils.ReservedIpsList) *CnetClientStub {
+	return &CnetClientStub{TestCnets: nets, ReservedIpsList: ips}
 }
 
 func (cnetClient *CnetClientStub) Create(ctx context.Context, obj *danmtypes.ClusterNetwork, opts meta_v1.CreateOptions) (*danmtypes.ClusterNetwork, error) {
@@ -27,8 +31,30 @@ func (cnetClient *CnetClientStub) Create(ctx context.Context, obj *danmtypes.Clu
 }
 
 func (cnetClient *CnetClientStub) Update(ctx context.Context, obj *danmtypes.ClusterNetwork, opts meta_v1.UpdateOptions) (*danmtypes.ClusterNetwork, error) {
-	return nil, nil
-
+	cnetClient.TimesUpdateWasCalled++
+	err := ValidateIpReservations(obj.Spec, cnetClient.ReservedIpsList)
+	if err != nil {
+		return nil, err
+	}
+	netIndex := -1
+	for index, net := range cnetClient.TestCnets {
+		if net.ObjectMeta.Name == obj.ObjectMeta.Name {
+			netIndex = index
+		}
+	}
+	if strings.Contains(obj.Spec.NetworkID, "conflict") && obj.ObjectMeta.ResourceVersion != magicVersion {
+		if netIndex != -1 {
+			cnetClient.TestCnets[netIndex].ObjectMeta.ResourceVersion = magicVersion
+		}
+		return nil, errors.New(datastructs.OptimisticLockErrorMsg)
+	}
+	if strings.Contains(obj.Spec.NetworkID, "error") {
+		return nil, errors.New("fatal error, don't retry")
+	}
+	if netIndex != -1 {
+		cnetClient.TestCnets[netIndex] = *obj
+	}
+	return obj, nil
 }
 
 func (cnetClient *CnetClientStub) UpdateStatus(ctx context.Context, clusterNetwork *danmtypes.ClusterNetwork, opts meta_v1.UpdateOptions) (*danmtypes.ClusterNetwork, error) {

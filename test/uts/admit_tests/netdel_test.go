@@ -9,6 +9,7 @@ import (
 
 	danmtypes "github.com/danm-cni/danm/crd/apis/danm/v1"
 	"github.com/danm-cni/danm/pkg/admit"
+	"github.com/danm-cni/danm/pkg/datastructs"
 	stubs "github.com/danm-cni/danm/test/stubs/danm"
 	httpstub "github.com/danm-cni/danm/test/stubs/http"
 	"github.com/danm-cni/danm/test/utils"
@@ -189,12 +190,12 @@ type ripDeletion struct {
 
 var (
 	tnetRipDeletions = []ripDeletion{
-		{"rip-test", labels.Set{admit.NetworkNameLabel: "tnetWithRips", admit.NetworkTypeLabel: "TenantNetwork"}},
+		{"rip-test", labels.Set{datastructs.NetworkNameLabel: "tnetWithRips", datastructs.NetworkTypeLabel: "TenantNetwork"}},
 	}
 	cnetRipDeletions = []ripDeletion{
-		{"rip-test", labels.Set{admit.NetworkNameLabel: "cnetWithRips", admit.NetworkTypeLabel: "ClusterNetwork"}},
-		{"default", labels.Set{admit.NetworkNameLabel: "cnetWithRips", admit.NetworkTypeLabel: "ClusterNetwork"}},
-		{"sdm", labels.Set{admit.NetworkNameLabel: "cnetWithRips", admit.NetworkTypeLabel: "ClusterNetwork"}},
+		{"rip-test", labels.Set{datastructs.NetworkNameLabel: "cnetWithRips", datastructs.NetworkTypeLabel: "ClusterNetwork"}},
+		{"default", labels.Set{datastructs.NetworkNameLabel: "cnetWithRips", datastructs.NetworkTypeLabel: "ClusterNetwork"}},
+		{"sdm", labels.Set{datastructs.NetworkNameLabel: "cnetWithRips", datastructs.NetworkTypeLabel: "ClusterNetwork"}},
 	}
 )
 

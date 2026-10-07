@@ -2,8 +2,11 @@ package danm
 
 import (
 	"context"
+	"errors"
+	"strings"
 
 	danmtypes "github.com/danm-cni/danm/crd/apis/danm/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	types "k8s.io/apimachinery/pkg/types"
@@ -11,14 +14,16 @@ import (
 )
 
 type RipClientStub struct {
-	Namespace         string
-	DeletedNamespaces []string
-	DeletedSelectors  []string
-	DeletedLabels     []labels.Set
+	Namespace           string
+	DeletedNamespaces   []string
+	DeletedSelectors    []string
+	DeletedLabels       []labels.Set
+	TestRips            []danmtypes.ReservedIP
+	IsListErrorExpected bool
 }
 
-func newRipClientStub() *RipClientStub {
-	return &RipClientStub{}
+func newRipClientStub(testRips []danmtypes.ReservedIP, isListErrorExpected bool) *RipClientStub {
+	return &RipClientStub{TestRips: testRips, IsListErrorExpected: isListErrorExpected}
 }
 
 func (ripClient *RipClientStub) Create(ctx context.Context, obj *danmtypes.ReservedIP, opts meta_v1.CreateOptions) (*danmtypes.ReservedIP, error) {
@@ -51,7 +56,15 @@ func (ripClient *RipClientStub) DeleteCollection(ctx context.Context, options me
 }
 
 func (ripClient *RipClientStub) Get(ctx context.Context, ripName string, options meta_v1.GetOptions) (*danmtypes.ReservedIP, error) {
-	return nil, nil
+	if strings.Contains(ripName, "error") {
+		return nil, errors.New("fatal error, don't retry")
+	}
+	for _, testRip := range ripClient.TestRips {
+		if testRip.Name == ripName {
+			return testRip.DeepCopy(), nil
+		}
+	}
+	return nil, apierrors.NewNotFound(danmtypes.SchemeGroupVersion.WithResource("reservedips").GroupResource(), ripName)
 }
 
 func (ripClient *RipClientStub) Watch(ctx context.Context, opts meta_v1.ListOptions) (watch.Interface, error) {
@@ -60,7 +73,11 @@ func (ripClient *RipClientStub) Watch(ctx context.Context, opts meta_v1.ListOpti
 }
 
 func (ripClient *RipClientStub) List(ctx context.Context, opts meta_v1.ListOptions) (*danmtypes.ReservedIPList, error) {
-	return nil, nil
+	if ripClient.IsListErrorExpected {
+		return nil, errors.New("fatal error, don't retry")
+	}
+	ripList := danmtypes.ReservedIPList{Items: ripClient.TestRips}
+	return &ripList, nil
 }
 
 func (ripClient *RipClientStub) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts meta_v1.PatchOptions, subresources ...string) (result *danmtypes.ReservedIP, err error) {

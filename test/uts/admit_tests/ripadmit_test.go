@@ -9,6 +9,7 @@ import (
 
 	danmtypes "github.com/danm-cni/danm/crd/apis/danm/v1"
 	"github.com/danm-cni/danm/pkg/admit"
+	"github.com/danm-cni/danm/pkg/datastructs"
 	stubs "github.com/danm-cni/danm/test/stubs/danm"
 	httpstub "github.com/danm-cni/danm/test/stubs/http"
 	"github.com/danm-cni/danm/test/utils"
@@ -106,6 +107,14 @@ var (
 		},
 		{
 			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "dynamic", Namespace: "rip-test"},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.70", Shareable: false}, {Address: "2001:db8:85a3::8a2e:370:7350", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
 			ObjectMeta: meta_v1.ObjectMeta{Name: "dsTnetSuccess", Namespace: "rip-test"},
 			Spec: danmtypes.ReservedIPSpec{
 				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
@@ -163,7 +172,7 @@ var (
 		{
 			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
 			ObjectMeta: meta_v1.ObjectMeta{Name: "correctlyLabelled", Namespace: "rip-test",
-				Labels: map[string]string{admit.NetworkNameLabel: "superDualStack", admit.NetworkTypeLabel: "TenantNetwork"}},
+				Labels: map[string]string{datastructs.NetworkNameLabel: "superDualStack", datastructs.NetworkTypeLabel: "TenantNetwork"}},
 			Spec: danmtypes.ReservedIPSpec{
 				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
 				Ips:     []danmtypes.RipIP{{Address: "192.168.1.70", Shareable: false}},
@@ -172,7 +181,7 @@ var (
 		{
 			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
 			ObjectMeta: meta_v1.ObjectMeta{Name: "staleTypeLabel", Namespace: "rip-test",
-				Labels: map[string]string{admit.NetworkNameLabel: "superDualStack", admit.NetworkTypeLabel: "ClusterNetwork"}},
+				Labels: map[string]string{datastructs.NetworkNameLabel: "superDualStack", datastructs.NetworkTypeLabel: "ClusterNetwork"}},
 			Spec: danmtypes.ReservedIPSpec{
 				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
 				Ips:     []danmtypes.RipIP{{Address: "192.168.1.70", Shareable: false}},
@@ -336,18 +345,18 @@ var (
 var (
 	tnetDsLabels = []admit.Patch{
 		{Op: "add", Path: "/metadata/labels", Value: map[string]string{
-			admit.NetworkNameLabel: "superDualStack",
-			admit.NetworkTypeLabel: "TenantNetwork"}},
+			datastructs.NetworkNameLabel: "superDualStack",
+			datastructs.NetworkTypeLabel: "TenantNetwork"}},
 	}
 	cnetDsLabels = []admit.Patch{
 		{Op: "add", Path: "/metadata/labels", Value: map[string]string{
-			admit.NetworkNameLabel: "superDualStackWithStatus",
-			admit.NetworkTypeLabel: "ClusterNetwork"}},
+			datastructs.NetworkNameLabel: "superDualStackWithStatus",
+			datastructs.NetworkTypeLabel: "ClusterNetwork"}},
 	}
 	cnetDupeLabels = []admit.Patch{
 		{Op: "add", Path: "/metadata/labels", Value: map[string]string{
-			admit.NetworkNameLabel: "superDualStackWithStatusDupe",
-			admit.NetworkTypeLabel: "ClusterNetwork"}},
+			datastructs.NetworkNameLabel: "superDualStackWithStatusDupe",
+			datastructs.NetworkTypeLabel: "ClusterNetwork"}},
 	}
 	labelsMergedIntoExistingSet = []admit.Patch{
 		{Op: "add", Path: "/metadata/labels/danm.k8s.io~1network-name", Value: "superDualStackWithStatus"},
@@ -386,6 +395,7 @@ var validateRipTcs = []struct {
 	{"v6OutsideCidr", "", "v6OutsideCidr", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
 	{"doubleV4", "", "doubleV4", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
 	{"doubleV6", "", "doubleV6", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
+	{"reservedName", "", "dynamic", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
 	{"dsTnetSuccessNewStatus", "", "dsTnetSuccess", "", v1beta1.Create, false, nil, nil, &ripTestStatus, nil, tnetDsLabels},
 	{"dsCnetSuccessStatusAppend", "", "dsCnetSuccess", "bueno", v1beta1.Create, false, nil, nil, nil, &ripTestStatusCnet, cnetDsLabels},
 	{"dsCnetSuccessStatusNoAppendDueToDupe", "", "dsCnetSuccessDupe", "bueno", v1beta1.Create, false, nil, nil, nil, &ripTestStatusCnetDupe, cnetDupeLabels},

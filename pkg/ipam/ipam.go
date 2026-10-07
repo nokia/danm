@@ -1,8 +1,10 @@
 package ipam
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"net"
@@ -16,22 +18,37 @@ import (
 	"github.com/danm-cni/danm/pkg/bitarray"
 	"github.com/danm-cni/danm/pkg/datastructs"
 	"github.com/danm-cni/danm/pkg/netcontrol"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 const (
-	NoneAllocType    = "none"
-	DynamicAllocType = "dynamic"
+	NoneAllocType       = "none"
+	DynamicAllocType    = "dynamic"
+	WithPrefix          = true
+	V4Suffix            = "V4"
+	V6Suffix            = "V6"
+	UnshareableStaticIp = false
 )
+
+type ripRecord struct {
+	shareable  bool
+	ownerName  string
+	ownerNs    string
+	ripAddress string
+}
+
+type reservedIps map[string]ripRecord
 
 // Reserve inspects the network object received as an input, and allocates an IPv4 or IPv6 address from the appropriate allocation pool
 // In case static IP allocation is requested, it will try to reserve the requested address. If it is not possible, it returns an error
 // The reserved IP addresses are represented by setting a bit in the network's BitArray type allocation matrices
 // The refreshed network object is modified in the K8s API server at the end
-func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4, req6 string) (string, string, error) {
+func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4, req6, requestNamespace string) (string, string, error) {
 	origSpec := netInfo.Spec
 	tempNet := netInfo
 	for {
-		ip4, ip6, err := allocateIps(&tempNet, req4, req6)
+		ip4, ip6, err := allocateIps(danmClient, &tempNet, req4, req6, requestNamespace)
 		if err != nil {
 			return "", "", errors.New("failed to allocate IP address for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
 		}
@@ -84,12 +101,15 @@ func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, rip str
 	}
 }
 
-func allocateIps(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string, error) {
+func allocateIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, req4, req6, requestNamespace string) (string, string, error) {
 	ip4 := ""
 	ip6 := ""
-	var err error
+	reservedIps, err := getReservedIps(danmClient, netInfo, req4, req6, requestNamespace)
+	if err != nil {
+		return "", "", err
+	}
 	if req4 != "" {
-		netInfo.Spec.Options.Alloc, ip4, err = allocateAddress(&netInfo.Spec.Options.Pool, netInfo.Spec.Options.Alloc, req4, netInfo.Spec.Options.Cidr, netInfo.Spec.Options.Cidr, netInfo.Spec.Options.Routes)
+		netInfo.Spec.Options.Alloc, ip4, err = allocateAddress(&netInfo.Spec.Options.Pool, netInfo.Spec.Options.Alloc, req4, netInfo.Spec.Options.Cidr, netInfo.Spec.Options.Cidr, netInfo.Spec.Options.Routes, requestNamespace, reservedIps, V4Suffix)
 		if err != nil {
 			return "", "", err
 		}
@@ -100,7 +120,7 @@ func allocateIps(netInfo *danmtypes.DanmNet, req4, req6 string) (string, string,
 		}
 		//TODO: to have a real uniform handling both V4 and V6 pool definition should be uniform, meaning, V4 pools should also have a separare allocation CIDR
 		tempPool6 := danmtypes.IpPool{Start: netInfo.Spec.Options.Pool6.Start, End: netInfo.Spec.Options.Pool6.End, LastIp: netInfo.Spec.Options.Pool6.LastIp}
-		netInfo.Spec.Options.Alloc6, ip6, err = allocateAddress(&tempPool6, netInfo.Spec.Options.Alloc6, req6, netInfo.Spec.Options.Pool6.Cidr, netInfo.Spec.Options.Net6, netInfo.Spec.Options.Routes6)
+		netInfo.Spec.Options.Alloc6, ip6, err = allocateAddress(&tempPool6, netInfo.Spec.Options.Alloc6, req6, netInfo.Spec.Options.Pool6.Cidr, netInfo.Spec.Options.Net6, netInfo.Spec.Options.Routes6, requestNamespace, reservedIps, V6Suffix)
 		if err != nil {
 			return "", "", err
 		}
@@ -115,7 +135,7 @@ func InitV6AllocFields(netInfo *danmtypes.DanmNet) {
 		InitAllocPool(netInfo.Spec.Options.Pool6.Cidr, netInfo.Spec.Options.Pool6.Start, netInfo.Spec.Options.Pool6.End, netInfo.Spec.Options.Alloc6, netInfo.Spec.Options.Routes6)
 }
 
-func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, allocCidr, netCidr string, routes map[string]string) (string, string, error) {
+func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, allocCidr, netCidr string, routes map[string]string, requestNamespace string, reservedIps reservedIps, ripSuffix string) (string, string, error) {
 	if reqType == NoneAllocType {
 		return alloc, NoneAllocType, nil
 	}
@@ -143,7 +163,7 @@ func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, allocCidr, netCidr 
 		var doesAnyFreeIpExist bool
 		var allocatedIndex uint32
 		for i := lastIpIndex; i <= end; i++ {
-			if !ba.Get(i) && !isIpAGwIp(i, routes, ba, allocSubnet) {
+			if !ba.Get(i) && !isIpAGwIp(i, routes, ba, allocSubnet) && !isIpReserved(getIpFromIndex(i, allocSubnet, netSubnet, !WithPrefix), reservedIps) {
 				ba.Set(i)
 				allocatedIndex = i
 				doesAnyFreeIpExist = true
@@ -158,30 +178,34 @@ func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, allocCidr, netCidr 
 		if !doesAnyFreeIpExist {
 			return alloc, "", errors.New("IP address cannot be dynamically allocated, all addresses are reserved!")
 		}
-		allocatedIp = getIpFromIndex(allocatedIndex, allocSubnet, netSubnet)
+		allocatedIp = getIpFromIndex(allocatedIndex, allocSubnet, netSubnet, WithPrefix)
 		pool.LastIp = allocatedIp
+		return ba.Encode(), allocatedIp, nil
+	}
+	//I guess we are doing backward compatibility now :)
+	//You used to be able to define a static IP in CIDR format, so now we need to trim the suffix if it is still unnecessarily there
+	requestParts := strings.Split(reqType, "/")
+	ip := net.ParseIP(requestParts[0])
+	var err error
+	//Old-school static IP allocation
+	if ip != nil {
+		if isIpReserved(requestParts[0], reservedIps) {
+			return alloc, "", errors.New("static IP allocation failed, requested static IP:" + requestParts[0] + " is reserved through the ReservedIP API")
+		}
+		allocatedIp, err = allocateStaticIp(ip, netSubnet, allocSubnet, ba, UnshareableStaticIp)
+		if err != nil {
+			return alloc, "", err
+		}
 	} else {
-		//I guess we are doing backward compatibility now :)
-		//You used to be able to define a static IP in CIDR format, so now we need to trim the suffix if it is unnecessarily there
-		requestParts := strings.Split(reqType, "/")
-		ip := net.ParseIP(requestParts[0])
-		if ip == nil {
-			return alloc, "", errors.New("static IP allocation failed, requested static IP:" + reqType + " is not a valid IP")
+		//ReservedIP reference style allocation... or malformed static IP request. no way to differentiate
+		requestedReservedIpRecord, exists := reservedIps[reqType+"/"+requestNamespace+"/"+ripSuffix]
+		if !exists {
+			return alloc, "", errors.New("static IP allocation failed, requested static IP:" + reqType + " is either a malformed IP address, or a non-existent ReservedIP reference")
 		}
-		if !(netSubnet.Contains(ip)) {
-			return alloc, "", errors.New("static IP allocation failed, requested static IP:" + reqType + " is outside the network's CIDR:" + netCidr)
-		}
-		prefix, _ := netSubnet.Mask.Size()
-		allocatedIp = requestParts[0] + "/" + strconv.Itoa(prefix)
-		//Static IP allocations can come from the network's CIDR, outside of the dynamic allocation pool
-		//But if the static IP does belong to the allocation pool, we need to reserve its place as usual
-		if allocSubnet.Contains(ip) {
-			allocatedIndex := GetIndexOfIp(ip, allocSubnet)
-			//TODO: we should throw the same error if static IP is outside the allocation pool, but was already assigned to a DanmEp
-			if ba.Get(allocatedIndex) {
-				return alloc, "", errors.New("static IP allocation failed, requested IP address:" + reqType + " is already in use")
-			}
-			ba.Set(allocatedIndex)
+		requestedReservedIp := net.ParseIP(requestedReservedIpRecord.ripAddress)
+		allocatedIp, err = allocateStaticIp(requestedReservedIp, netSubnet, allocSubnet, ba, requestedReservedIpRecord.shareable)
+		if err != nil {
+			return alloc, "", err
 		}
 	}
 	return ba.Encode(), allocatedIp, nil
@@ -220,7 +244,7 @@ func GetIndexOfIp(ip net.IP, subnet *net.IPNet) uint32 {
 	return index
 }
 
-func getIpFromIndex(index uint32, allocSubnet, netSubnet *net.IPNet) string {
+func getIpFromIndex(index uint32, allocSubnet, netSubnet *net.IPNet, withPrefix bool) string {
 	var ip net.IP
 	if allocSubnet.IP.To4() != nil {
 		firstIpAsInt := Ip2int(allocSubnet.IP)
@@ -231,7 +255,10 @@ func getIpFromIndex(index uint32, allocSubnet, netSubnet *net.IPNet) string {
 		ip = Int2ip6(firstIpAsBigInt.Add(firstIpAsBigInt, indexAsBigInt))
 	}
 	prefix, _ := netSubnet.Mask.Size()
-	return ip.String() + "/" + strconv.Itoa(prefix)
+	if withPrefix {
+		return ip.String() + "/" + strconv.Itoa(prefix)
+	}
+	return ip.String()
 }
 
 func updateIpAllocation(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet) (bool, danmtypes.DanmNet, error) {
@@ -407,4 +434,64 @@ func WasIpAllocatedByDanm(ip string, netInfo *danmtypes.DanmNet) bool {
 		return true
 	}
 	return false
+}
+
+func getReservedIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, req4, req6, requestNamespace string) (reservedIps, error) {
+	reservedIps := make(reservedIps)
+	//Build up the reservedIps cache but only if an allocation is actually expected to take place
+	if ((req4 == "" || req4 == NoneAllocType) && (req6 == "" || req6 == NoneAllocType)) || netInfo.Kind == netcontrol.DanmNetKind || netInfo.Kind == "" {
+		return reservedIps, nil
+	}
+	for _, statusRip := range netInfo.Status.ReservedIPs {
+		labelSelectorListOpt := meta_v1.ListOptions{LabelSelector: labels.Set{
+			datastructs.NetworkNameLabel: netInfo.Name,
+			datastructs.NetworkTypeLabel: netInfo.Kind,
+		}.String()}
+		rips, err := danmClient.DanmV1().ReservedIPs(statusRip.Namespace).List(context.TODO(), labelSelectorListOpt)
+		if err != nil {
+			return reservedIps, fmt.Errorf("failed to get ReservedIP objects from the API Server because: %w", err)
+		}
+		for _, rip := range rips.Items {
+			for _, ip := range rip.Spec.Ips {
+				ripRecord := ripRecord{ownerName: rip.Name, ownerNs: rip.Namespace, shareable: ip.Shareable, ripAddress: ip.Address}
+				reservedIps[ip.Address] = ripRecord
+				//KA-CHING: at least one of requested IP allocations will ask for the lookup of this exact ReservedIP object
+				//It looks kinda stupid but if we create an additional "reverse link" record to this object we can immediately access the required values later without either doing another lookup, or maintaining two separate lists in memory
+				if rip.Namespace == requestNamespace && (req4 == rip.Name || req6 == rip.Name) {
+					var suffix string
+					netIp := net.ParseIP(ip.Address)
+					if netIp.To4() != nil {
+						suffix = V4Suffix
+					} else {
+						suffix = V6Suffix
+					}
+					reservedIps[rip.Name+"/"+rip.Namespace+"/"+suffix] = ripRecord
+				}
+			}
+		}
+	}
+	return reservedIps, nil
+}
+
+func isIpReserved(ip string, reservedIps reservedIps) bool {
+	_, exists := reservedIps[ip]
+	return exists
+}
+
+func allocateStaticIp(ip net.IP, netSubnet, allocSubnet *net.IPNet, ba *bitarray.BitArray, isShareable bool) (string, error) {
+	if !(netSubnet.Contains(ip)) {
+		return "", errors.New("static IP allocation failed, requested static IP:" + ip.String() + " is outside the network's CIDR:" + netSubnet.String())
+	}
+	//Static IP allocations can come from the network's CIDR, outside of the dynamic allocation pool
+	//But if the static IP does belong to the allocation pool, we need to reserve its place as usual
+	if allocSubnet.Contains(ip) {
+		allocatedIndex := GetIndexOfIp(ip, allocSubnet)
+		//TODO: we should throw the same error if static IP is outside the allocation pool, but was already assigned to a DanmEp
+		if ba.Get(allocatedIndex) && !isShareable {
+			return "", errors.New("static IP allocation failed, requested IP address:" + ip.String() + " is already in use")
+		}
+		ba.Set(allocatedIndex)
+	}
+	prefix, _ := netSubnet.Mask.Size()
+	return ip.String() + "/" + strconv.Itoa(prefix), nil
 }

@@ -3,6 +3,7 @@ package admit
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -12,15 +13,15 @@ import (
 	danmtypes "github.com/danm-cni/danm/crd/apis/danm/v1"
 	danmclientset "github.com/danm-cni/danm/crd/client/clientset/versioned"
 	"github.com/danm-cni/danm/pkg/confman"
+	"github.com/danm-cni/danm/pkg/datastructs"
+	"github.com/danm-cni/danm/pkg/ipam"
 	"github.com/danm-cni/danm/pkg/netcontrol"
 	admv1beta1 "k8s.io/api/admission/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
-	NetworkNameLabel = "danm.k8s.io/network-name"
-	NetworkTypeLabel = "danm.k8s.io/network-type"
-	RipLabelsPath    = "/metadata/labels"
+	RipLabelsPath = "/metadata/labels"
 )
 
 func (validator *Validator) ValidateReservedIp(responseWriter http.ResponseWriter, request *http.Request) {
@@ -105,6 +106,9 @@ func (validator *Validator) validateReserveIp(newNet *danmtypes.DanmNet, oldIp, 
 	}
 	if newNet == nil {
 		return nil
+	}
+	if newIp.Name == ipam.DynamicAllocType {
+		return errors.New("name:" + ipam.DynamicAllocType + " is reserved for DANM IPAM internal use, please try again with a different name")
 	}
 	err := validateNetworkRef(newIp, validator.Client)
 	if err != nil {
@@ -233,8 +237,8 @@ func createPatchListFromRipLabels(newIp *danmtypes.ReservedIP) []Patch {
 		netType = netcontrol.TenantNetworkKind
 	}
 	desiredLabels := []struct{ key, value string }{
-		{NetworkNameLabel, newIp.Spec.Network.Name},
-		{NetworkTypeLabel, netType},
+		{datastructs.NetworkNameLabel, newIp.Spec.Network.Name},
+		{datastructs.NetworkTypeLabel, netType},
 	}
 	//JSON Patch "add" fails if the parent of the modified path does not exist, so the whole label set needs to be added at once to an unlabelled object
 	if len(newIp.ObjectMeta.Labels) == 0 {

@@ -42,14 +42,14 @@ func (client *ClientStub) TenantNetworks(namespace string) client.TenantNetworkI
 
 func (client *ClientStub) ClusterNetworks() client.ClusterNetworkInterface {
 	if client.CnetClient == nil {
-		client.CnetClient = newCnetClientStub(client.Objects.TestCnets)
+		client.CnetClient = newCnetClientStub(client.Objects.TestCnets, client.Objects.ReservedIps)
 	}
 	return client.CnetClient
 }
 
 func (client *ClientStub) ReservedIPs(namespace string) client.ReservedIPInterface {
 	if client.RipClient == nil {
-		client.RipClient = newRipClientStub()
+		client.RipClient = newRipClientStub(client.Objects.TestRips, client.Objects.IsRipListErrorExpected)
 	}
 	client.RipClient.Namespace = namespace
 	return client.RipClient

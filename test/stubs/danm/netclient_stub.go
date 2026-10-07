@@ -37,31 +37,9 @@ func (netClient *NetClientStub) Create(ctx context.Context, obj *danmtypes.DanmN
 
 func (netClient *NetClientStub) Update(ctx context.Context, obj *danmtypes.DanmNet, opts meta_v1.UpdateOptions) (*danmtypes.DanmNet, error) {
 	netClient.TimesUpdateWasCalled++
-	for _, netReservation := range netClient.ReservedIpsList {
-		if obj.Spec.NetworkID == netReservation.NetworkId {
-			for _, reservation := range netReservation.Reservations {
-				ip, _, _ := net.ParseCIDR(reservation.Ip)
-				var subnet *net.IPNet
-				var alloc string
-				if ip.To4() != nil {
-					_, subnet, _ = net.ParseCIDR(obj.Spec.Options.Cidr)
-					alloc = obj.Spec.Options.Alloc
-				} else {
-					_, subnet, _ = net.ParseCIDR(obj.Spec.Options.Pool6.Cidr)
-					alloc = obj.Spec.Options.Alloc6
-				}
-				if subnet == nil || !subnet.Contains(ip) {
-					continue
-				}
-				isIpSetInBa := isIpSet(ip, subnet, alloc)
-				if !isIpSetInBa && reservation.Set {
-					return nil, errors.New("Reservation failure, IP:" + reservation.Ip + " should have been reserved in DanmNet:" + obj.Spec.NetworkID)
-				}
-				if isIpSetInBa && !reservation.Set {
-					return nil, errors.New("Reservation failure, IP:" + reservation.Ip + " should have been free in DanmNet:" + obj.Spec.NetworkID)
-				}
-			}
-		}
+	err := ValidateIpReservations(obj.Spec, netClient.ReservedIpsList)
+	if err != nil {
+		return nil, err
 	}
 	var netIndex int
 	for index, net := range netClient.TestNets {
@@ -115,6 +93,38 @@ func (netClient *NetClientStub) Patch(ctx context.Context, name string, pt types
 
 func (netClient *NetClientStub) AddReservedIpsList(reservedIps []utils.ReservedIpsList) {
 	netClient.ReservedIpsList = reservedIps
+}
+
+// ValidateIpReservations checks the allocation matrices of an updated network against the IP reservations expected by the test case
+func ValidateIpReservations(spec danmtypes.DanmNetSpec, reservedIpsList []utils.ReservedIpsList) error {
+	for _, netReservation := range reservedIpsList {
+		if spec.NetworkID != netReservation.NetworkId {
+			continue
+		}
+		for _, reservation := range netReservation.Reservations {
+			ip, _, _ := net.ParseCIDR(reservation.Ip)
+			var subnet *net.IPNet
+			var alloc string
+			if ip.To4() != nil {
+				_, subnet, _ = net.ParseCIDR(spec.Options.Cidr)
+				alloc = spec.Options.Alloc
+			} else {
+				_, subnet, _ = net.ParseCIDR(spec.Options.Pool6.Cidr)
+				alloc = spec.Options.Alloc6
+			}
+			if subnet == nil || !subnet.Contains(ip) {
+				continue
+			}
+			isIpSetInBa := isIpSet(ip, subnet, alloc)
+			if !isIpSetInBa && reservation.Set {
+				return errors.New("Reservation failure, IP:" + reservation.Ip + " should have been reserved in DanmNet:" + spec.NetworkID)
+			}
+			if isIpSetInBa && !reservation.Set {
+				return errors.New("Reservation failure, IP:" + reservation.Ip + " should have been free in DanmNet:" + spec.NetworkID)
+			}
+		}
+	}
+	return nil
 }
 
 func isIpSet(ip net.IP, subnet *net.IPNet, alloc string) bool {

@@ -14,6 +14,8 @@ const (
 	MaxV4MaskLength        = 9
 	MaxV6PrefixLength      = 105
 	MinV6PrefixLength      = 128
+	NetworkNameLabel       = "danm.k8s.io/network-name"
+	NetworkTypeLabel       = "danm.k8s.io/network-type"
 )
 
 var (

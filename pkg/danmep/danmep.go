@@ -259,7 +259,7 @@ func CreateDanmEp(danmClient danmclientset.Interface, namingScheme string, isIpR
 		err error
 	)
 	if isIpReservationNeeded {
-		ip4, ip6, err = ipam.Reserve(danmClient, *netInfo, iface.Ip, iface.Ip6)
+		ip4, ip6, err = ipam.Reserve(danmClient, *netInfo, iface.Ip, iface.Ip6, args.Namespace)
 		if err != nil {
 			return nil, netInfo, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
 		}

@@ -15,6 +15,9 @@ spec:
   scope: Namespaced
   versions:
   - name: v1
+    selectableFields:
+    - jsonPath: .spec.reservedIpRefs.v4
+    - jsonPath: .spec.reservedIpRefs.v6
     schema:
       openAPIV3Schema:
         properties:
@@ -81,6 +84,13 @@ spec:
                 type: string
               netns:
                 type: string
+              reservedIpRefs:
+                type: object
+                properties:
+                  v4:
+                    type: string
+                  v6:
+                    type: string
             required:
             - EndpointID
             - Interface

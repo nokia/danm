@@ -23,7 +23,7 @@ func (client *ClientStub) DanmNets(namespace string) client.DanmNetInterface {
 }
 
 func (client *ClientStub) DanmEps(namespace string) client.DanmEpInterface {
-	return newEpClientStub(client.Objects.TestEps)
+	return newEpClientStub(client.Objects.TestEps, namespace)
 }
 
 func (client *ClientStub) TenantConfigs() client.TenantConfigInterface {

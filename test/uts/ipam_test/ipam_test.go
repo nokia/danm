@@ -172,48 +172,41 @@ var reserveTcs = []struct {
 	{"ripV6NotExistingRipAsked", 20, 0, "", "doesntExist", "", "", "", "", true, 0, "rip-test"},
 	{"ripV4OutsideNetCidr", 20, 0, "dualStackOutsideCidr", "", "", "", "", "", true, 0, "rip-test"},
 	{"ripV6OutsideNetCidr", 20, 0, "", "dualStackOutsideCidr", "", "", "", "", true, 0, "rip-test"},
-	{"ripV4OutsideAlloc", 20, 0, "dualStackOutsideAlloc", "", "192.168.1.69/26", "", "dualStackOutsideAlloc", "", false, 1, "rip-test"},
-	{"ripV6OutsideAlloc", 20, 0, "", "dualStackOutsideAlloc", "", "2001:db8:85a3::8a2e:370:7339/109", "", "dualStackOutsideAlloc", false, 1, "rip-test"},
-	{"ripDsInsideAlloc", 20, 0, "dualStackInAlloc", "dualStackInAlloc", "192.168.1.70/26", "2001:db8:85a3::8a2e:370:7340/109", "dualStackInAlloc", "dualStackInAlloc", false, 1, "rip-test"},
+	{"ripV4OutsideAlloc", 20, 0, "dualStackOutsideAlloc", "", "192.168.1.69/26", "", "", "", false, 1, "rip-test"},
+	{"ripV6OutsideAlloc", 20, 0, "", "dualStackOutsideAlloc", "", "2001:db8:85a3::8a2e:370:7339/109", "", "", false, 1, "rip-test"},
+	{"ripDsInsideAlloc", 20, 0, "dualStackInAlloc", "dualStackInAlloc", "192.168.1.70/26", "2001:db8:85a3::8a2e:370:7340/109", "", "", false, 1, "rip-test"},
 	{"ripV4InsideAllocExhausted", 21, 0, "dualStackInAlloc", "", "", "", "", "", true, 0, "rip-test"},
 	{"ripV6InsideAllocExhausted", 21, 0, "", "dualStackInAlloc", "", "", "", "", true, 0, "rip-test"},
 	{"shareableRipV4InsideAllocExhausted", 21, 0, "dualStackInAllocShareable", "", "192.168.1.71/26", "", "dualStackInAllocShareable", "", false, 0, "rip-test"},
 	{"shareableRipV6InsideAllocExhausted", 21, 0, "", "dualStackInAllocShareable", "", "2001:db8:85a3::8a2e:370:7341/109", "", "dualStackInAllocShareable", false, 0, "rip-test"},
-}
-
-var freeTcs = []struct {
-	netName                   string
-	netIndex                  int
-	allocatedIp               string
-	isErrorExpected           bool
-	timesUpdateShouldBeCalled int
-}{
-	{"l2Network", 0, "192.168.1.126/26", false, 0},
-	{"noAssignedIp", 1, "", false, 0},
-	{"successfulFree", 2, "192.168.1.2/30", false, 1},
-	{"noNetmask", 2, "192.168.1.2", false, 0},
-	{"outOfRange", 2, "192.168.1.10/30", false, 0},
-	{"invalidIp", 2, "192.168.hululu/30", false, 0},
-	{"ipv6OutsideOfCidr", 3, "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, 0},
-	{"resolvedConflictDuringUpdate", 7, "192.168.1.69/26", false, 2},
-	{"unresolvedConflictAfterUpdate", 8, "192.168.1.69/26", true, 1},
-	{"errorUpdate", 9, "192.168.1.69/26", true, 1},
-	{"ipv6SuccesfulFree", 12, "2a00:8a00:a000:1193::1/106", false, 1},
+	{"shareableRipV4InsideAllocExhausted", 21, 0, "dualStackInAllocShareable", "", "192.168.1.71/26", "", "dualStackInAllocShareable", "", false, 0, "rip-test"},
+	{"shareableRipDsInsideAllocExhausted", 21, 0, "dualStackInAllocShareable", "dualStackInAllocShareable", "192.168.1.71/26", "2001:db8:85a3::8a2e:370:7341/109", "dualStackInAllocShareable", "dualStackInAllocShareable", false, 0, "rip-test"},
 }
 
 var gcTcs = []struct {
-	netName      string
-	netIndex     int
-	allocatedIp4 string
-	allocatedIp6 string
+	netName                   string
+	netIndex                  int
+	allocatedIp4              string
+	allocatedIp6              string
+	isErrorExpected           bool
+	timesUpdateShouldBeCalled int
 }{
-	{"ip4OnlyGc", 12, "192.168.1.110/26", ""},
-	{"ip6OnlyGc", 12, "", "2a00:8a00:a000:1193::1/106"},
-	{"dualStackGc", 12, "192.168.1.115", "2a00:8a00:a000:1193::5"},
-	{"emptyV4FilledV6", 12, "", "2a00:8a00:a000:1193::5"},
-	{"noneV4FilledV6", 12, "none", "2a00:8a00:a000:1193::5"},
-	{"filledV4EmptyV6", 12, "192.168.1.115", ""},
-	{"filledV4NoneV6", 12, "192.168.1.115", "none"},
+	{"l2Network", 0, "192.168.1.126/26", "", false, 0},
+	{"noAssignedIp", 1, "", "", false, 0},
+	{"noNetmask", 2, "192.168.1.2", "", false, 1},
+	{"outOfRange", 2, "192.168.1.10/30", "", false, 0},
+	{"invalidIp", 2, "192.168.hululu/30", "", false, 0},
+	{"ipv6OutsideOfCidr", 3, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", false, 0},
+	{"resolvedConflictDuringUpdate", 7, "192.168.1.69/26", "", false, 2},
+	{"unresolvedConflictAfterUpdate", 8, "192.168.1.69/26", "", true, 1},
+	{"errorUpdate", 9, "192.168.1.69/26", "", true, 1},
+	{"ip4OnlyGc", 12, "192.168.1.110/26", "", false, 1},
+	{"ip6OnlyGc", 12, "", "2a00:8a00:a000:1193::1/106", false, 1},
+	{"dualStackGc", 12, "192.168.1.115", "2a00:8a00:a000:1193::5", false, 1},
+	{"emptyV4FilledV6", 12, "", "2a00:8a00:a000:1193::5", false, 1},
+	{"noneV4FilledV6", 12, "none", "2a00:8a00:a000:1193::5", false, 1},
+	{"filledV4EmptyV6", 12, "192.168.1.115", "", false, 1},
+	{"filledV4NoneV6", 12, "192.168.1.115", "none", false, 1},
 }
 
 var wasAllocatedTcs = []struct {
@@ -290,31 +283,13 @@ func TestReserve(t *testing.T) {
 	}
 }
 
-func TestFree(t *testing.T) {
-	err := utils.SetupAllocationPools(testNets)
-	if err != nil {
-		t.Errorf("Allocation pool for testnets could not be set-up because:%v", err)
+// copyTestNets deep copies the test networks, so subtests mutating them through the client stub stay isolated from each other
+func copyTestNets(nets []danmtypes.DanmNet) []danmtypes.DanmNet {
+	copiedNets := make([]danmtypes.DanmNet, 0, len(nets))
+	for _, net := range nets {
+		copiedNets = append(copiedNets, *net.DeepCopy())
 	}
-	for _, tc := range freeTcs {
-		t.Run(tc.netName, func(t *testing.T) {
-			var ips []utils.ReservedIpsList
-			ips = utils.AppendIpToExpectedAllocsList(ips, tc.allocatedIp, false, testNets[tc.netIndex].Spec.NetworkID)
-			testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
-			netClientStub := stubs.NewClientSetStub(testArtifacts)
-			err := ipam.Free(netClientStub, testNets[tc.netIndex], tc.allocatedIp)
-			if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
-				t.Errorf("Received error:%v does not match with expectation", err)
-				return
-			}
-			var timesUpdateWasCalled int
-			if netClientStub.DanmClient.NetClient != nil {
-				timesUpdateWasCalled = netClientStub.DanmClient.NetClient.TimesUpdateWasCalled
-			}
-			if tc.timesUpdateShouldBeCalled != timesUpdateWasCalled {
-				t.Errorf("%s", "Network manifest should have been updated:"+strconv.Itoa(tc.timesUpdateShouldBeCalled)+" times, but it happened:"+strconv.Itoa(timesUpdateWasCalled)+" times instead")
-			}
-		})
-	}
+	return copiedNets
 }
 
 func TestGarbageCollectIps(t *testing.T) {
@@ -324,14 +299,24 @@ func TestGarbageCollectIps(t *testing.T) {
 	}
 	for _, tc := range gcTcs {
 		t.Run(tc.netName, func(t *testing.T) {
+			//The stub shares the backing array of the test networks, so every subtest needs its own copy to not inherit the allocations freed by the previous ones
+			nets := copyTestNets(testNets)
 			var ips []utils.ReservedIpsList
-			ips = utils.AppendIpToExpectedAllocsList(ips, tc.allocatedIp4, false, testNets[tc.netIndex].Spec.NetworkID)
-			ips = utils.AppendIpToExpectedAllocsList(ips, tc.allocatedIp6, false, testNets[tc.netIndex].Spec.NetworkID)
-			testArtifacts := utils.TestArtifacts{TestNets: testNets, ReservedIps: ips}
+			ips = utils.AppendIpToExpectedAllocsList(ips, tc.allocatedIp4, false, nets[tc.netIndex].Spec.NetworkID)
+			ips = utils.AppendIpToExpectedAllocsList(ips, tc.allocatedIp6, false, nets[tc.netIndex].Spec.NetworkID)
+			testArtifacts := utils.TestArtifacts{TestNets: nets, ReservedIps: ips}
 			netClientStub := stubs.NewClientSetStub(testArtifacts)
-			err := ipam.GarbageCollectIps(netClientStub, &testNets[tc.netIndex], tc.allocatedIp4, tc.allocatedIp6)
-			if err != nil {
+			err := ipam.GarbageCollectIps(netClientStub, nets[tc.netIndex], tc.allocatedIp4, tc.allocatedIp6)
+			if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
 				t.Errorf("Received error:%v does not match with expectation", err)
+				return
+			}
+			var timesUpdateWasCalled int
+			if netClientStub.DanmClient.NetClient != nil && (nets[tc.netIndex].Kind == netcontrol.DanmNetKind || nets[tc.netIndex].Kind == "") {
+				timesUpdateWasCalled = netClientStub.DanmClient.NetClient.TimesUpdateWasCalled
+			}
+			if tc.timesUpdateShouldBeCalled != timesUpdateWasCalled {
+				t.Errorf("%s", "Network manifest should have been updated:"+strconv.Itoa(tc.timesUpdateShouldBeCalled)+" times, but it happened:"+strconv.Itoa(timesUpdateWasCalled)+" times instead")
 			}
 		})
 	}

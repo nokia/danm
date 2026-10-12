@@ -23,6 +23,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/vishvananda/netlink"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 )
 
 type sysctlFunction func(*danmtypes.DanmEp) bool
@@ -54,8 +55,10 @@ var sysctls = []sysctlTask{
 }
 
 const (
-	MaxRetryCount = 10
-	RetryInterval = 100
+	MaxRetryCount      = 10
+	RetryInterval      = 100
+	V4RipFieldSelector = "spec.reservedIpRefs.v4"
+	V6RipFieldSelector = "spec.reservedIpRefs.v6"
 )
 
 // DeleteIpvlanInterface deletes a Pod's IPVLAN network interface based on the related DanmEp
@@ -374,7 +377,15 @@ func DeleteDanmEp(danmClient danmclientset.Interface, ep *danmtypes.DanmEp, dnet
 		if dnet == nil {
 			return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because its linked network is not available to free DANM IPAM allocated IPs")
 		}
-		err := ipam.GarbageCollectIps(danmClient, dnet, ep.Spec.Iface.Address, ep.Spec.Iface.AddressIPv6)
+		v4IpToFree := ep.Spec.Iface.Address
+		v6IpToFree := ep.Spec.Iface.AddressIPv6
+		if ep.Spec.Iface.Address != "" && ep.Spec.RipRefs.V4 != "" && isAddressShared(danmClient, V4RipFieldSelector, ep.Namespace, ep.Spec.RipRefs.V4) {
+			v4IpToFree = ""
+		}
+		if ep.Spec.Iface.AddressIPv6 != "" && ep.Spec.RipRefs.V6 != "" && isAddressShared(danmClient, V6RipFieldSelector, ep.Namespace, ep.Spec.RipRefs.V6) {
+			v6IpToFree = ""
+		}
+		err := ipam.GarbageCollectIps(danmClient, *dnet, v4IpToFree, v6IpToFree)
 		if err != nil {
 			return errors.New("DanmEp:" + ep.ObjectMeta.Name + " cannot be safely deleted because freeing its reserved IP addresses failed with error:" + err.Error())
 		}
@@ -396,4 +407,18 @@ func getVfMac(pciId string) net.HardwareAddr {
 		return pfLink.Attrs().Vfs[vfId].Mac
 	}
 	return net.HardwareAddr{}
+}
+
+// isAddressShared figures out if there are any other DanmEps in the same namespace holding a reference to the same ReservedIP objects
+// This check basically determines whether DanmEp's respective IP address was allocated through a shareable and still active ReservedIP record
+// We care about this information because in this case the DanmEp needs to be deleted without freeing this address
+// API related errors are discarded on purpose to ensure clusters not using this API and feature can continue to function
+func isAddressShared(client danmclientset.Interface, fieldSelector, ns, ripName string) bool {
+	selector := fields.SelectorFromSet(fields.Set{
+		fieldSelector: ripName,
+	})
+	epList, _ := client.DanmV1().DanmEps(ns).List(context.TODO(), meta_v1.ListOptions{
+		FieldSelector: selector.String(),
+	})
+	return epList != nil && len(epList.Items) > 1
 }

@@ -57,48 +57,32 @@ func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4
 		if reflect.DeepEqual(origSpec, tempNet.Spec) {
 			return ipamResult, nil
 		}
-		retryNeeded, newNetSpec, err := updateIpAllocation(danmClient, tempNet)
+		retryNeeded, newNet, err := updateIpAllocation(danmClient, tempNet)
 		if err != nil {
 			return datastructs.IpamResult{}, err
 		}
 		if retryNeeded {
-			tempNet = newNetSpec
+			tempNet = newNet
+			origSpec = newNet.Spec
 			continue
 		}
 		return ipamResult, nil
 	}
 }
 
-// Free inspects the network object received as an input, and releases an IPv4 or IPv6 address from the appropriate allocation pool
+// freeIp inspects the network object received as an input, and releases an IPv4 or IPv6 address from the appropriate allocation pool
 // The IP address liberation is represented by unsetting a bit in the network's BitArray type allocation matrix
-// The refreshed network object is modified in the K8s API server at the end
-func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, rip string) error {
+func freeIp(netInfo *danmtypes.DanmNet, rip string) {
 	if rip == NoneAllocType || rip == "" {
-		return nil
+		return
 	}
 	ripParts := strings.Split(rip, "/")
 	ip := net.ParseIP(ripParts[0])
-	tempNet := netInfo
-	origSpec := netInfo.Spec
-	for {
-		if ip.To4() != nil {
-			tempNet.Spec.Options.Alloc = resetIp(tempNet.Spec.Options.Alloc, tempNet.Spec.Options.Cidr, ip)
-		} else {
-			tempNet.Spec.Options.Alloc6 = resetIp(tempNet.Spec.Options.Alloc6, tempNet.Spec.Options.Pool6.Cidr, ip)
-		}
-		//There is nothing to update in the API server if the network is unchanged after freeing the IP
-		if reflect.DeepEqual(origSpec, tempNet.Spec) {
-			return nil
-		}
-		retryNeeded, newNet, err := updateIpAllocation(danmClient, tempNet)
-		if err != nil {
-			return err
-		}
-		if retryNeeded {
-			tempNet = newNet
-			continue
-		}
-		return nil
+
+	if ip.To4() != nil {
+		netInfo.Spec.Options.Alloc = resetIp(netInfo.Spec.Options.Alloc, netInfo.Spec.Options.Cidr, ip)
+	} else {
+		netInfo.Spec.Options.Alloc6 = resetIp(netInfo.Spec.Options.Alloc6, netInfo.Spec.Options.Pool6.Cidr, ip)
 	}
 }
 
@@ -199,11 +183,14 @@ func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, allocCidr, netCidr 
 			return alloc, "", "", err
 		}
 	} else {
-		ripRef = reqType
 		//ReservedIP reference style allocation... or malformed static IP request. no way to differentiate
 		requestedReservedIpRecord, exists := reservedIps[reqType+"/"+requestNamespace+"/"+ripSuffix]
 		if !exists {
 			return alloc, "", "", errors.New("static IP allocation failed, requested static IP:" + reqType + " is either a malformed IP address, or a non-existent ReservedIP reference")
+		}
+		//Only storing RIP reference in DanmEp for Shareable allocations means for the majority of the cases we do not need to do an extra lookup during a delete
+		if requestedReservedIpRecord.shareable {
+			ripRef = reqType
 		}
 		requestedReservedIp := net.ParseIP(requestedReservedIpRecord.ripAddress)
 		allocatedIp, err = allocateStaticIp(requestedReservedIp, netSubnet, allocSubnet, ba, requestedReservedIpRecord.shareable)
@@ -291,13 +278,26 @@ func resetIp(alloc, cidr string, rip net.IP) string {
 	return ba.Encode()
 }
 
-func GarbageCollectIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, ip4, ip6 string) error {
-	err := Free(danmClient, *netInfo, ip4)
-	if err != nil {
-		return err
+func GarbageCollectIps(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, ip4, ip6 string) error {
+	tempNet := netInfo
+	origSpec := netInfo.Spec
+	for {
+		freeIp(&tempNet, ip4)
+		freeIp(&tempNet, ip6)
+		if reflect.DeepEqual(origSpec, tempNet.Spec) {
+			return nil
+		}
+		retryNeeded, newNet, err := updateIpAllocation(danmClient, tempNet)
+		if err != nil {
+			return err
+		}
+		if retryNeeded {
+			tempNet = newNet
+			origSpec = newNet.Spec
+			continue
+		}
+		return nil
 	}
-	err = Free(danmClient, *netInfo, ip6)
-	return err
 }
 
 // Ip2int converts an IP address stored according to the Golang net package to a native Golang big endian, 32-bit integer
@@ -416,7 +416,7 @@ func WasIpAllocatedByDanm(ip string, netInfo *danmtypes.DanmNet) bool {
 		return false
 	}
 	//Interface without IP is a DANM special so DanmEps having such attributes need to be treated as "DANM-managed" to ensure they are properly cleaned
-	//ipam.Free is already prepared to handle these types
+	//IP freeing is already prepared to handle these types
 	if ip == NoneAllocType || ip == "" {
 		return true
 	}

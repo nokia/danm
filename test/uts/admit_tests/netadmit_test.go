@@ -11,6 +11,7 @@ import (
 	stubs "github.com/danm-cni/danm/test/stubs/danm"
 	httpstub "github.com/danm-cni/danm/test/stubs/http"
 	"github.com/danm-cni/danm/test/utils"
+	"github.com/danm-cni/danm/test/utils/webhook"
 	"k8s.io/api/admission/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -642,7 +643,7 @@ func TestValidateNetwork(t *testing.T) {
 			testClient := stubs.NewClientSetStub(testArtifacts)
 			validator.Client = testClient
 			validator.ValidateNetwork(writerStub, request)
-			err = utils.ValidateHttpResponse(writerStub, tc.isErrorExpected, tc.expectedPatches)
+			err = webhook.ValidateHttpResponse(writerStub, tc.isErrorExpected, tc.expectedPatches)
 			if err != nil {
 				t.Errorf("Received HTTP Response did not match expectation, because:%v", err)
 				return

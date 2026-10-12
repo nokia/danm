@@ -253,21 +253,18 @@ func ArePodsConnectedToNetwork(client danmclientset.Interface, dnet *danmtypes.D
 // It helps making sure IPs are for sure universally reserved upon DanmEp creation itself
 // TODO: I hate myself for the bool input parameter, but ipam absolutely should not depend on cnidel. Could be changed to cleverly defaulting iface attributes to sthing?
 func CreateDanmEp(danmClient danmclientset.Interface, namingScheme string, isIpReservationNeeded bool, netInfo *danmtypes.DanmNet, iface datastructs.Interface, args *datastructs.CniArgs) (*danmtypes.DanmEp, *danmtypes.DanmNet, error) {
-	var (
-		ip4 = iface.Ip
-		ip6 = iface.Ip6
-		err error
-	)
+	var err error
+	ipamResult := datastructs.IpamResult{Ip4: iface.Ip, Ip6: iface.Ip6}
 	if isIpReservationNeeded {
-		ip4, ip6, err = ipam.Reserve(danmClient, *netInfo, iface.Ip, iface.Ip6, args.Namespace)
+		ipamResult, err = ipam.Reserve(danmClient, *netInfo, iface.Ip, iface.Ip6, args.Namespace)
 		if err != nil {
 			return nil, netInfo, errors.New("IP address reservation failed for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
 		}
 	}
 	epSpec := danmtypes.DanmEpIface{
 		Name:        calculateIfaceName(namingScheme, netInfo.Spec.Options.Prefix, iface.DefaultIfaceName, iface.SequenceId),
-		Address:     ip4,
-		AddressIPv6: ip6,
+		Address:     ipamResult.Ip4,
+		AddressIPv6: ipamResult.Ip6,
 		Proutes:     iface.Proutes,
 		Proutes6:    iface.Proutes6,
 		DeviceID:    iface.Device,
@@ -280,7 +277,7 @@ func CreateDanmEp(danmClient danmclientset.Interface, namingScheme string, isIpR
 			epSpec.MacAddress = hwAddress.String()
 		}
 	}
-	ep, err := createDanmEp(danmClient, epSpec, netInfo, args)
+	ep, err := createDanmEp(danmClient, epSpec, netInfo, args, ipamResult)
 	if err != nil {
 		return nil, netInfo, errors.New("DanmEp object could not be created due to error:" + err.Error())
 	}
@@ -311,7 +308,7 @@ func calculateIfaceName(namingScheme, chosenName, defaultName string, sequenceId
 	return defaultName + strconv.Itoa(sequenceId)
 }
 
-func createDanmEp(danmClient danmclientset.Interface, epInput danmtypes.DanmEpIface, netInfo *danmtypes.DanmNet, args *datastructs.CniArgs) (*danmtypes.DanmEp, error) {
+func createDanmEp(danmClient danmclientset.Interface, epInput danmtypes.DanmEpIface, netInfo *danmtypes.DanmNet, args *datastructs.CniArgs, ipamResult datastructs.IpamResult) (*danmtypes.DanmEp, error) {
 	epidInt, err := uuid.NewV4()
 	if err != nil {
 		return nil, errors.New("uuid.NewV4 returned error during EP creation:" + err.Error())
@@ -332,6 +329,7 @@ func createDanmEp(danmClient danmclientset.Interface, epInput danmtypes.DanmEpIf
 		CID:         args.ContainerId,
 		Netns:       args.Netns,
 		ApiType:     netInfo.TypeMeta.Kind,
+		RipRefs:     danmtypes.RipReferences{V4: ipamResult.Rip4, V6: ipamResult.Rip6},
 	}
 	meta := meta_v1.ObjectMeta{
 		Name:            epid,

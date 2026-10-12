@@ -42,29 +42,30 @@ type reservedIps map[string]ripRecord
 
 // Reserve inspects the network object received as an input, and allocates an IPv4 or IPv6 address from the appropriate allocation pool
 // In case static IP allocation is requested, it will try to reserve the requested address. If it is not possible, it returns an error
-// The reserved IP addresses are represented by setting a bit in the network's BitArray type allocation matrices
+// Static IP can be also request via providing a reference to a ReservedIP object holding the desired address. Allocations done via this feature may be shared between multiple Pods
+// The allocated IP addresses are represented by setting a bit in the network's BitArray type allocation matrices
 // The refreshed network object is modified in the K8s API server at the end
-func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4, req6, requestNamespace string) (string, string, error) {
+func Reserve(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, req4, req6, requestNamespace string) (datastructs.IpamResult, error) {
 	origSpec := netInfo.Spec
 	tempNet := netInfo
 	for {
-		ip4, ip6, err := allocateIps(danmClient, &tempNet, req4, req6, requestNamespace)
+		ipamResult, err := allocateIps(danmClient, &tempNet, req4, req6, requestNamespace)
 		if err != nil {
-			return "", "", errors.New("failed to allocate IP address for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
+			return datastructs.IpamResult{}, errors.New("failed to allocate IP address for network:" + netInfo.ObjectMeta.Name + " with error:" + err.Error())
 		}
 		//There is nothing to update in the API server if the network is unchanged after IP reservation
 		if reflect.DeepEqual(origSpec, tempNet.Spec) {
-			return ip4, ip6, nil
+			return ipamResult, nil
 		}
 		retryNeeded, newNetSpec, err := updateIpAllocation(danmClient, tempNet)
 		if err != nil {
-			return "", "", err
+			return datastructs.IpamResult{}, err
 		}
 		if retryNeeded {
 			tempNet = newNetSpec
 			continue
 		}
-		return ip4, ip6, nil
+		return ipamResult, nil
 	}
 }
 
@@ -101,17 +102,16 @@ func Free(danmClient danmclientset.Interface, netInfo danmtypes.DanmNet, rip str
 	}
 }
 
-func allocateIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, req4, req6, requestNamespace string) (string, string, error) {
-	ip4 := ""
-	ip6 := ""
+func allocateIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet, req4, req6, requestNamespace string) (datastructs.IpamResult, error) {
+	var ip4, ip6, rip4, rip6 string
 	reservedIps, err := getReservedIps(danmClient, netInfo, req4, req6, requestNamespace)
 	if err != nil {
-		return "", "", err
+		return datastructs.IpamResult{}, err
 	}
 	if req4 != "" {
-		netInfo.Spec.Options.Alloc, ip4, err = allocateAddress(&netInfo.Spec.Options.Pool, netInfo.Spec.Options.Alloc, req4, netInfo.Spec.Options.Cidr, netInfo.Spec.Options.Cidr, netInfo.Spec.Options.Routes, requestNamespace, reservedIps, V4Suffix)
+		netInfo.Spec.Options.Alloc, ip4, rip4, err = allocateAddress(&netInfo.Spec.Options.Pool, netInfo.Spec.Options.Alloc, req4, netInfo.Spec.Options.Cidr, netInfo.Spec.Options.Cidr, netInfo.Spec.Options.Routes, requestNamespace, reservedIps, V4Suffix)
 		if err != nil {
-			return "", "", err
+			return datastructs.IpamResult{}, err
 		}
 	}
 	if req6 != "" {
@@ -120,13 +120,14 @@ func allocateIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmNet,
 		}
 		//TODO: to have a real uniform handling both V4 and V6 pool definition should be uniform, meaning, V4 pools should also have a separare allocation CIDR
 		tempPool6 := danmtypes.IpPool{Start: netInfo.Spec.Options.Pool6.Start, End: netInfo.Spec.Options.Pool6.End, LastIp: netInfo.Spec.Options.Pool6.LastIp}
-		netInfo.Spec.Options.Alloc6, ip6, err = allocateAddress(&tempPool6, netInfo.Spec.Options.Alloc6, req6, netInfo.Spec.Options.Pool6.Cidr, netInfo.Spec.Options.Net6, netInfo.Spec.Options.Routes6, requestNamespace, reservedIps, V6Suffix)
+		netInfo.Spec.Options.Alloc6, ip6, rip6, err = allocateAddress(&tempPool6, netInfo.Spec.Options.Alloc6, req6, netInfo.Spec.Options.Pool6.Cidr, netInfo.Spec.Options.Net6, netInfo.Spec.Options.Routes6, requestNamespace, reservedIps, V6Suffix)
 		if err != nil {
-			return "", "", err
+			return datastructs.IpamResult{}, err
 		}
 		netInfo.Spec.Options.Pool6.LastIp = tempPool6.LastIp
 	}
-	return ip4, ip6, err
+	ipamResult := datastructs.IpamResult{Ip4: ip4, Ip6: ip6, Rip4: rip4, Rip6: rip6}
+	return ipamResult, err
 }
 
 func InitV6AllocFields(netInfo *danmtypes.DanmNet) {
@@ -135,12 +136,12 @@ func InitV6AllocFields(netInfo *danmtypes.DanmNet) {
 		InitAllocPool(netInfo.Spec.Options.Pool6.Cidr, netInfo.Spec.Options.Pool6.Start, netInfo.Spec.Options.Pool6.End, netInfo.Spec.Options.Alloc6, netInfo.Spec.Options.Routes6)
 }
 
-func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, allocCidr, netCidr string, routes map[string]string, requestNamespace string, reservedIps reservedIps, ripSuffix string) (string, string, error) {
+func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, allocCidr, netCidr string, routes map[string]string, requestNamespace string, reservedIps reservedIps, ripSuffix string) (string, string, string, error) {
 	if reqType == NoneAllocType {
-		return alloc, NoneAllocType, nil
+		return alloc, NoneAllocType, "", nil
 	}
 	if alloc == "" {
-		return alloc, "", errors.New("IP address cannot be allocated for an L2 network!")
+		return alloc, "", "", errors.New("IP address cannot be allocated for an L2 network!")
 	}
 	ba := bitarray.NewBitArrayFromBase64(alloc)
 	var allocatedIp string
@@ -176,39 +177,41 @@ func allocateAddress(pool *danmtypes.IpPool, alloc, reqType, allocCidr, netCidr 
 			}
 		}
 		if !doesAnyFreeIpExist {
-			return alloc, "", errors.New("IP address cannot be dynamically allocated, all addresses are reserved!")
+			return alloc, "", "", errors.New("IP address cannot be dynamically allocated, all addresses are reserved!")
 		}
 		allocatedIp = getIpFromIndex(allocatedIndex, allocSubnet, netSubnet, WithPrefix)
 		pool.LastIp = allocatedIp
-		return ba.Encode(), allocatedIp, nil
+		return ba.Encode(), allocatedIp, "", nil
 	}
 	//I guess we are doing backward compatibility now :)
 	//You used to be able to define a static IP in CIDR format, so now we need to trim the suffix if it is still unnecessarily there
 	requestParts := strings.Split(reqType, "/")
 	ip := net.ParseIP(requestParts[0])
 	var err error
+	var ripRef string
 	//Old-school static IP allocation
 	if ip != nil {
 		if isIpReserved(requestParts[0], reservedIps) {
-			return alloc, "", errors.New("static IP allocation failed, requested static IP:" + requestParts[0] + " is reserved through the ReservedIP API")
+			return alloc, "", "", errors.New("static IP allocation failed, requested static IP:" + requestParts[0] + " is reserved through the ReservedIP API")
 		}
 		allocatedIp, err = allocateStaticIp(ip, netSubnet, allocSubnet, ba, UnshareableStaticIp)
 		if err != nil {
-			return alloc, "", err
+			return alloc, "", "", err
 		}
 	} else {
+		ripRef = reqType
 		//ReservedIP reference style allocation... or malformed static IP request. no way to differentiate
 		requestedReservedIpRecord, exists := reservedIps[reqType+"/"+requestNamespace+"/"+ripSuffix]
 		if !exists {
-			return alloc, "", errors.New("static IP allocation failed, requested static IP:" + reqType + " is either a malformed IP address, or a non-existent ReservedIP reference")
+			return alloc, "", "", errors.New("static IP allocation failed, requested static IP:" + reqType + " is either a malformed IP address, or a non-existent ReservedIP reference")
 		}
 		requestedReservedIp := net.ParseIP(requestedReservedIpRecord.ripAddress)
 		allocatedIp, err = allocateStaticIp(requestedReservedIp, netSubnet, allocSubnet, ba, requestedReservedIpRecord.shareable)
 		if err != nil {
-			return alloc, "", err
+			return alloc, "", "", err
 		}
 	}
-	return ba.Encode(), allocatedIp, nil
+	return ba.Encode(), allocatedIp, ripRef, nil
 }
 
 func getAllocRangeBasedOnCidr(pool *danmtypes.IpPool, cidr *net.IPNet) (uint32, uint32) {

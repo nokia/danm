@@ -93,16 +93,17 @@ type DanmEp struct {
 }
 
 type DanmEpSpec struct {
-	NetworkName string      `json:"NetworkName"`
-	NetworkType string      `json:"NetworkType"`
-	EndpointID  string      `json:"EndpointID"`
-	Iface       DanmEpIface `json:"Interface"`
-	Host        string      `json:"Host,omitempty"`
-	Pod         string      `json:"Pod"`
-	PodUID      types.UID   `json:"PodUID,omitempty"`
-	CID         string      `json:"CID,omitempty"`
-	Netns       string      `json:"netns,omitempty"`
-	ApiType     string      `json:"apiType"`
+	NetworkName string        `json:"NetworkName"`
+	NetworkType string        `json:"NetworkType"`
+	EndpointID  string        `json:"EndpointID"`
+	Iface       DanmEpIface   `json:"Interface"`
+	Host        string        `json:"Host,omitempty"`
+	Pod         string        `json:"Pod"`
+	PodUID      types.UID     `json:"PodUID,omitempty"`
+	CID         string        `json:"CID,omitempty"`
+	Netns       string        `json:"netns,omitempty"`
+	ApiType     string        `json:"apiType"`
+	RipRefs     RipReferences `json:"reservedIpRefs,omitempty"`
 }
 
 type DanmEpIface struct {
@@ -114,6 +115,11 @@ type DanmEpIface struct {
 	Proutes6    map[string]string `json:"proutes6,omitempty"`
 	DeviceID    string            `json:"DeviceID,omitempty"`
 	Mtu         int               `json:"Mtu,omitempty"`
+}
+
+type RipReferences struct {
+	V4 string `json:"v4,omitempty"`
+	V6 string `json:"v6,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

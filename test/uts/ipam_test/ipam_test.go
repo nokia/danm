@@ -121,62 +121,64 @@ var reserveTcs = []struct {
 	requestedIp6              string
 	expectedIp4               string
 	expectedIp6               string
+	expectedRip4              string
+	expectedRip6              string
 	isErrorExpected           bool
 	timesUpdateShouldBeCalled int
 	requestNamespace          string
 }{
-	{"noIpsRequested", 0, -1, "", "", "", "", false, 0, ""},
-	{"noneIPv4", 0, -1, "none", "", "none", "", false, 0, ""},
-	{"noneIPv6", 0, -1, "", "none", "", "none", false, 0, ""},
-	{"noneDualStack", 0, -1, "none", "none", "none", "none", false, 0, ""},
-	{"dynamicErrorIPv4", 0, -1, "dynamic", "", "", "", true, 0, ""},
-	{"dynamicErrorIPv6", 0, -1, "", "dynamic", "", "", true, 0, ""},
-	{"dynamicErrorDualStack", 0, -1, "dynamic", "dynamic", "", "", true, 0, ""},
-	{"dynamicIPv4Success", 1, -1, "dynamic", "", "192.168.1.65/26", "", false, 1, ""},
-	{"dynamicIPv4Exhausted", 2, -1, "dynamic", "", "", "", true, 0, ""},
-	{"staticInvalidIPv4", 2, -1, "hululululu", "", "", "", true, 0, ""},
-	{"staticInvalidNoCidrIPv4", 2, -1, "192.168.1.1", "", "", "", true, 0, ""},
-	{"staticL2IPv4", 0, -1, "192.168.1.1/26", "", "", "", true, 0, ""},
-	{"staticNetmaskMismatchIPv4", 2, -1, "192.168.1.1/32", "", "", "", true, 0, ""},
-	{"staticAlreadyUsedIPv4", 2, -1, "192.168.1.2/30", "", "", "", true, 0, ""},
-	{"staticSuccessLastIPv4", 1, -1, "192.168.1.126/26", "", "192.168.1.126/26", "", false, 1, ""},
-	{"staticSuccessFirstIPv4", 11, -1, "192.168.1.65/26", "", "192.168.1.65/26", "", false, 1, ""},
-	{"staticFailAfterLastIPv4", 1, -1, "192.168.1.127/26", "", "", "", true, 0, ""},
-	{"staticFailBeforeFirstIPv4", 1, -1, "192.168.1.64/26", "", "", "", true, 0, ""},
-	{"dynamicIPv6Success", 3, -1, "", "dynamic", "", "2a00:8a00:a000:1193::1/64", false, 1, ""},
-	{"dynamicIPv6SmallCidrSizeSuccess", 4, -1, "", "dynamic", "", "2a00:8a00:a000:1193::1/120", false, 1, ""},
-	{"staticL2IPv6", 2, -1, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "", true, 0, ""},
-	{"staticInvalidIPv6", 3, -1, "", "2a00:8a00:a000:1193:hulu:lulu:lulu:lulu/64", "", "", true, 0, ""},
-	{"staticIPv/OutsideOfAllocCidr", 3, -1, "", "2a00:8a00:a000:2193:f816:3eff:fe24:e348/64", "", "", true, 0, ""},
-	{"staticIPv6Success", 3, -1, "", "2a00:8a00:a000:1193::3e:1010", "", "2a00:8a00:a000:1193::3e:1010/64", false, 1, ""},
-	{"dynamicDualStackSuccess", 3, -1, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193::2/64", false, 1, ""},
-	{"staticDualStackSuccess", 3, -1, "192.168.1.115", "2a00:8a00:a000:1193::3e:2002", "192.168.1.115/26", "2a00:8a00:a000:1193::3e:2002/64", false, 1, ""},
-	{"resolvedConflictDuringUpdate", 5, -1, "dynamic", "", "192.168.1.65/26", "", false, 2, ""},
-	{"unresolvedConflictAfterUpdate", 6, -1, "dynamic", "", "", "", true, 1, ""},
-	{"errorUpdate", 10, -1, "dynamic", "", "", "", true, 1, ""},
-	{"dyanmicV4FromAllocationPool", 13, -1, "dynamic", "", "192.168.1.70/26", "", false, 1, ""},
-	{"dyanmicV4FromAllocationPoolWithLastIpSet", 14, -1, "dynamic", "", "192.168.1.70/26", "", false, 1, ""},
-	{"dyanmicV4FirstIpIsNotAGw", 15, -1, "dynamic", "", "192.168.1.65/26", "", false, 1, ""},
-	{"dyanmicV6FirstIpIsNotAGw", 15, -1, "", "dynamic", "", "2a00:8a00:a000:1193::1/64", false, 1, ""},
-	{"dyanmicV4FirstIpIsGw", 16, -1, "dynamic", "", "192.168.1.66/26", "", false, 1, ""},
-	{"dyanmicV6FirstIpIsGw", 16, -1, "", "dynamic", "", "2a00:8a00:a000:1193::2/64", false, 1, ""},
-	{"staticV4GwSuccess", 16, -1, "192.168.1.65/26", "", "192.168.1.65/26", "", false, 1, ""},
-	{"staticV6GwSuccess", 16, -1, "", "2a00:8a00:a000:1193::1", "", "2a00:8a00:a000:1193::1/64", false, 1, ""},
-	{"staticV4GwFailIpReserved", 17, -1, "192.168.1.65/26", "", "", "", true, 0, ""},
-	{"staticV6GwFailIpReserved", 17, -1, "", "2a00:8a00:a000:1193::1", "", "", true, 0, ""},
-	{"dyanmicV4FromAllocationPoolWithLastIpCidr", 18, -1, "dynamic", "", "192.168.1.80/26", "", false, 1, ""},
-	{"ripError", 19, -1, "dynamic", "", "", "", true, 0, "rip-test"},
-	{"ripV4NotExistingRipAsked", 20, 0, "doesntExist", "", "", "", true, 0, "rip-test"},
-	{"ripV6NotExistingRipAsked", 20, 0, "", "doesntExist", "", "", true, 0, "rip-test"},
-	{"ripV4OutsideNetCidr", 20, 0, "dualStackOutsideCidr", "", "", "", true, 0, "rip-test"},
-	{"ripV6OutsideNetCidr", 20, 0, "", "dualStackOutsideCidr", "", "", true, 0, "rip-test"},
-	{"ripV4OutsideAlloc", 20, 0, "dualStackOutsideAlloc", "", "192.168.1.69/26", "", false, 1, "rip-test"},
-	{"ripV6OutsideAlloc", 20, 0, "", "dualStackOutsideAlloc", "", "2001:db8:85a3::8a2e:370:7339/109", false, 1, "rip-test"},
-	{"ripDsInsideAlloc", 20, 0, "dualStackInAlloc", "dualStackInAlloc", "192.168.1.70/26", "2001:db8:85a3::8a2e:370:7340/109", false, 1, "rip-test"},
-	{"ripV4InsideAllocExhausted", 21, 0, "dualStackInAlloc", "", "", "", true, 0, "rip-test"},
-	{"ripV6InsideAllocExhausted", 21, 0, "", "dualStackInAlloc", "", "", true, 0, "rip-test"},
-	{"shareableRipV4InsideAllocExhausted", 21, 0, "dualStackInAllocShareable", "", "192.168.1.71/26", "", false, 0, "rip-test"},
-	{"shareableRipV6InsideAllocExhausted", 21, 0, "", "dualStackInAllocShareable", "", "2001:db8:85a3::8a2e:370:7341/109", false, 0, "rip-test"},
+	{"noIpsRequested", 0, -1, "", "", "", "", "", "", false, 0, ""},
+	{"noneIPv4", 0, -1, "none", "", "none", "", "", "", false, 0, ""},
+	{"noneIPv6", 0, -1, "", "none", "", "none", "", "", false, 0, ""},
+	{"noneDualStack", 0, -1, "none", "none", "none", "none", "", "", false, 0, ""},
+	{"dynamicErrorIPv4", 0, -1, "dynamic", "", "", "", "", "", true, 0, ""},
+	{"dynamicErrorIPv6", 0, -1, "", "dynamic", "", "", "", "", true, 0, ""},
+	{"dynamicErrorDualStack", 0, -1, "dynamic", "dynamic", "", "", "", "", true, 0, ""},
+	{"dynamicIPv4Success", 1, -1, "dynamic", "", "192.168.1.65/26", "", "", "", false, 1, ""},
+	{"dynamicIPv4Exhausted", 2, -1, "dynamic", "", "", "", "", "", true, 0, ""},
+	{"staticInvalidIPv4", 2, -1, "hululululu", "", "", "", "", "", true, 0, ""},
+	{"staticInvalidNoCidrIPv4", 2, -1, "192.168.1.1", "", "", "", "", "", true, 0, ""},
+	{"staticL2IPv4", 0, -1, "192.168.1.1/26", "", "", "", "", "", true, 0, ""},
+	{"staticNetmaskMismatchIPv4", 2, -1, "192.168.1.1/32", "", "", "", "", "", true, 0, ""},
+	{"staticAlreadyUsedIPv4", 2, -1, "192.168.1.2/30", "", "", "", "", "", true, 0, ""},
+	{"staticSuccessLastIPv4", 1, -1, "192.168.1.126/26", "", "192.168.1.126/26", "", "", "", false, 1, ""},
+	{"staticSuccessFirstIPv4", 11, -1, "192.168.1.65/26", "", "192.168.1.65/26", "", "", "", false, 1, ""},
+	{"staticFailAfterLastIPv4", 1, -1, "192.168.1.127/26", "", "", "", "", "", true, 0, ""},
+	{"staticFailBeforeFirstIPv4", 1, -1, "192.168.1.64/26", "", "", "", "", "", true, 0, ""},
+	{"dynamicIPv6Success", 3, -1, "", "dynamic", "", "2a00:8a00:a000:1193::1/64", "", "", false, 1, ""},
+	{"dynamicIPv6SmallCidrSizeSuccess", 4, -1, "", "dynamic", "", "2a00:8a00:a000:1193::1/120", "", "", false, 1, ""},
+	{"staticL2IPv6", 2, -1, "", "2a00:8a00:a000:1193:f816:3eff:fe24:e348/64", "", "", "", "", true, 0, ""},
+	{"staticInvalidIPv6", 3, -1, "", "2a00:8a00:a000:1193:hulu:lulu:lulu:lulu/64", "", "", "", "", true, 0, ""},
+	{"staticIPv/OutsideOfAllocCidr", 3, -1, "", "2a00:8a00:a000:2193:f816:3eff:fe24:e348/64", "", "", "", "", true, 0, ""},
+	{"staticIPv6Success", 3, -1, "", "2a00:8a00:a000:1193::3e:1010", "", "2a00:8a00:a000:1193::3e:1010/64", "", "", false, 1, ""},
+	{"dynamicDualStackSuccess", 3, -1, "dynamic", "dynamic", "192.168.1.65/26", "2a00:8a00:a000:1193::2/64", "", "", false, 1, ""},
+	{"staticDualStackSuccess", 3, -1, "192.168.1.115", "2a00:8a00:a000:1193::3e:2002", "192.168.1.115/26", "2a00:8a00:a000:1193::3e:2002/64", "", "", false, 1, ""},
+	{"resolvedConflictDuringUpdate", 5, -1, "dynamic", "", "192.168.1.65/26", "", "", "", false, 2, ""},
+	{"unresolvedConflictAfterUpdate", 6, -1, "dynamic", "", "", "", "", "", true, 1, ""},
+	{"errorUpdate", 10, -1, "dynamic", "", "", "", "", "", true, 1, ""},
+	{"dyanmicV4FromAllocationPool", 13, -1, "dynamic", "", "192.168.1.70/26", "", "", "", false, 1, ""},
+	{"dyanmicV4FromAllocationPoolWithLastIpSet", 14, -1, "dynamic", "", "192.168.1.70/26", "", "", "", false, 1, ""},
+	{"dyanmicV4FirstIpIsNotAGw", 15, -1, "dynamic", "", "192.168.1.65/26", "", "", "", false, 1, ""},
+	{"dyanmicV6FirstIpIsNotAGw", 15, -1, "", "dynamic", "", "2a00:8a00:a000:1193::1/64", "", "", false, 1, ""},
+	{"dyanmicV4FirstIpIsGw", 16, -1, "dynamic", "", "192.168.1.66/26", "", "", "", false, 1, ""},
+	{"dyanmicV6FirstIpIsGw", 16, -1, "", "dynamic", "", "2a00:8a00:a000:1193::2/64", "", "", false, 1, ""},
+	{"staticV4GwSuccess", 16, -1, "192.168.1.65/26", "", "192.168.1.65/26", "", "", "", false, 1, ""},
+	{"staticV6GwSuccess", 16, -1, "", "2a00:8a00:a000:1193::1", "", "2a00:8a00:a000:1193::1/64", "", "", false, 1, ""},
+	{"staticV4GwFailIpReserved", 17, -1, "192.168.1.65/26", "", "", "", "", "", true, 0, ""},
+	{"staticV6GwFailIpReserved", 17, -1, "", "2a00:8a00:a000:1193::1", "", "", "", "", true, 0, ""},
+	{"dyanmicV4FromAllocationPoolWithLastIpCidr", 18, -1, "dynamic", "", "192.168.1.80/26", "", "", "", false, 1, ""},
+	{"ripError", 19, -1, "dynamic", "", "", "", "", "", true, 0, "rip-test"},
+	{"ripV4NotExistingRipAsked", 20, 0, "doesntExist", "", "", "", "", "", true, 0, "rip-test"},
+	{"ripV6NotExistingRipAsked", 20, 0, "", "doesntExist", "", "", "", "", true, 0, "rip-test"},
+	{"ripV4OutsideNetCidr", 20, 0, "dualStackOutsideCidr", "", "", "", "", "", true, 0, "rip-test"},
+	{"ripV6OutsideNetCidr", 20, 0, "", "dualStackOutsideCidr", "", "", "", "", true, 0, "rip-test"},
+	{"ripV4OutsideAlloc", 20, 0, "dualStackOutsideAlloc", "", "192.168.1.69/26", "", "dualStackOutsideAlloc", "", false, 1, "rip-test"},
+	{"ripV6OutsideAlloc", 20, 0, "", "dualStackOutsideAlloc", "", "2001:db8:85a3::8a2e:370:7339/109", "", "dualStackOutsideAlloc", false, 1, "rip-test"},
+	{"ripDsInsideAlloc", 20, 0, "dualStackInAlloc", "dualStackInAlloc", "192.168.1.70/26", "2001:db8:85a3::8a2e:370:7340/109", "dualStackInAlloc", "dualStackInAlloc", false, 1, "rip-test"},
+	{"ripV4InsideAllocExhausted", 21, 0, "dualStackInAlloc", "", "", "", "", "", true, 0, "rip-test"},
+	{"ripV6InsideAllocExhausted", 21, 0, "", "dualStackInAlloc", "", "", "", "", true, 0, "rip-test"},
+	{"shareableRipV4InsideAllocExhausted", 21, 0, "dualStackInAllocShareable", "", "192.168.1.71/26", "", "dualStackInAllocShareable", "", false, 0, "rip-test"},
+	{"shareableRipV6InsideAllocExhausted", 21, 0, "", "dualStackInAllocShareable", "", "2001:db8:85a3::8a2e:370:7341/109", "", "dualStackInAllocShareable", false, 0, "rip-test"},
 }
 
 var freeTcs = []struct {
@@ -257,16 +259,22 @@ func TestReserve(t *testing.T) {
 			if requestNamespace == "" {
 				requestNamespace = testNets[tc.netIndex].Namespace
 			}
-			ip4, ip6, err := ipam.Reserve(netClientStub, testNets[tc.netIndex], tc.requestedIp4, tc.requestedIp6, requestNamespace)
+			ipamResult, err := ipam.Reserve(netClientStub, testNets[tc.netIndex], tc.requestedIp4, tc.requestedIp6, requestNamespace)
 			if (err != nil && !tc.isErrorExpected) || (err == nil && tc.isErrorExpected) {
 				t.Errorf("Received error:%v does not match with expectation", err)
 				return
 			}
-			if ip4 != tc.expectedIp4 {
-				t.Errorf("Allocated IP4 address:%s does not match with expected:%s", ip4, tc.expectedIp4)
+			if ipamResult.Ip4 != tc.expectedIp4 {
+				t.Errorf("Allocated IP4 address:%s does not match with expected:%s", ipamResult.Ip4, tc.expectedIp4)
 			}
-			if ip6 != tc.expectedIp6 {
-				t.Errorf("Allocated IP6 address:%s does not match with the expected:%s", ip6, tc.expectedIp6)
+			if ipamResult.Ip6 != tc.expectedIp6 {
+				t.Errorf("Allocated IP6 address:%s does not match with the expected:%s", ipamResult.Ip6, tc.expectedIp6)
+			}
+			if ipamResult.Rip4 != tc.expectedRip4 {
+				t.Errorf("Returned V4 ReservedIP reference:%s does not match with expected:%s", ipamResult.Rip4, tc.expectedRip4)
+			}
+			if ipamResult.Rip6 != tc.expectedRip6 {
+				t.Errorf("Returned V6 ReservedIP reference:%s does not match with the expected:%s", ipamResult.Rip6, tc.expectedRip6)
 			}
 			var timesUpdateWasCalled int
 			if netClientStub.DanmClient.NetClient != nil && (testNets[tc.netIndex].Kind == netcontrol.DanmNetKind || testNets[tc.netIndex].Kind == "") {

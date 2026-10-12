@@ -84,3 +84,10 @@ type NetwatcherConfig struct {
 	RestConfig     *rest.Config
 	SourceLearning bool
 }
+
+type IpamResult struct {
+	Ip4  string
+	Ip6  string
+	Rip4 string
+	Rip6 string
+}

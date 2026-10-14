@@ -2,6 +2,7 @@ package admit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,11 +14,15 @@ import (
 	danmtypes "github.com/danm-cni/danm/crd/apis/danm/v1"
 	danmclientset "github.com/danm-cni/danm/crd/client/clientset/versioned"
 	"github.com/danm-cni/danm/pkg/confman"
+	"github.com/danm-cni/danm/pkg/danmep"
 	"github.com/danm-cni/danm/pkg/datastructs"
 	"github.com/danm-cni/danm/pkg/ipam"
 	"github.com/danm-cni/danm/pkg/netcontrol"
 	admv1beta1 "k8s.io/api/admission/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 const (
@@ -104,21 +109,58 @@ func (validator *Validator) validateReserveIp(newNet *danmtypes.DanmNet, oldIp, 
 		(oldIp == nil && opType == admv1beta1.Delete) {
 		return fmt.Errorf("invalid operation possibly due to an intermittent network error, please try again!")
 	}
+	isOldIpReferenced, err := validator.isOldIpReferenced(oldIp)
+	if err != nil {
+		return fmt.Errorf("cannot validate change request because K8s API query failed with error: %w", err)
+	}
+	if isOldIpReferenced {
+		return errors.New("shareable ReservedIP objects cannot be modified or deleted as long as they have a live Pod referencing them, please remove all affected Pods then try again")
+	}
 	if newNet == nil {
 		return nil
 	}
 	if newIp.Name == ipam.DynamicAllocType {
 		return errors.New("name:" + ipam.DynamicAllocType + " is reserved for DANM IPAM internal use, please try again with a different name")
 	}
-	err := validateNetworkRef(newIp, validator.Client)
+	err = validateNetworkRef(newIp, validator.Client)
 	if err != nil {
 		return fmt.Errorf("network reference validation failed with error: %w", err)
 	}
-	err = validateIps(newNet, newIp)
+	err = validator.validateIps(newNet, newIp)
 	if err != nil {
 		return fmt.Errorf("IP reservation validation failed with error: %w", err)
 	}
 	return nil
+}
+
+func (validator *Validator) isOldIpReferenced(oldIp *danmtypes.ReservedIP) (bool, error) {
+	if oldIp == nil {
+		return false, nil
+	}
+	for _, ip := range oldIp.Spec.Ips {
+		if ip.Shareable {
+			addr := net.ParseIP(ip.Address)
+			var fieldSelector string
+			if addr.To4() != nil {
+				fieldSelector = danmep.V4RipFieldSelector
+			} else {
+				fieldSelector = danmep.V6RipFieldSelector
+			}
+			selector := fields.SelectorFromSet(fields.Set{
+				fieldSelector: oldIp.Name,
+			})
+			epList, err := validator.Client.DanmV1().DanmEps(oldIp.Namespace).List(context.TODO(), meta_v1.ListOptions{
+				FieldSelector: selector.String(),
+			})
+			if err != nil {
+				return false, err
+			}
+			if epList != nil && len(epList.Items) > 0 {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 func validateNetworkRef(newIp *danmtypes.ReservedIP, client danmclientset.Interface) error {
@@ -134,24 +176,27 @@ func validateNetworkRef(newIp *danmtypes.ReservedIP, client danmclientset.Interf
 	return nil
 }
 
-func validateIps(dnet *danmtypes.DanmNet, newIp *danmtypes.ReservedIP) error {
+func (validator *Validator) validateIps(dnet *danmtypes.DanmNet, newIp *danmtypes.ReservedIP) error {
 	_, v4Cidr, _ := net.ParseCIDR(dnet.Spec.Options.Cidr)
 	_, v6Cidr, _ := net.ParseCIDR(dnet.Spec.Options.Net6)
 	var v4AddrCounter, v6AddrCounter int
+	var v4Ip, v6Ip net.IP
 	for _, rip := range newIp.Spec.Ips {
 		ip := net.ParseIP(rip.Address)
 		if ip == nil {
 			return fmt.Errorf("IP:%v requested to be reserved is not a valid IP address", rip.Address)
 		}
 		//Static IPs can fall outside the defined allocation pool but they still need to come from a 1: L3 network's 2: network CIDR
-		v4Ip := ip.To4()
-		if v4Ip != nil {
+		tempIp := ip.To4()
+		if tempIp != nil {
 			v4AddrCounter++
+			v4Ip = tempIp
 			if dnet.Spec.Options.Alloc == "" || !v4Cidr.Contains(ip) {
 				return fmt.Errorf("V4 IP:%v requested to be reserved is not part of the referenced network's V4 Allocation CIDR:%v", ip, dnet.Spec.Options.Cidr)
 			}
 		} else {
 			v6AddrCounter++
+			v6Ip = ip
 			if dnet.Spec.Options.Alloc6 == "" || !v6Cidr.Contains(ip) {
 				return fmt.Errorf("V6 IP:%v requested to be reserved is not part of the referenced network's V6 Allocation CIDR:%v", ip, dnet.Spec.Options.Net6)
 			}
@@ -160,7 +205,46 @@ func validateIps(dnet *danmtypes.DanmNet, newIp *danmtypes.ReservedIP) error {
 	if v4AddrCounter > 1 || v6AddrCounter > 1 {
 		return fmt.Errorf("a ReservedIP object can have maximum one IPv4 and one IPv6 address defined")
 	}
+	conflictingAddress, err := validator.checkReservationConflicts(dnet, v4Ip, v6Ip, newIp)
+	if err != nil {
+		return err
+	}
+	if conflictingAddress != "" {
+		return fmt.Errorf("desired IP address:%v is already reserved in the network, please select a different address", conflictingAddress)
+	}
 	return nil
+}
+
+func (validator *Validator) checkReservationConflicts(dnet *danmtypes.DanmNet, v4Ip, v6Ip net.IP, newIp *danmtypes.ReservedIP) (string, error) {
+	labelSelectorListOpt := meta_v1.ListOptions{LabelSelector: labels.Set{
+		datastructs.NetworkNameLabel: dnet.Name,
+		datastructs.NetworkTypeLabel: dnet.Kind,
+	}.String()}
+	_, v4AllocSubnet, _ := net.ParseCIDR(dnet.Spec.Options.Cidr)
+	_, v6AllocSubnet, _ := net.ParseCIDR(dnet.Spec.Options.Pool6.Cidr)
+	if v4Ip != nil && v4AllocSubnet != nil && v4AllocSubnet.Contains(v4Ip) && ipam.WasIpAlreadyAllocated(v4Ip, v4AllocSubnet, dnet.Spec.Options.Alloc) {
+		return v4Ip.String(), nil
+	}
+	if v6Ip != nil && v6AllocSubnet != nil && v6AllocSubnet.Contains(v6Ip) && ipam.WasIpAlreadyAllocated(v6Ip, v6AllocSubnet, dnet.Spec.Options.Alloc6) {
+		return v6Ip.String(), nil
+	}
+	rips, err := validator.Client.DanmV1().ReservedIPs(dnet.Namespace).List(context.TODO(), labelSelectorListOpt)
+	if err != nil {
+		return "", err
+	}
+	for _, rip := range rips.Items {
+		if rip.Name == newIp.Name && rip.Namespace == newIp.Namespace {
+			continue
+		}
+		for _, existingAddress := range rip.Spec.Ips {
+			for _, desiredAddress := range newIp.Spec.Ips {
+				if net.ParseIP(desiredAddress.Address).Equal(net.ParseIP(existingAddress.Address)) {
+					return desiredAddress.Address, nil
+				}
+			}
+		}
+	}
+	return "", nil
 }
 
 func (validator *Validator) updateNetworkStatuses(oldNet, newNet *danmtypes.DanmNet, oldRip, newRip *danmtypes.ReservedIP) error {

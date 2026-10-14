@@ -270,7 +270,7 @@ func resetIp(alloc, cidr string, rip net.IP) string {
 	ba := bitarray.NewBitArrayFromBase64(alloc)
 	_, subnet, _ := net.ParseCIDR(cidr)
 	if rip == nil || subnet == nil || !subnet.Contains(rip) {
-		//Invalid IP, nothing to do here. Resetting would crash if we wouldn't return
+		//Invalid IP, nothing to do here. Resetting would crash if we didn't return
 		return alloc
 	}
 	allocatedIndex := GetIndexOfIp(rip, subnet)
@@ -457,7 +457,7 @@ func getReservedIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmN
 		for _, rip := range rips.Items {
 			for _, ip := range rip.Spec.Ips {
 				ripRecord := ripRecord{ownerName: rip.Name, ownerNs: rip.Namespace, shareable: ip.Shareable, ripAddress: ip.Address}
-				reservedIps[ip.Address] = ripRecord
+				reservedIps[normalizeIp(ip.Address)] = ripRecord
 				//KA-CHING: at least one of requested IP allocations will ask for the lookup of this exact ReservedIP object
 				//It looks kinda stupid but if we create an additional "reverse link" record to this object we can immediately access the required values later without either doing another lookup, or maintaining two separate lists in memory
 				if rip.Namespace == requestNamespace && (req4 == rip.Name || req6 == rip.Name) {
@@ -477,8 +477,21 @@ func getReservedIps(danmClient danmclientset.Interface, netInfo *danmtypes.DanmN
 }
 
 func isIpReserved(ip string, reservedIps reservedIps) bool {
-	_, exists := reservedIps[ip]
+	if len(reservedIps) == 0 {
+		return false
+	}
+	_, exists := reservedIps[normalizeIp(ip)]
 	return exists
+}
+
+// normalizeIp converts an IP address into its canonical text representation
+// The very same address can be legally written down in multiple ways, but reservations are matched by comparing plain strings
+func normalizeIp(ip string) string {
+	parsedIp := net.ParseIP(ip)
+	if parsedIp == nil {
+		return ip
+	}
+	return parsedIp.String()
 }
 
 func allocateStaticIp(ip net.IP, netSubnet, allocSubnet *net.IPNet, ba *bitarray.BitArray, isShareable bool) (string, error) {
@@ -497,4 +510,10 @@ func allocateStaticIp(ip net.IP, netSubnet, allocSubnet *net.IPNet, ba *bitarray
 	}
 	prefix, _ := netSubnet.Mask.Size()
 	return ip.String() + "/" + strconv.Itoa(prefix), nil
+}
+
+func WasIpAlreadyAllocated(ip net.IP, allocSubnet *net.IPNet, alloc string) bool {
+	ba := bitarray.NewBitArrayFromBase64(alloc)
+	indexBeingChecked := GetIndexOfIp(ip, allocSubnet)
+	return indexBeingChecked <= ba.Len() && ba.Get(indexBeingChecked)
 }

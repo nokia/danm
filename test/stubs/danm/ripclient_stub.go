@@ -76,7 +76,22 @@ func (ripClient *RipClientStub) List(ctx context.Context, opts meta_v1.ListOptio
 	if ripClient.IsListErrorExpected {
 		return nil, errors.New("fatal error, don't retry")
 	}
-	ripList := danmtypes.ReservedIPList{Items: ripClient.TestRips}
+	selector, err := labels.Parse(opts.LabelSelector)
+	if err != nil {
+		return nil, apierrors.NewBadRequest("unable to parse label selector:" + opts.LabelSelector)
+	}
+	matchingRips := make([]danmtypes.ReservedIP, 0)
+	for _, rip := range ripClient.TestRips {
+		//An empty namespace means a cluster-wide List, just like in the real API
+		if ripClient.Namespace != "" && rip.ObjectMeta.Namespace != ripClient.Namespace {
+			continue
+		}
+		if !selector.Matches(labels.Set(rip.ObjectMeta.Labels)) {
+			continue
+		}
+		matchingRips = append(matchingRips, rip)
+	}
+	ripList := danmtypes.ReservedIPList{Items: matchingRips}
 	return &ripList, nil
 }
 

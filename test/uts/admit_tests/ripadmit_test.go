@@ -204,8 +204,233 @@ var (
 				Ips:     []danmtypes.RipIP{{Address: "192.168.1.69", Shareable: true}, {Address: "2001:db8:85a3::8a2e:370:7350", Shareable: false}},
 			},
 		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "v4AddressTaken", Namespace: "rip-test", Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.68", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "v6AddressTakenInAnotherNotation", Namespace: "rip-test",
+				Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "2001:0db8:85a3:0000:0000:8a2e:0370:7340", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "cnetAddressTakenInAnotherNs", Namespace: "rip-test", Labels: cnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStackWithStatus", Type: "ClusterNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.67", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "addressOnlyTakenOnAnotherNetwork", Namespace: "rip-test",
+				Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.65", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "addressOnlyTakenInAnotherNs", Namespace: "rip-test", Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.66", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "selfUpdatedRip", Namespace: "rip-test", Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.69", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "sharedV4Rip", Namespace: "rip-test", Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.71", Shareable: true}},
+			},
+		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "sharedV6Rip", Namespace: "rip-test", Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "2001:db8:85a3::8a2e:370:7341", Shareable: true}},
+			},
+		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "exclusiveRip", Namespace: "rip-test", Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.72", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "sharedRipOfAnotherNs", Namespace: "rip-test", Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.73", Shareable: true}},
+			},
+		},
+		{
+			TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "unreferencedSharedRip", Namespace: "rip-test", Labels: tnetDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.74", Shareable: true}},
+			},
+		},
+		{
+			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "v4DynamicallyAllocated", Namespace: "rip-test",
+				Labels: allocatedDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "allocatedDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.75", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "v4NotDynamicallyAllocated", Namespace: "rip-test",
+				Labels: allocatedDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "allocatedDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "192.168.1.76", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "v6DynamicallyAllocated", Namespace: "rip-test",
+				Labels: allocatedDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "allocatedDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "2001:db8:85a3::8a2e:370:7345", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "dsPartiallyAllocated", Namespace: "rip-test",
+				Labels: allocatedDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "allocatedDualStack", Type: "TenantNetwork"},
+				Ips: []danmtypes.RipIP{
+					{Address: "192.168.1.76", Shareable: false},
+					{Address: "2001:db8:85a3::8a2e:370:7345", Shareable: false},
+				},
+			},
+		},
+		{
+			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "v6OutsideAllocCidr", Namespace: "rip-test",
+				Labels: allocatedDsLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "allocatedDualStack", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "2001:db8:85a3::8a2e:370:7365", Shareable: false}},
+			},
+		},
+		{
+			TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
+			ObjectMeta: meta_v1.ObjectMeta{Name: "v6WithoutAllocCidr", Namespace: "rip-test",
+				Labels: noV6AllocLabelSet},
+			Spec: danmtypes.ReservedIPSpec{
+				Network: danmtypes.RipNetworkSelector{Name: "noV6AllocCidr", Type: "TenantNetwork"},
+				Ips:     []danmtypes.RipIP{{Address: "2001:db8:85a3::8a2e:370:7345", Shareable: false}},
+			},
+		},
 	}
 )
+
+var existingRips = []danmtypes.ReservedIP{
+	{
+		TypeMeta: meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "ripOfAnotherNetwork", Namespace: "rip-test",
+			Labels: map[string]string{datastructs.NetworkNameLabel: "otherDualStack", datastructs.NetworkTypeLabel: "TenantNetwork"}},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "otherDualStack", Type: "TenantNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "192.168.1.65", Shareable: false}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "tnetRipOfAnotherNs", Namespace: "another-tenant", Labels: tnetDsLabelSet},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "192.168.1.66", Shareable: false}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "cnetRipOfAnotherNs", Namespace: "another-tenant", Labels: cnetDsLabelSet},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "superDualStackWithStatus", Type: "ClusterNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "192.168.1.67", Shareable: false}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "ripHoldingAV4Address", Namespace: "rip-test", Labels: tnetDsLabelSet},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "192.168.1.68", Shareable: false}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "ripHoldingAV6Address", Namespace: "rip-test", Labels: tnetDsLabelSet},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "2001:db8:85a3::8a2e:370:7340", Shareable: false}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "selfUpdatedRip", Namespace: "rip-test", Labels: tnetDsLabelSet},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "superDualStack", Type: "TenantNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "192.168.1.69", Shareable: false}},
+		},
+	},
+}
+
+var ripReferencingEps = []danmtypes.DanmEp{
+	{
+		ObjectMeta: meta_v1.ObjectMeta{Name: "epHoldingTheV4Rip", Namespace: "rip-test"},
+		Spec:       danmtypes.DanmEpSpec{RipRefs: danmtypes.RipReferences{V4: "sharedV4Rip"}},
+	},
+	{
+		ObjectMeta: meta_v1.ObjectMeta{Name: "epHoldingTheV6Rip", Namespace: "rip-test"},
+		Spec:       danmtypes.DanmEpSpec{RipRefs: danmtypes.RipReferences{V6: "sharedV6Rip"}},
+	},
+	{
+		ObjectMeta: meta_v1.ObjectMeta{Name: "epHoldingTheExclusiveRip", Namespace: "rip-test"},
+		Spec:       danmtypes.DanmEpSpec{RipRefs: danmtypes.RipReferences{V4: "exclusiveRip"}},
+	},
+	{
+		ObjectMeta: meta_v1.ObjectMeta{Name: "epOfAnotherNamespace", Namespace: "another-tenant"},
+		Spec:       danmtypes.DanmEpSpec{RipRefs: danmtypes.RipReferences{V4: "sharedRipOfAnotherNs"}},
+	},
+}
+
+var epListErrorEps = []danmtypes.DanmEp{
+	{
+		ObjectMeta: meta_v1.ObjectMeta{Name: "errorEp", Namespace: "rip-test"},
+		Spec:       danmtypes.DanmEpSpec{RipRefs: danmtypes.RipReferences{V4: "sharedV4Rip"}},
+	},
+}
 
 var (
 	tconfs = []danmtypes.TenantConfig{
@@ -248,9 +473,27 @@ var (
 			Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "superDualStack",
 				Options: danmtypes.DanmNetOption{
 					Alloc:  "gAAAAAAAAAAAAAAE",
-					Alloc6: "gAAAAAAAAAAAAAAE",
+					Alloc6: "gAAAAAAAAAAAAAAAAAAAAQ==",
 					Cidr:   "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80", LastIp: "192.168.1.72/26"},
-					Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7334/109", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
+					Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7300/121", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
+		},
+		{
+			ObjectMeta: meta_v1.ObjectMeta{Name: "allocatedDualStack", Namespace: "rip-test"},
+			Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "allocatedDualStack",
+				Options: danmtypes.DanmNetOption{
+					Alloc:  "gBAAAAAAAAE=",
+					Alloc6: "hAAAAQ==",
+					Cidr:   "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80", LastIp: "192.168.1.72/26"},
+					Net6: "2001:db8:85a3::8a2e:370:7300/120", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7340/123", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
+		},
+		{
+			ObjectMeta: meta_v1.ObjectMeta{Name: "noV6AllocCidr", Namespace: "rip-test"},
+			Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "noV6AllocCidr",
+				Options: danmtypes.DanmNetOption{
+					Alloc:  "gBAAAAAAAAE=",
+					Alloc6: "hAAAAQ==",
+					Cidr:   "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80", LastIp: "192.168.1.72/26"},
+					Net6: "2001:db8:85a3::8a2e:370:7300/120"}},
 		},
 	}
 	cnets = []danmtypes.ClusterNetwork{
@@ -263,9 +506,9 @@ var (
 			Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "superDualStack",
 				Options: danmtypes.DanmNetOption{
 					Alloc:  "gAAAAAAAAAAAAAAE",
-					Alloc6: "gAAAAAAAAAAAAAAE",
+					Alloc6: "gAAAAAAAAAAAAAAAAAAAAQ==",
 					Cidr:   "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80", LastIp: "192.168.1.72/26"},
-					Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7334/109", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
+					Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7300/121", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
 			Status: danmtypes.DanmNetStatus{
 				ReservedIPs: []danmtypes.NetRipStatus{
 					{Namespace: "rip-test", Objects: []string{"oldRip"}},
@@ -278,9 +521,9 @@ var (
 			Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "superDualStack",
 				Options: danmtypes.DanmNetOption{
 					Alloc:  "gAAAAAAAAAAAAAAE",
-					Alloc6: "gAAAAAAAAAAAAAAE",
+					Alloc6: "gAAAAAAAAAAAAAAAAAAAAQ==",
 					Cidr:   "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80", LastIp: "192.168.1.72/26"},
-					Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7334/109", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
+					Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7300/121", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
 			Status: danmtypes.DanmNetStatus{
 				ReservedIPs: []danmtypes.NetRipStatus{
 					{Namespace: "rip-test", Objects: []string{"oldRip", "dsCnetSuccessDupe"}},
@@ -293,9 +536,9 @@ var (
 			Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "deleteLastRip",
 				Options: danmtypes.DanmNetOption{
 					Alloc:  "gAAAAAAAAAAAAAAE",
-					Alloc6: "gAAAAAAAAAAAAAAE",
+					Alloc6: "gAAAAAAAAAAAAAAAAAAAAQ==",
 					Cidr:   "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80", LastIp: "192.168.1.72/26"},
-					Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7334/109", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
+					Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7300/121", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
 			Status: danmtypes.DanmNetStatus{
 				ReservedIPs: []danmtypes.NetRipStatus{
 					{Namespace: "rip-test", Objects: []string{"deleteLastRipInStatus"}},
@@ -344,6 +587,18 @@ var (
 )
 
 var (
+	tnetDsLabelSet = map[string]string{
+		datastructs.NetworkNameLabel: "superDualStack",
+		datastructs.NetworkTypeLabel: "TenantNetwork"}
+	cnetDsLabelSet = map[string]string{
+		datastructs.NetworkNameLabel: "superDualStackWithStatus",
+		datastructs.NetworkTypeLabel: "ClusterNetwork"}
+	allocatedDsLabelSet = map[string]string{
+		datastructs.NetworkNameLabel: "allocatedDualStack",
+		datastructs.NetworkTypeLabel: "TenantNetwork"}
+	noV6AllocLabelSet = map[string]string{
+		datastructs.NetworkNameLabel: "noV6AllocCidr",
+		datastructs.NetworkTypeLabel: "TenantNetwork"}
 	tnetDsLabels = []admit.Patch{
 		{Op: "add", Path: "/metadata/labels", Value: map[string]string{
 			datastructs.NetworkNameLabel: "superDualStack",
@@ -369,47 +624,68 @@ var (
 )
 
 var validateRipTcs = []struct {
-	tcName                string
-	oldRipName            string
-	newRipName            string
-	tconfName             string
-	opType                v1beta1.Operation
-	isErrorExpected       bool
-	expectedOldTnetStatus *danmtypes.DanmNetStatus
-	expectedOldCnetStatus *danmtypes.DanmNetStatus
-	expectedTnetStatus    *danmtypes.DanmNetStatus
-	expectedCnetStatus    *danmtypes.DanmNetStatus
-	expectedPatches       []admit.Patch
+	tcName                 string
+	oldRipName             string
+	newRipName             string
+	tconfName              string
+	opType                 v1beta1.Operation
+	isErrorExpected        bool
+	expectedOldTnetStatus  *danmtypes.DanmNetStatus
+	expectedOldCnetStatus  *danmtypes.DanmNetStatus
+	expectedTnetStatus     *danmtypes.DanmNetStatus
+	expectedCnetStatus     *danmtypes.DanmNetStatus
+	expectedPatches        []admit.Patch
+	testEps                []danmtypes.DanmEp
+	isRipListErrorExpected bool
 }{
-	{"emptyRequest", "", "", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"malformedOldObject", "malformed", "", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"malformedNewObject", "", "malformed", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"emptyRip", "", "empty-rip", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"createNoNetwork", "", "nonet", "bueno", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"cnetWoTconf", "", "cnet", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"cnetNotAllowed", "", "cnet", "vlan", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"cnetWrongPrivilege", "", "cnet", "wrongPriv", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"malformedIp", "", "wrongIp", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"emptyCidr", "", "v4NoCidr", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"v4OutsideCidr", "", "v4OutsideCidr", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"emptyNet6", "", "v6NoCidr", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"v6OutsideCidr", "", "v6OutsideCidr", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"doubleV4", "", "doubleV4", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"doubleV6", "", "doubleV6", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"reservedName", "", "dynamic", "", v1beta1.Create, true, nil, nil, nil, nil, nil},
-	{"dsTnetSuccessNewStatus", "", "dsTnetSuccess", "", v1beta1.Create, false, nil, nil, &ripTestStatus, nil, tnetDsLabels},
-	{"dsCnetSuccessStatusAppend", "", "dsCnetSuccess", "bueno", v1beta1.Create, false, nil, nil, nil, &ripTestStatusCnet, cnetDsLabels},
-	{"dsCnetSuccessStatusNoAppendDueToDupe", "", "dsCnetSuccessDupe", "bueno", v1beta1.Create, false, nil, nil, nil, &ripTestStatusCnetDupe, cnetDupeLabels},
-	{"dsCnetUpdateSuccessStatusAppend", "dsCnetSuccessUpdate", "dsCnetSuccess", "bueno", v1beta1.Update, false, nil, nil, nil, &ripTestStatusCnet, cnetDsLabels},
-	{"dsCnetUpdateSuccessStatusNoAppendDueToDupe", "dsCnetSuccessDupeUpdate", "dsCnetSuccessDupe", "bueno", v1beta1.Update, false, nil, nil, nil, &ripTestStatusCnetDupe, cnetDupeLabels},
-	{"dryDsCnetSuccessStatusAppend", "", "dsCnetSuccess", "bueno", v1beta1.Create, false, nil, nil, nil, nil, cnetDsLabels},
-	{"deleteNoNetworkSuccess", "deleteNoNetwork", "", "bueno", v1beta1.Delete, false, nil, nil, nil, nil, nil},
-	{"dsCnetChangeNetworkRefSuccess", "dsCnetSuccessDupe", "dsCnetSuccessUpdate", "bueno", v1beta1.Update, false, nil, &ripTestStatusCnetOld, nil, &ripUpdateNetRef, cnetDsLabels},
-	{"deleteLastRipInNs", "deleteLastRipInStatus", "", "", v1beta1.Delete, false, nil, &ripDeleteLastObject, nil, nil, nil},
-	{"labelsMergedIntoAlreadyLabelledRip", "", "alreadyLabelled", "bueno", v1beta1.Create, false, nil, nil, nil, nil, labelsMergedIntoExistingSet},
-	{"noPatchWhenLabelsAreAlreadyCorrect", "", "correctlyLabelled", "", v1beta1.Create, false, nil, nil, nil, nil, nil},
-	{"staleLabelRefreshedOnUpdate", "", "staleTypeLabel", "", v1beta1.Update, false, nil, nil, nil, nil, onlyTypeLabelRefreshed},
-	{"emptyNetworkTypeDefaultedInLabel", "", "defaultedType", "", v1beta1.Create, false, nil, nil, nil, nil, tnetDsLabels},
+	{"emptyRequest", "", "", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"malformedOldObject", "malformed", "", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"malformedNewObject", "", "malformed", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"emptyRip", "", "empty-rip", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"createNoNetwork", "", "nonet", "bueno", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"cnetWoTconf", "", "cnet", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"cnetNotAllowed", "", "cnet", "vlan", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"cnetWrongPrivilege", "", "cnet", "wrongPriv", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"malformedIp", "", "wrongIp", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"emptyCidr", "", "v4NoCidr", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"v4OutsideCidr", "", "v4OutsideCidr", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"emptyNet6", "", "v6NoCidr", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"v6OutsideCidr", "", "v6OutsideCidr", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"doubleV4", "", "doubleV4", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"doubleV6", "", "doubleV6", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"reservedName", "", "dynamic", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"dsTnetSuccessNewStatus", "", "dsTnetSuccess", "", v1beta1.Create, false, nil, nil, &ripTestStatus, nil, tnetDsLabels, nil, false},
+	{"dsCnetSuccessStatusAppend", "", "dsCnetSuccess", "bueno", v1beta1.Create, false, nil, nil, nil, &ripTestStatusCnet, cnetDsLabels, nil, false},
+	{"dsCnetSuccessStatusNoAppendDueToDupe", "", "dsCnetSuccessDupe", "bueno", v1beta1.Create, false, nil, nil, nil, &ripTestStatusCnetDupe, cnetDupeLabels, nil, false},
+	{"dsCnetUpdateSuccessStatusAppend", "dsCnetSuccessUpdate", "dsCnetSuccess", "bueno", v1beta1.Update, false, nil, nil, nil, &ripTestStatusCnet, cnetDsLabels, nil, false},
+	{"dsCnetUpdateSuccessStatusNoAppendDueToDupe", "dsCnetSuccessDupeUpdate", "dsCnetSuccessDupe", "bueno", v1beta1.Update, false, nil, nil, nil, &ripTestStatusCnetDupe, cnetDupeLabels, nil, false},
+	{"dryDsCnetSuccessStatusAppend", "", "dsCnetSuccess", "bueno", v1beta1.Create, false, nil, nil, nil, nil, cnetDsLabels, nil, false},
+	{"deleteNoNetworkSuccess", "deleteNoNetwork", "", "bueno", v1beta1.Delete, false, nil, nil, nil, nil, nil, nil, false},
+	{"dsCnetChangeNetworkRefSuccess", "dsCnetSuccessDupe", "dsCnetSuccessUpdate", "bueno", v1beta1.Update, false, nil, &ripTestStatusCnetOld, nil, &ripUpdateNetRef, cnetDsLabels, nil, false},
+	{"deleteLastRipInNs", "deleteLastRipInStatus", "", "", v1beta1.Delete, false, nil, &ripDeleteLastObject, nil, nil, nil, nil, false},
+	{"labelsMergedIntoAlreadyLabelledRip", "", "alreadyLabelled", "bueno", v1beta1.Create, false, nil, nil, nil, nil, labelsMergedIntoExistingSet, nil, false},
+	{"noPatchWhenLabelsAreAlreadyCorrect", "", "correctlyLabelled", "", v1beta1.Create, false, nil, nil, nil, nil, nil, nil, false},
+	{"staleLabelRefreshedOnUpdate", "", "staleTypeLabel", "", v1beta1.Update, false, nil, nil, nil, nil, onlyTypeLabelRefreshed, nil, false},
+	{"emptyNetworkTypeDefaultedInLabel", "", "defaultedType", "", v1beta1.Create, false, nil, nil, nil, nil, tnetDsLabels, nil, false},
+	{"v4AddressAlreadyReserved", "", "v4AddressTaken", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"v6AddressAlreadyReservedInAnotherNotation", "", "v6AddressTakenInAnotherNotation", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"cnetAddressAlreadyReservedInAnotherNs", "", "cnetAddressTakenInAnotherNs", "bueno", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"sameAddressReservedOnAnotherNetwork", "", "addressOnlyTakenOnAnotherNetwork", "", v1beta1.Create, false, nil, nil, nil, nil, nil, nil, false},
+	{"sameTnetAddressReservedInAnotherNs", "", "addressOnlyTakenInAnotherNs", "", v1beta1.Create, false, nil, nil, nil, nil, nil, nil, false},
+	{"ripDoesNotConflictWithItsOwnStoredCopy", "selfUpdatedRip", "selfUpdatedRip", "", v1beta1.Update, false, nil, nil, nil, nil, nil, nil, false},
+	{"ripListFailure", "", "addressOnlyTakenOnAnotherNetwork", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, true},
+	{"deleteSharedRipHeldByAPod", "sharedV4Rip", "", "", v1beta1.Delete, true, nil, nil, nil, nil, nil, ripReferencingEps, false},
+	{"updateSharedV6RipHeldByAPod", "sharedV6Rip", "sharedV6Rip", "", v1beta1.Update, true, nil, nil, nil, nil, nil, ripReferencingEps, false},
+	{"deleteExclusiveRipHeldByAPod", "exclusiveRip", "", "", v1beta1.Delete, false, nil, nil, nil, nil, nil, ripReferencingEps, false},
+	{"deleteSharedRipHeldByAPodOfAnotherNs", "sharedRipOfAnotherNs", "", "", v1beta1.Delete, false, nil, nil, nil, nil, nil, ripReferencingEps, false},
+	{"deleteSharedRipWithoutAnyPod", "unreferencedSharedRip", "", "", v1beta1.Delete, false, nil, nil, nil, nil, nil, ripReferencingEps, false},
+	{"epListFailure", "sharedV4Rip", "", "", v1beta1.Delete, true, nil, nil, nil, nil, nil, epListErrorEps, false},
+	{"v4AddressAlreadyDynamicallyAllocated", "", "v4DynamicallyAllocated", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"v4AddressFreeInAllocBitmask", "", "v4NotDynamicallyAllocated", "", v1beta1.Create, false, nil, nil, nil, nil, nil, nil, false},
+	{"v6AddressAlreadyDynamicallyAllocated", "", "v6DynamicallyAllocated", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"onlyV6AddressDynamicallyAllocatedInDualStackRip", "", "dsPartiallyAllocated", "", v1beta1.Create, true, nil, nil, nil, nil, nil, nil, false},
+	{"v6AddressOutsideOfAllocCidrIsNotCheckedInBitmask", "", "v6OutsideAllocCidr", "", v1beta1.Create, false, nil, nil, nil, nil, nil, nil, false},
+	{"v6AllocBitmaskIsNotCheckedWithoutAllocCidr", "", "v6WithoutAllocCidr", "", v1beta1.Create, false, nil, nil, nil, nil, nil, nil, false},
 }
 
 func TestValidateReservedIp(t *testing.T) {
@@ -436,7 +712,8 @@ func TestValidateReservedIp(t *testing.T) {
 					}
 				}
 			}
-			testArtifacts := utils.TestArtifacts{TestTnets: tnets, TestCnets: cnets, TestTconfs: testConf}
+			testArtifacts := utils.TestArtifacts{TestTnets: tnets, TestCnets: cnets, TestTconfs: testConf,
+				TestRips: existingRips, TestEps: tc.testEps, IsRipListErrorExpected: tc.isRipListErrorExpected}
 			testClient := stubs.NewClientSetStub(testArtifacts)
 			validator.Client = testClient
 			validator.ValidateReservedIp(writerStub, request)

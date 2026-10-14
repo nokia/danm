@@ -1,12 +1,14 @@
 package ipam_test
 
 import (
+	"net"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
 
 	danmtypes "github.com/danm-cni/danm/crd/apis/danm/v1"
+	"github.com/danm-cni/danm/pkg/datastructs"
 	"github.com/danm-cni/danm/pkg/ipam"
 	"github.com/danm-cni/danm/pkg/netcontrol"
 	stubs "github.com/danm-cni/danm/test/stubs/danm"
@@ -68,6 +70,18 @@ var testNets = []danmtypes.DanmNet{
 				Cidr: "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80", LastIp: "192.168.1.72/26"},
 				Net6: "2001:db8:85a3::8a2e:370:7334/109", Pool6: danmtypes.IpPoolV6{IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
 	},
+	{
+		ObjectMeta: meta_v1.ObjectMeta{Name: "notationTest"},
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ClusterNetwork"},
+		Spec: danmtypes.DanmNetSpec{NetworkType: "ipvlan", NetworkID: "notationTest",
+			Options: danmtypes.DanmNetOption{
+				Cidr: "192.168.1.64/26", Pool: danmtypes.IpPool{Start: "192.168.1.70", End: "192.168.1.80"},
+				Net6: "2001:db8:85a3::8a2e:370:7334/108", Pool6: danmtypes.IpPoolV6{Cidr: "2001:db8:85a3::8a2e:370:7334/109", IpPool: danmtypes.IpPool{Start: "2001:db8:85a3::8a2e:370:7340", End: "2001:db8:85a3::8a2e:370:7350"}}}},
+		Status: danmtypes.DanmNetStatus{
+			ReservedIPs: []danmtypes.NetRipStatus{
+				{Namespace: "rip-test", Objects: []string{"expandedV6Rip", "canonicalV6Rip", "v4MappedRip"}},
+			}},
+	},
 }
 
 var testNetStatuses = []danmtypes.DanmNetStatus{
@@ -78,10 +92,25 @@ var testNetStatuses = []danmtypes.DanmNetStatus{
 	},
 }
 
+var ripTestLabels = map[string]string{
+	datastructs.NetworkNameLabel: "ripTest",
+	datastructs.NetworkTypeLabel: "ClusterNetwork",
+}
+
+var fullRipTestLabels = map[string]string{
+	datastructs.NetworkNameLabel: "fullRipTest",
+	datastructs.NetworkTypeLabel: "ClusterNetwork",
+}
+
+var notationTestLabels = map[string]string{
+	datastructs.NetworkNameLabel: "notationTest",
+	datastructs.NetworkTypeLabel: "ClusterNetwork",
+}
+
 var testRips = []danmtypes.ReservedIP{
 	{
 		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
-		ObjectMeta: meta_v1.ObjectMeta{Name: "dualStackOutsideCidr", Namespace: "rip-test"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "dualStackOutsideCidr", Namespace: "rip-test", Labels: ripTestLabels},
 		Spec: danmtypes.ReservedIPSpec{
 			Network: danmtypes.RipNetworkSelector{Name: "ripTest", Type: "ClusterNetwork"},
 			Ips:     []danmtypes.RipIP{{Address: "192.168.1.63", Shareable: false}, {Address: "2001:db8:85a3::8a2e:369:1", Shareable: false}},
@@ -89,7 +118,7 @@ var testRips = []danmtypes.ReservedIP{
 	},
 	{
 		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
-		ObjectMeta: meta_v1.ObjectMeta{Name: "dualStackOutsideAlloc", Namespace: "rip-test"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "dualStackOutsideAlloc", Namespace: "rip-test", Labels: ripTestLabels},
 		Spec: danmtypes.ReservedIPSpec{
 			Network: danmtypes.RipNetworkSelector{Name: "ripTest", Type: "ClusterNetwork"},
 			Ips:     []danmtypes.RipIP{{Address: "192.168.1.69", Shareable: false}, {Address: "2001:db8:85a3::8a2e:370:7339", Shareable: false}},
@@ -97,7 +126,7 @@ var testRips = []danmtypes.ReservedIP{
 	},
 	{
 		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
-		ObjectMeta: meta_v1.ObjectMeta{Name: "dualStackInAlloc", Namespace: "rip-test"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "dualStackInAlloc", Namespace: "rip-test", Labels: ripTestLabels},
 		Spec: danmtypes.ReservedIPSpec{
 			Network: danmtypes.RipNetworkSelector{Name: "ripTest", Type: "ClusterNetwork"},
 			Ips:     []danmtypes.RipIP{{Address: "192.168.1.70", Shareable: false}, {Address: "2001:db8:85a3::8a2e:370:7340", Shareable: false}},
@@ -105,10 +134,50 @@ var testRips = []danmtypes.ReservedIP{
 	},
 	{
 		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
-		ObjectMeta: meta_v1.ObjectMeta{Name: "dualStackInAllocShareable", Namespace: "rip-test"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "dualStackInAllocShareable", Namespace: "rip-test", Labels: ripTestLabels},
 		Spec: danmtypes.ReservedIPSpec{
 			Network: danmtypes.RipNetworkSelector{Name: "ripTest", Type: "ClusterNetwork"},
 			Ips:     []danmtypes.RipIP{{Address: "192.168.1.71", Shareable: true}, {Address: "2001:db8:85a3::8a2e:370:7341", Shareable: true}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "fullNetDualStackInAlloc", Namespace: "rip-test", Labels: fullRipTestLabels},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "fullRipTest", Type: "ClusterNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "192.168.1.70", Shareable: false}, {Address: "2001:db8:85a3::8a2e:370:7340", Shareable: false}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "fullNetDualStackInAllocShareable", Namespace: "rip-test", Labels: fullRipTestLabels},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "fullRipTest", Type: "ClusterNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "192.168.1.71", Shareable: true}, {Address: "2001:db8:85a3::8a2e:370:7341", Shareable: true}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "expandedV6Rip", Namespace: "rip-test", Labels: notationTestLabels},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "notationTest", Type: "ClusterNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "2001:0db8:85a3:0000:0000:8a2e:0370:7340", Shareable: false}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "canonicalV6Rip", Namespace: "rip-test", Labels: notationTestLabels},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "notationTest", Type: "ClusterNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "2001:db8:85a3::8a2e:370:7342", Shareable: false}},
+		},
+	},
+	{
+		TypeMeta:   meta_v1.TypeMeta{Kind: "ReservedIP"},
+		ObjectMeta: meta_v1.ObjectMeta{Name: "v4MappedRip", Namespace: "rip-test", Labels: notationTestLabels},
+		Spec: danmtypes.ReservedIPSpec{
+			Network: danmtypes.RipNetworkSelector{Name: "notationTest", Type: "ClusterNetwork"},
+			Ips:     []danmtypes.RipIP{{Address: "::ffff:192.168.1.70", Shareable: false}},
 		},
 	},
 }
@@ -175,12 +244,15 @@ var reserveTcs = []struct {
 	{"ripV4OutsideAlloc", 20, 0, "dualStackOutsideAlloc", "", "192.168.1.69/26", "", "", "", false, 1, "rip-test"},
 	{"ripV6OutsideAlloc", 20, 0, "", "dualStackOutsideAlloc", "", "2001:db8:85a3::8a2e:370:7339/109", "", "", false, 1, "rip-test"},
 	{"ripDsInsideAlloc", 20, 0, "dualStackInAlloc", "dualStackInAlloc", "192.168.1.70/26", "2001:db8:85a3::8a2e:370:7340/109", "", "", false, 1, "rip-test"},
-	{"ripV4InsideAllocExhausted", 21, 0, "dualStackInAlloc", "", "", "", "", "", true, 0, "rip-test"},
-	{"ripV6InsideAllocExhausted", 21, 0, "", "dualStackInAlloc", "", "", "", "", true, 0, "rip-test"},
-	{"shareableRipV4InsideAllocExhausted", 21, 0, "dualStackInAllocShareable", "", "192.168.1.71/26", "", "dualStackInAllocShareable", "", false, 0, "rip-test"},
-	{"shareableRipV6InsideAllocExhausted", 21, 0, "", "dualStackInAllocShareable", "", "2001:db8:85a3::8a2e:370:7341/109", "", "dualStackInAllocShareable", false, 0, "rip-test"},
-	{"shareableRipV4InsideAllocExhausted", 21, 0, "dualStackInAllocShareable", "", "192.168.1.71/26", "", "dualStackInAllocShareable", "", false, 0, "rip-test"},
-	{"shareableRipDsInsideAllocExhausted", 21, 0, "dualStackInAllocShareable", "dualStackInAllocShareable", "192.168.1.71/26", "2001:db8:85a3::8a2e:370:7341/109", "dualStackInAllocShareable", "dualStackInAllocShareable", false, 0, "rip-test"},
+	{"ripV4InsideAllocExhausted", 21, 0, "fullNetDualStackInAlloc", "", "", "", "", "", true, 0, "rip-test"},
+	{"ripV6InsideAllocExhausted", 21, 0, "", "fullNetDualStackInAlloc", "", "", "", "", true, 0, "rip-test"},
+	{"shareableRipV4InsideAllocExhausted", 21, 0, "fullNetDualStackInAllocShareable", "", "192.168.1.71/26", "", "fullNetDualStackInAllocShareable", "", false, 0, "rip-test"},
+	{"shareableRipV6InsideAllocExhausted", 21, 0, "", "fullNetDualStackInAllocShareable", "", "2001:db8:85a3::8a2e:370:7341/109", "", "fullNetDualStackInAllocShareable", false, 0, "rip-test"},
+	{"shareableRipV4InsideAllocExhausted", 21, 0, "fullNetDualStackInAllocShareable", "", "192.168.1.71/26", "", "fullNetDualStackInAllocShareable", "", false, 0, "rip-test"},
+	{"shareableRipDsInsideAllocExhausted", 21, 0, "fullNetDualStackInAllocShareable", "fullNetDualStackInAllocShareable", "192.168.1.71/26", "2001:db8:85a3::8a2e:370:7341/109", "fullNetDualStackInAllocShareable", "fullNetDualStackInAllocShareable", false, 0, "rip-test"},
+	{"staticIpReservedInAnotherNotation", 22, -1, "", "2001:0db8:85a3:0000:0000:8a2e:0370:7342", "", "", "", "", true, 0, "rip-test"},
+	{"dynamicV6SkipsAddressReservedInAnotherNotation", 22, -1, "", "dynamic", "", "2001:db8:85a3::8a2e:370:7341/108", "", "", false, 1, "rip-test"},
+	{"dynamicV4SkipsV4MappedReservedAddress", 22, -1, "dynamic", "", "192.168.1.71/26", "", "", "", false, 1, "rip-test"},
 }
 
 var gcTcs = []struct {
@@ -229,6 +301,38 @@ var wasAllocatedTcs = []struct {
 	{"v6l2", "l2", "2001:db8:85a3::8a2e:370:8000", false},
 }
 
+const (
+	v4AllocMask      = "gBAAAAAAAAE="
+	v4FreeMask       = "AAAAAAAAAAA="
+	v6SmallSubnet    = "2001:db8:85a3::8a2e:370:7340/123"
+	v6SmallAllocMask = "hAAAAQ=="
+	v6LargeSubnet    = "2001:db8:85a3::8a2e:370:7300/121"
+	v6LargeAllocMask = "gAAAAAAAAAAAAIAAAAAAAQ=="
+)
+
+var alreadyAllocatedTcs = []struct {
+	tcName            string
+	ip                string
+	allocSubnet       string
+	alloc             string
+	expectedAllocated bool
+}{
+	{"v4FirstAddressOfSubnet", "192.168.1.64", "192.168.1.64/26", v4AllocMask, true},
+	{"v4LastAddressOfSubnet", "192.168.1.127", "192.168.1.64/26", v4AllocMask, true},
+	{"v4AllocatedAddress", "192.168.1.75", "192.168.1.64/26", v4AllocMask, true},
+	{"v4FreeAddressBeforeAllocatedBit", "192.168.1.74", "192.168.1.64/26", v4AllocMask, false},
+	{"v4FreeAddressAfterAllocatedBit", "192.168.1.76", "192.168.1.64/26", v4AllocMask, false},
+	{"v4EmptyAllocPool", "192.168.1.75", "192.168.1.64/26", v4FreeMask, false},
+	{"v6FirstAddressOfSubnet", "2001:db8:85a3::8a2e:370:7340", v6SmallSubnet, v6SmallAllocMask, true},
+	{"v6LastAddressOfSubnet", "2001:db8:85a3::8a2e:370:735f", v6SmallSubnet, v6SmallAllocMask, true},
+	{"v6AllocatedAddress", "2001:db8:85a3::8a2e:370:7345", v6SmallSubnet, v6SmallAllocMask, true},
+	{"v6FreeAddress", "2001:db8:85a3::8a2e:370:7346", v6SmallSubnet, v6SmallAllocMask, false},
+	{"v6AllocatedAddressInANonFirstByte", "2001:db8:85a3::8a2e:370:7350", v6LargeSubnet, v6LargeAllocMask, true},
+	{"v6FreeAddressInANonFirstByte", "2001:db8:85a3::8a2e:370:7351", v6LargeSubnet, v6LargeAllocMask, false},
+	{"v6AllocatedAddressInAnotherNotation", "2001:0db8:85a3:0000:0000:8a2e:0370:7345", v6SmallSubnet, v6SmallAllocMask, true},
+	{"nilIpFallsBackToTheFirstIndex", "", "192.168.1.64/26", v4AllocMask, true},
+}
+
 func TestReserve(t *testing.T) {
 	err := utils.SetupAllocationPools(testNets)
 	if err != nil {
@@ -247,7 +351,6 @@ func TestReserve(t *testing.T) {
 				testArtifacts.IsRipListErrorExpected = true
 			}
 			netClientStub := stubs.NewClientSetStub(testArtifacts)
-			//The request always comes from the Pod's namespace, which is not necessarily the same as the network's own
 			requestNamespace := tc.requestNamespace
 			if requestNamespace == "" {
 				requestNamespace = testNets[tc.netIndex].Namespace
@@ -283,7 +386,6 @@ func TestReserve(t *testing.T) {
 	}
 }
 
-// copyTestNets deep copies the test networks, so subtests mutating them through the client stub stay isolated from each other
 func copyTestNets(nets []danmtypes.DanmNet) []danmtypes.DanmNet {
 	copiedNets := make([]danmtypes.DanmNet, 0, len(nets))
 	for _, net := range nets {
@@ -299,7 +401,6 @@ func TestGarbageCollectIps(t *testing.T) {
 	}
 	for _, tc := range gcTcs {
 		t.Run(tc.netName, func(t *testing.T) {
-			//The stub shares the backing array of the test networks, so every subtest needs its own copy to not inherit the allocations freed by the previous ones
 			nets := copyTestNets(testNets)
 			var ips []utils.ReservedIpsList
 			ips = utils.AppendIpToExpectedAllocsList(ips, tc.allocatedIp4, false, nets[tc.netIndex].Spec.NetworkID)
@@ -333,6 +434,22 @@ func TestWasIpAllocatedByDanm(t *testing.T) {
 				}
 			}
 			wasAllocated := ipam.WasIpAllocatedByDanm(tc.allocatedIp, &testNet)
+			if wasAllocated != tc.expectedAllocated {
+				t.Errorf("Received allocation verdict:%v does not match with expectation:%v", wasAllocated, tc.expectedAllocated)
+			}
+		})
+	}
+}
+
+func TestWasIpAlreadyAllocated(t *testing.T) {
+	for _, tc := range alreadyAllocatedTcs {
+		t.Run(tc.tcName, func(t *testing.T) {
+			_, allocSubnet, err := net.ParseCIDR(tc.allocSubnet)
+			if err != nil {
+				t.Errorf("Allocation subnet:%s of the TC could not be parsed because:%v", tc.allocSubnet, err)
+				return
+			}
+			wasAllocated := ipam.WasIpAlreadyAllocated(net.ParseIP(tc.ip), allocSubnet, tc.alloc)
 			if wasAllocated != tc.expectedAllocated {
 				t.Errorf("Received allocation verdict:%v does not match with expectation:%v", wasAllocated, tc.expectedAllocated)
 			}

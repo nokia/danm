@@ -3,3 +3,11 @@ bin/
 vendor/
 ut/
 .idea/
+*.patch
+.claude/
+danm
+webhook
+netwatcher
+svcwatcher
+fakeipam
+cnitest

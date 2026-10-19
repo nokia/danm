@@ -4,6 +4,9 @@ kind: TenantConfig
 metadata:
   name: ripprivilege
 hostDevices:
+- name: wlo1
+  vniType: vlan
+  vniRange: 1000-2000
 - name: ens4
   vniType: vlan
   vniRange: 1000-2000
@@ -25,7 +28,7 @@ spec:
   NetworkID: examplel3
   NetworkType: ipvlan
   Options:
-    host_device: ens4
+    host_device: wlo1
     vlan: 500
     container_prefix: ext
     rt_tables: 100
@@ -43,7 +46,7 @@ spec:
   NetworkID: examplel3
   NetworkType: ipvlan
   Options:
-    host_device: ens4
+    host_device: wlo1
     vlan: 500
     container_prefix: ext
     rt_tables: 100
@@ -62,7 +65,7 @@ spec:
   NetworkID: internal
   NetworkType: ipvlan
   Options:
-    host_device: ens4
+    host_device: wlo1
     container_prefix: int
     rt_tables: 200
     cidr: 10.240.1.0/24

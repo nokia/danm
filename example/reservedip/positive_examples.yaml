@@ -26,3 +26,59 @@ spec:
   - address: 10.240.1.50
   - address: 3a00:8a00:a000:1193::1
     shareable: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rip-test
+spec:
+  selector:
+    matchLabels:
+      app: rip-test
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: rip-test
+      annotations:
+        danm.io/interfaces: |
+          [
+            {"clusterNetwork":"default", "ip":"dynamic"},
+            {"clusterNetwork":"examplel3", "ip6":"cnet"}
+          ]
+    spec:
+      containers:
+      - name: busybox
+        imagePullPolicy: IfNotPresent
+        image: busybox:latest
+        args:
+        - sleep
+        - "1000"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rip-test-static
+spec:
+  selector:
+    matchLabels:
+      app: rip-test-static
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: rip-test-static
+      annotations:
+        danm.io/interfaces: |
+          [
+            {"clusterNetwork":"default", "ip":"dynamic"},
+            {"clusterNetwork":"examplel3", "ip":"10.100.1.51"}
+          ]
+    spec:
+      containers:
+      - name: busybox
+        imagePullPolicy: IfNotPresent
+        image: busybox:latest
+        args:
+        - sleep
+        - "1000"

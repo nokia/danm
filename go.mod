@@ -6,11 +6,11 @@ require (
 	github.com/apparentlymart/go-cidr v1.1.1
 	github.com/containernetworking/cni v1.3.0
 	github.com/containernetworking/plugins v1.9.1
-	github.com/golang/glog v1.2.5
 	github.com/j-keck/arping v1.0.3
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7
 	github.com/k8snetworkplumbingwg/sriov-cni v1.1.1-0.20250716060549-6e57b33abf15
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
+	github.com/stretchr/testify v1.11.1
 	github.com/vishvananda/netlink v1.3.1
 	gopkg.in/k8snetworkplumbingwg/multus-cni.v4 v4.3.0
 	k8s.io/api v0.36.2

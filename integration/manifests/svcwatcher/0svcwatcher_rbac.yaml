@@ -34,6 +34,14 @@ rules:
   - watch
   - get
 - apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
+- apiGroups:
   - ""
   resources:
   - events

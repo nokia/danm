@@ -2,36 +2,38 @@ package svccontrol
 
 import (
 	"encoding/json"
-	"reflect"
+	"fmt"
+	"sort"
 
 	danmv1 "github.com/danm-cni/danm/crd/apis/danm/v1"
 	"github.com/danm-cni/danm/pkg/netcontrol"
-	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
 )
 
 const (
-	PodSelector        = "danm.io/selector"
-	DanmNetSelector    = "danm.io/network"
-	TenantNetSelector  = "danm.io/tenantNetwork"
-	ClusterNetSelector = "danm.io/clusterNetwork"
-	TolerateUnreadyEps = "service.alpha.kubernetes.io/tolerate-unready-endpoints"
+	//Keep in sync with metacni.danmIfDefinitionSyntax
+	danmIfDefinitionSyntax = "danm.io/interfaces"
+	PodSelector            = "danm.io/selector"
+	DanmNetSelector        = "danm.io/network"
+	TenantNetSelector      = "danm.io/tenantNetwork"
+	ClusterNetSelector     = "danm.io/clusterNetwork"
+	TolerateUnreadyEps     = "service.alpha.kubernetes.io/tolerate-unready-endpoints"
 )
 
-func IsContain(ep, svc map[string]string) bool {
-	epFit := true
-	for k, v := range svc {
-		if val, ok := ep[k]; ok {
+func IsContain(labels, selector map[string]string) bool {
+	fit := true
+	for k, v := range selector {
+		if val, ok := labels[k]; ok {
 			if val != v {
-				epFit = false
+				fit = false
 				break
 			}
 		} else {
-			epFit = false
+			fit = false
 			break
 		}
 	}
-	return epFit
+	return fit
 }
 
 func GetDanmSvcAnnotations(annotations map[string]string) (map[string]string, map[string]string, error) {
@@ -41,8 +43,7 @@ func GetDanmSvcAnnotations(annotations map[string]string) (map[string]string, ma
 		if danmSel != "" {
 			err := json.Unmarshal([]byte(danmSel), &selectorMap)
 			if err != nil {
-				glog.Errorf("utils: json error: %s", err)
-				return selectorMap, netSelectors, err
+				return selectorMap, netSelectors, fmt.Errorf("Pod selector annotation %s could not be unmarshalled because: %w", PodSelector, err)
 			}
 		}
 	}
@@ -66,6 +67,9 @@ func GetDanmSvcAnnotations(annotations map[string]string) (map[string]string, ma
 }
 
 func PodReady(pod *corev1.Pod) bool {
+	if pod.DeletionTimestamp != nil {
+		return false
+	}
 	for i := range pod.Status.Conditions {
 		if pod.Status.Conditions[i].Type == corev1.PodReady && pod.Status.Conditions[i].Status == corev1.ConditionTrue {
 			return true
@@ -74,63 +78,32 @@ func PodReady(pod *corev1.Pod) bool {
 	return false
 }
 
-func SelectDesMatchLabels(des []*danmv1.DanmEp, selectorMap map[string]string, svcNets map[string]string, svcNs string) []*danmv1.DanmEp {
+func SelectDesMatchLabels(objs []interface{}, selectorMap map[string]string, svcNets map[string]string, svcNs string) []*danmv1.DanmEp {
 	var deList []*danmv1.DanmEp
-	for _, de := range des {
+	for _, o := range objs {
+		de := o.(*danmv1.DanmEp)
+		deFit := true
 		if de.GetNamespace() != svcNs {
-			continue
+			deFit = false
+		} else {
+			deMap := de.GetLabels()
+			deFit = IsContain(deMap, selectorMap)
+			if deFit && !isDepSelectedBySvc(de, svcNets) {
+				deFit = false
+			}
 		}
-		deMap := de.GetLabels()
-		deFit := IsContain(deMap, selectorMap)
-		if deFit && !isDepSelectedBySvc(de, svcNets) {
-			continue
+		if deFit {
+			deList = append(deList, de.DeepCopy())
 		}
-		deList = append(deList, de.DeepCopy())
 	}
 	return deList
 }
 
-//nolint:staticcheck // Endpoints is deprecated but still supported, refactor it at some point though
-func FindEpsForSvc(eps []*corev1.Endpoints, svcName, svcNs string) bool {
-	epFound := false
-	for _, ep := range eps {
-		epName := ep.GetName()
-		if epName == svcName && ep.GetNamespace() == svcNs {
-			epFound = true
-			break
-		}
-	}
-	return epFound
-}
-
-func SvcChanged(oldSvc, newSvc *corev1.Service) bool {
-	// danm svc annotations and annotations.ealy change are relevant
-	oldAnno := oldSvc.Annotations
-	newAnno := newSvc.Annotations
-	oldSelMap, oldNets, oldErr := GetDanmSvcAnnotations(oldAnno)
-	newSelMap, newNets, newErr := GetDanmSvcAnnotations(newAnno)
-	if oldErr != nil || newErr != nil {
-		return true
-	}
-	if reflect.DeepEqual(oldSelMap, newSelMap) && reflect.DeepEqual(oldNets, newNets) && reflect.DeepEqual(oldSvc.Spec.Ports, newSvc.Spec.Ports) && (oldSvc.Annotations[TolerateUnreadyEps] == newSvc.Annotations[TolerateUnreadyEps]) {
-		// no change
-		return false
-	}
-	return true
-}
-
-func PodLabelChanged(oldPod, newPod *corev1.Pod) bool {
-	if reflect.DeepEqual(oldPod.GetLabels(), newPod.GetLabels()) {
-		// no change
-		return false
-	}
-	return true
-}
-
-func MatchExistingSvc(de *danmv1.DanmEp, servicesList []*corev1.Service) []*corev1.Service {
+func MatchExistingSvc(de *danmv1.DanmEp, objs []interface{}) []*corev1.Service {
 	deNs := de.Namespace
 	var svcList []*corev1.Service
-	for _, svc := range servicesList {
+	for _, obj := range objs {
+		svc := obj.(*corev1.Service)
 		annotations := svc.GetAnnotations()
 		selectorMap, svcNets, err := GetDanmSvcAnnotations(annotations)
 		if err != nil {
@@ -154,7 +127,7 @@ func isDepSelectedBySvc(dep *danmv1.DanmEp, netSelectors map[string]string) bool
 		return false
 	}
 	if danmNet, ok := netSelectors[netcontrol.DanmNetKind]; ok {
-		if danmNet == dep.Spec.NetworkName && (netcontrol.DanmNetKind == dep.Spec.ApiType || dep.Spec.ApiType == "") {
+		if danmNet == dep.Spec.NetworkName && (netcontrol.DanmNetKind == dep.Spec.ApiType || "" == dep.Spec.ApiType) {
 			return true
 		}
 	}
@@ -169,4 +142,50 @@ func isDepSelectedBySvc(dep *danmv1.DanmEp, netSelectors map[string]string) bool
 		}
 	}
 	return false
+}
+
+// normalizeSubsets returns a comparison-only canonical copy of the subsets: addresses and ports are put
+// into a deterministic order, and the Pod ResourceVersions are cleared from the target references.
+// The input is never modified, and the result is never written back into the cluster
+//
+//nolint:staticcheck // Endpoints is deprecated but still supported, refactor it at some point though
+func normalizeSubsets(subsets []corev1.EndpointSubset) []corev1.EndpointSubset {
+	ordered := make([]corev1.EndpointSubset, len(subsets))
+	for i, s := range subsets {
+		s.DeepCopyInto(&ordered[i])
+		sort.Slice(ordered[i].Addresses, func(a, b int) bool {
+			return ordered[i].Addresses[a].IP < ordered[i].Addresses[b].IP
+		})
+		sort.Slice(ordered[i].NotReadyAddresses, func(a, b int) bool {
+			return ordered[i].NotReadyAddresses[a].IP < ordered[i].NotReadyAddresses[b].IP
+		})
+
+		sort.Slice(ordered[i].Ports, func(a, b int) bool {
+			return ordered[i].Ports[a].Port < ordered[i].Ports[b].Port
+		})
+		clearPodResourceVersions(ordered[i].Addresses)
+		clearPodResourceVersions(ordered[i].NotReadyAddresses)
+	}
+	return ordered
+}
+
+// clearPodResourceVersions blanks the Pod ResourceVersion in the target reference of every address.
+// It is bumped by every single Pod update, so Endpoints which are otherwise identical would never
+// compare equal, and svcwatcher would rewrite them on each periodic reconciliation
+//
+//nolint:staticcheck // Endpoints is deprecated but still supported, refactor it at some point though
+func clearPodResourceVersions(addrs []corev1.EndpointAddress) {
+	for i := range addrs {
+		if addrs[i].TargetRef != nil {
+			addrs[i].TargetRef.ResourceVersion = ""
+		}
+	}
+}
+
+func shrinkSubsets(eps *corev1.Endpoints) {
+	if len(eps.Subsets) > 0 &&
+		len(eps.Subsets[0].Addresses) == 0 &&
+		len(eps.Subsets[0].NotReadyAddresses) == 0 {
+		eps.Subsets = nil
+	}
 }

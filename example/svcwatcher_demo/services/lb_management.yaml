@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vnf-oam-svc
+  namespace: example-vnf
+spec:
+  selector:
+    vnf-type: example-vnf
+  ports:
+  - name: oam
+    port: 8080
+    protocol: TCP

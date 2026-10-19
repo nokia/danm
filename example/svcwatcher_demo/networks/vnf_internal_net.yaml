@@ -1,5 +1,5 @@
 apiVersion: danm.io/v1
-kind: DanmNet
+kind: TenantNetwork
 metadata:
   name: internal
   namespace: example-vnf
@@ -7,10 +7,9 @@ spec:
   NetworkID: internal
   NetworkType: ipvlan
   Options:
-    host_device: ens3
+    host_device: wlo1
     container_prefix: int
     rt_tables: 200
-    vxlan: 600
     cidr: 10.240.1.0/24
     allocation_pool:
       start: 10.240.1.100

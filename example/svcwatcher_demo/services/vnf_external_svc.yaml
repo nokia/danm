@@ -5,7 +5,7 @@ metadata:
   namespace: example-vnf
   annotations:
     danm.io/selector: '{"vnf-type":"example-vnf"}'
-    danm.io/network: external
+    danm.io/clusterNetwork: external
 spec:
   clusterIP: None
   ports:

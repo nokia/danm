@@ -1,0 +1,12 @@
+apiVersion: danm.io/v1
+kind: ClusterNetwork
+metadata:
+  name: external
+spec:
+  NetworkID: external
+  NetworkType: ipvlan
+  Options:
+    host_device: wlo1
+    container_prefix: eth0
+    rt_tables: 200
+    cidr: 10.100.20.0/24

@@ -15,7 +15,7 @@ spec:
       annotations:
         danm.io/interfaces: |
           [
-            {"network":"external", "ip":"dynamic"}
+            {"clusterNetwork":"external", "ip":"dynamic"}
           ]
     spec:
       containers:

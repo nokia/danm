@@ -5,7 +5,7 @@ metadata:
   namespace: example-vnf
   annotations:
     danm.io/selector: '{"app":"internal-processor"}'
-    danm.io/network: internal
+    danm.io/tenantNetwork: internal
 spec:
   clusterIP: None
   ports:

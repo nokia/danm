@@ -1,8 +1,0 @@
-apiVersion: danm.io/v1
-kind: DanmNet
-metadata:
-  name: management
-  namespace: example-vnf
-spec:
-  NetworkID: management
-  NetworkType: flannel

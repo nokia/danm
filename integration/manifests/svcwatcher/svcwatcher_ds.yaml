@@ -9,14 +9,6 @@ spec:
       danm.io: svcwatcher
   template:
     metadata:
-      annotations:
-        # Adapt to your own network environment!
-        danm.io/interfaces: |
-          [
-            {
-              "network":"flannel"
-            }
-          ]
       labels:
         danm.io: svcwatcher
     spec:
@@ -28,8 +20,6 @@ spec:
         - name: svcwatcher
           image: svcwatcher
           imagePullPolicy: IfNotPresent
-          args:
-            - "--logtostderr"
       tolerations:
        - effect: NoSchedule
          operator: Exists

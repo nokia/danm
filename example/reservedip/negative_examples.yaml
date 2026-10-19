@@ -146,3 +146,73 @@ spec:
   - address: 10.100.1.50
   - address: 2a00:8a00:a000:1193::1
     shareable: true
+---
+apiVersion: danm.io/v1
+kind: ReservedIP
+metadata:
+  name: dynamic
+  namespace: default
+spec:
+  network:
+    name: examplel3
+    type: ClusterNetwork
+  ips:
+  - address: 10.100.1.50
+  - address: 2a00:8a00:a000:1193::1
+    shareable: true
+---
+apiVersion: danm.io/v1
+kind: ReservedIP
+metadata:
+  name: cnet2
+  namespace: default
+spec:
+  network:
+    name: examplel3
+    type: ClusterNetwork
+  ips:
+  - address: 10.100.1.50
+  - address: 2a00:8a00:a000:1193::2
+    shareable: true
+---
+apiVersion: danm.io/v1
+kind: ReservedIP
+metadata:
+  name: cnet2
+  namespace: default
+spec:
+  network:
+    name: examplel3
+    type: ClusterNetwork
+  ips:
+  - address: 10.100.1.51
+  - address: 2a00:8a00:a000:1193::1
+    shareable: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rip-test-reserved
+spec:
+  selector:
+    matchLabels:
+      app: rip-test-reserved
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: rip-test-reserved
+      annotations:
+        danm.io/interfaces: |
+          [
+            {"clusterNetwork":"default", "ip":"dynamic"},
+            {"clusterNetwork":"examplel3", "ip":"10.100.1.50"}
+          ]
+    spec:
+      containers:
+      - name: busybox
+        imagePullPolicy: IfNotPresent
+        image: busybox:latest
+        args:
+        - sleep
+        - "1000"
